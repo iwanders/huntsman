@@ -1,0 +1,14 @@
+[package]
+name = "huntsman_dissector"
+version = "0.1.0"
+authors = ["Ivor Wanders <ivor@iwanders.net>"]
+edition = "2018"
+
+[dependencies]
+wireshark_dissector_rs = { path = "../wireshark_dissector_rs" }
+libc = "0.2.93"
+
+[lib]
+name = "huntsman_dissector"
+path = "src/lib.rs"
+crate-type = ["cdylib"]

@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "wireshark_dissector_rs",
+    "huntsman_dissector",
+]
