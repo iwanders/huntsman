@@ -2,19 +2,13 @@ extern crate wireshark_dissector_rs;
 
 use wireshark_dissector_rs::dissector;
 use wireshark_dissector_rs::epan;
-use wireshark_dissector_rs::plugin;
+
 
 // Lift these to make it less verbose.
 type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;
 type Encoding = epan::proto::Encoding;
 
-
-/*
-    So usb is a bit clunky, we can't register a proper post dissector because the TAP in usb makes the subdissectors
-    reentrant, so instead we register a postdissector and inspect whatever the HID USB dissector did and then use those
-    fields or offsets.
-*/
 
 #[repr(usize)]
 enum TreeIdentifier {
@@ -39,12 +33,33 @@ impl HuntsmanDissector {
         display: FieldDisplay::BASE_NONE,
     };
     const DIRECTION: dissector::PacketField = dissector::PacketField {
-        name: "Direction",
-        abbrev: "huntsman.direction",
+        name: "Direction or status?",
+        abbrev: "huntsman.status",
         field_type: FieldType::UINT8,  // Should really add enum support...
         display: FieldDisplay::BASE_DEC,
     };
+    const SEQUENCE: dissector::PacketField = dissector::PacketField {
+        name: "Some sequence_number",
+        abbrev: "huntsman.status",
+        field_type: FieldType::UINT8,
+        display: FieldDisplay::BASE_DEC,
+    };
+    const CHECKSUM: dissector::PacketField = dissector::PacketField {
+        name: "Checksum",
+        abbrev: "huntsman.checksum",  // second last byte... pretty sure about this one.
+        field_type: FieldType::UINT8,
+        display: FieldDisplay::BASE_HEX,
+    };
+
+    const EXPECTED_MSG_LENGTH: usize = 90;
 }
+
+enum Direction
+{
+    HostToDevice,
+    DeviceToHost
+}
+
 impl HuntsmanDissector {
     fn get_id(self: &Self, desired_field: &dissector::PacketField) -> epan::proto::HFIndex {
         for (field, index) in &self.field_mapping {
@@ -70,80 +85,10 @@ impl HuntsmanDissector {
             tree_indices: Vec::new(),
         }
     }
-}
 
-enum Direction
-{
-    HostToDevice,
-    DeviceToHost
-}
-
-impl dissector::Dissector for HuntsmanDissector {
-    fn get_fields(self: &Self) -> Vec<dissector::PacketField> {
-        let mut f = Vec::new();
-        f.push(HuntsmanDissector::ROOT);
-        f.push(HuntsmanDissector::FULL_PAYLOAD);
-        f.push(HuntsmanDissector::DIRECTION);
-        return f;
-    }
-
-    fn set_field_indices(self: &mut Self, hfindices: Vec<(dissector::PacketField, epan::proto::HFIndex)>) {
-        self.field_mapping = hfindices;
-    }
-
-    fn dissect(self: &mut Self, proto: &mut epan::ProtoTree, tvb: &mut epan::TVB) -> usize {
-        use std::collections::HashMap;
-
-        let mut offset: usize;
-        let mut length: usize;
-
-        
-        let mut fields: HashMap<String, epan::FieldInfo> = HashMap::new();
-        for field in proto.all_finfos() {
-            match field.hfinfo() {
-                Ok(v) => {
-                fields.insert(v.abbrev().to_string(), field);
-                },
-                Err(e) => println!("{}", e),
-            }
-        }
-    
-        let transfer_type = fields.get("usb.transfer_type");
-        match transfer_type
-        {
-            None => return tvb.reported_length(), // Nothing to do here, move along.
-            Some(field) => 
-            {
-                if field.value().get_uinteger() != 0x02
-                {
-                    return tvb.reported_length(); // Not a USB control message.
-                }
-            }
-        }
-
-        let direction : Direction;
-        if fields.contains_key("usb.data_fragment")
-        {
-            offset = fields.get("usb.data_fragment").unwrap().start() as usize;
-            length = fields.get("usb.data_fragment").unwrap().length() as usize;
-            direction = Direction::HostToDevice;
-        }
-        else if fields.contains_key("usb.control_stage")
-        {
-            offset = (fields.get("usb.control_stage").unwrap().start() + 1) as usize;
-            let usb_data_len = fields.get("usb.data_len").unwrap().value().get_uinteger() as usize;
-            if offset >= usb_data_len
-            {
-                return tvb.reported_length(); // nothing to do here...
-            }
-            length = usb_data_len - offset;
-            direction = Direction::DeviceToHost;
-        }
-        else
-        {
-            return tvb.reported_length(); // Nothing to do here, move along.
-        }
-
+    fn dissect_private(self: &Self, proto: &mut epan::ProtoTree, tvb: &mut epan::TVB, mut offset: usize) -> usize {
+        let data_start_offset = offset;
+        let length = tvb.reported_length()-offset;
 
         // Now, we can actually do things.
         let mut root_item = proto.add_item(self.get_id(&HuntsmanDissector::ROOT), tvb, offset, 0, Encoding::BIG_ENDIAN);
@@ -166,7 +111,83 @@ impl dissector::Dissector for HuntsmanDissector {
         );
         offset += 1;
 
+        offset += 9;
+        root.add_item(
+            self.get_id(&HuntsmanDissector::SEQUENCE),
+            tvb,
+            offset,
+            1,
+            Encoding::BIG_ENDIAN,
+        );
+        offset += 1;
+
+
+
+        root.add_item(
+            self.get_id(&HuntsmanDissector::CHECKSUM),
+            tvb,
+            data_start_offset + length - 2 ,
+            1,
+            Encoding::BIG_ENDIAN,
+        );
+        offset += 1;
+
         tvb.reported_length()
+    }
+
+
+}
+
+
+impl dissector::Dissector for HuntsmanDissector {
+    fn get_fields(self: &Self) -> Vec<dissector::PacketField> {
+        let mut f = Vec::new();
+        f.push(HuntsmanDissector::ROOT);
+        f.push(HuntsmanDissector::FULL_PAYLOAD);
+        f.push(HuntsmanDissector::DIRECTION);
+        f.push(HuntsmanDissector::CHECKSUM);
+        f.push(HuntsmanDissector::SEQUENCE);
+        return f;
+    }
+
+    fn set_field_indices(self: &mut Self, hfindices: Vec<(dissector::PacketField, epan::proto::HFIndex)>) {
+        self.field_mapping = hfindices;
+    }
+
+    fn heuristic_dissect(self: &Self, proto: &mut epan::ProtoTree, tvb: &mut epan::TVB) -> bool
+    {
+        let remaining = tvb.reported_length();
+        let expected_length : usize = HuntsmanDissector::EXPECTED_MSG_LENGTH;
+        if remaining < expected_length
+        {
+            return false;  // message is too short, can never be for us.
+        }
+
+        // Grab the last 90 bytes.
+        let section = tvb.get_mem(remaining - expected_length, expected_length);
+
+        // Checksum is xor based, if we see the message id increment with same message, the output is increasing by that
+        // same message id, it's not a sum, it's an xor and we skip the first byte, first two bytes also seem to have no
+        // impact on the value. Last byte of the message is always zero.
+        let mut checksum : u8 = 0;
+        for i in 2..expected_length-2
+        {
+            checksum ^= section[i];
+        }
+
+        if checksum != section[section.len() - 2]
+        {
+            return false;  // checksum didn't match, likely not our protocol.
+        }
+
+        if *section.last().unwrap() != 0u8  // last byte wasn't zero, all of them have that?
+        {
+            return false;
+        }
+
+        // Yes, it's for us, let us dissect it.
+        self.dissect_private(proto, tvb, remaining - expected_length);
+        return true;
     }
 
     fn get_protocol_name(self: &Self) -> (&'static str, &'static str, &'static str) {
@@ -175,7 +196,19 @@ impl dissector::Dissector for HuntsmanDissector {
 
     fn get_registration(self: &Self) -> Vec<dissector::Registration> {
         return vec![
-            dissector::Registration::Post,
+            //~ dissector::Registration::Post,
+            //~ dissector::Registration::UInt {
+                //~ abbrev: "usb.product",
+                //~ pattern: 0x15320226,
+            //~ },
+
+            // We could use a heuristic dissector on the usb.control 
+            dissector::Registration::Heuristic {
+                table: "usb.control",
+                display_name: "huntsman",
+                internal_name: "huntsman",
+                enabled: true,
+            },
         ];
     }
 
@@ -189,10 +222,11 @@ impl dissector::Dissector for HuntsmanDissector {
 }
 
 // This function is the main entry point for the plugin. It's the only symbol called automatically.
+use std::rc::Rc;
 #[no_mangle]
 pub fn plugin_register() {
-    let z = Box::new(HuntsmanDissector::new());
-    plugin::setup(z);
+    let z = Rc::new(HuntsmanDissector::new());
+    dissector::setup(z);
 }
 
 // And we need these public symbols to tell wireshark we are the right version.
