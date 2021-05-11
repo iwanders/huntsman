@@ -40,7 +40,7 @@ impl HuntsmanDissector {
     };
     const SEQUENCE: dissector::PacketField = dissector::PacketField {
         name: "Some sequence_number",
-        abbrev: "huntsman.status",
+        abbrev: "huntsman.sequence",
         field_type: FieldType::UINT8,
         display: FieldDisplay::BASE_DEC,
     };
@@ -48,6 +48,12 @@ impl HuntsmanDissector {
         name: "Checksum",
         abbrev: "huntsman.checksum",  // second last byte... pretty sure about this one.
         field_type: FieldType::UINT8,
+        display: FieldDisplay::BASE_HEX,
+    };
+    const COMMAND: dissector::PacketField = dissector::PacketField {
+        name: "Command?",
+        abbrev: "huntsman.command",
+        field_type: FieldType::UINT32,
         display: FieldDisplay::BASE_HEX,
     };
 
@@ -111,6 +117,13 @@ impl HuntsmanDissector {
         );
         offset += 1;
 
+        root.add_item(
+            self.get_id(&HuntsmanDissector::COMMAND),
+            tvb,
+            offset+4,
+            4,
+            Encoding::BIG_ENDIAN,
+        );
         offset += 9;
         root.add_item(
             self.get_id(&HuntsmanDissector::SEQUENCE),
@@ -147,6 +160,7 @@ impl dissector::Dissector for HuntsmanDissector {
         f.push(HuntsmanDissector::DIRECTION);
         f.push(HuntsmanDissector::CHECKSUM);
         f.push(HuntsmanDissector::SEQUENCE);
+        f.push(HuntsmanDissector::COMMAND);
         return f;
     }
 
