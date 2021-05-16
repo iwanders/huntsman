@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "binary",
+    "library",
+    "library_macro",
+]
