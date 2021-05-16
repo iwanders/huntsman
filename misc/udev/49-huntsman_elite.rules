@@ -1,0 +1,2 @@
+# Set appropriate permissions such that we can interact with the keyboard over hid.
+SUBSYSTEMS=="usb|input|hid", GROUP:="plugdev", ATTRS{idProduct}=="0226", ATTRS{idVendor}=="1532"
