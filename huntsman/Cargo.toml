@@ -1,0 +1,10 @@
+[package]
+name = "huntsman"
+version = "0.1.0"
+authors = ["Ivor Wanders <ivor@iwanders.net>"]
+edition = "2018"
+
+[dependencies]
+hidapi = "1.2.6"
+huntsman_comm = { path = "../huntsman_comm" }
+

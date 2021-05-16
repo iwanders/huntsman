@@ -50,9 +50,9 @@ pub trait Command {
 
 #[derive(Default, Copy, Clone)]
 pub struct RGB {
-    r: u8,
-    g: u8,
-    b: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 impl RGB {
     pub fn payload(&self) -> Vec<u8> {
@@ -68,6 +68,19 @@ pub struct SetLedState {
 }
 impl SetLedState {
     pub const CMD: u32 = 0x4a0f0300;
+
+    pub fn make_test_red() -> SetLedState
+    {
+        let mut state: SetLedState = Default::default();
+        state.id = 6;
+        state.count = 0x16;
+        for i in 0..state.count as usize {
+            if i <= (state.count - 4).into() {
+                state.leds[i].r = 0xff;
+            }
+        }
+        return state;
+    }
 }
 
 impl Command for SetLedState {
@@ -109,14 +122,7 @@ mod tests {
     fn test_bad_add() {
         let expected = parse_wireshark_value("00:1f:00:00:00:4a:0f:03:00:00:06:00:16:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:a9:00");
         // This is a command for led id 6, with red, except for last 4 bytes, they are dark.
-        let mut state: SetLedState = Default::default();
-        state.id = 6;
-        state.count = 0x16;
-        for i in 0..state.count as usize {
-            if i <= (state.count - 4).into() {
-                state.leds[i].r = 0xff;
-            }
-        }
+        let state = SetLedState::make_test_red();
         assert_eq!(state.serialize(), expected);
     }
 }

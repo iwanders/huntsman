@@ -4,4 +4,5 @@ members = [
     "wireshark_dissector_rs",
     "huntsman_dissector",
     "huntsman_comm",
+    "huntsman",
 ]
