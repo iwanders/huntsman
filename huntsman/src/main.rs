@@ -26,6 +26,27 @@ pub fn main() -> Result<(), String> {
                         .help("delay duration between things."),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("set_color")
+                .arg(
+                    Arg::with_name("red")
+                        .short("r")
+                        .takes_value(true)
+                        .default_value("0"),
+                )
+                .arg(
+                    Arg::with_name("green")
+                        .short("g")
+                        .takes_value(true)
+                        .default_value("0"),
+                )
+                .arg(
+                    Arg::with_name("blue")
+                        .short("b")
+                        .takes_value(true)
+                        .default_value("0"),
+                ),
+        )
         .get_matches();
 
     match matches.occurrences_of("c") {
@@ -34,6 +55,7 @@ pub fn main() -> Result<(), String> {
     }
 
     let mut h = huntsman::Huntsman::new()?;
+
     if let Some(matches) = matches.subcommand_matches("flashy_thing") {
         let delay_in = matches.value_of("delay").expect("Delay be set");
         let delay = delay_in
@@ -41,6 +63,25 @@ pub fn main() -> Result<(), String> {
             .parse::<u64>()
             .expect("Parsing delay as a number didn't work");
         h.do_flashy_things(delay);
+    }
+
+    if let Some(matches) = matches.subcommand_matches("set_color") {
+        let r_in = matches.value_of("red").expect("red be set");
+        let r = r_in
+            .to_string()
+            .parse::<u8>()
+            .expect("Parsing r as a number didn't work");
+        let g_in = matches.value_of("green").expect("green be set");
+        let g = g_in
+            .to_string()
+            .parse::<u8>()
+            .expect("Parsing g as a number didn't work");
+        let b_in = matches.value_of("blue").expect("blue be set");
+        let b = b_in
+            .to_string()
+            .parse::<u8>()
+            .expect("Parsing b as a number didn't work");
+        h.set_color(r, g, b);
     }
 
     return Ok(());
