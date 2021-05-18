@@ -16,15 +16,9 @@ pub trait Command {
         v.push(0x0);
         v.push(0x0);
         v.push(0x0);
-        //~ v.push(0x0);
+
         // Now follows the command.
         let cmd = self.command_id();
-        println!(
-            "Cmd: {:X}, >> {:X}, as {:X}",
-            cmd,
-            cmd >> 8,
-            (cmd >> 8) as u8
-        );
         v.push((cmd >> (8 * 3)) as u8);
         v.push((cmd >> (8 * 2)) as u8);
         v.push((cmd >> (8 * 1)) as u8);
