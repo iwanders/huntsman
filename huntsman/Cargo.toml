@@ -6,5 +6,6 @@ edition = "2018"
 
 [dependencies]
 hidapi = "1.2.6"
+clap = "2.33.3"
 huntsman_comm = { path = "../huntsman_comm" }
 

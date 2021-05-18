@@ -63,8 +63,7 @@ pub struct SetLedState {
 impl SetLedState {
     pub const CMD: u32 = 0x4a0f0300;
 
-    pub fn make_test_red() -> SetLedState
-    {
+    pub fn make_test_red() -> SetLedState {
         let mut state: SetLedState = Default::default();
         state.id = 6;
         state.count = 0x16;
