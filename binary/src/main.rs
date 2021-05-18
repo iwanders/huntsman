@@ -13,6 +13,7 @@ struct Z
 #[derive(HelloMacro)]
 struct Pancakes
 {
+    #[hello("foo")]
     x: f32,
     arr: [u32; 3],
     s: Z,

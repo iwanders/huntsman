@@ -9,6 +9,7 @@ use syn;
 
 fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
+    println!("Full: {:?}", ast);
     match &ast.data
     {
         syn::Data::Struct(data_struct) => {
@@ -63,7 +64,7 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
 }
 
 
-#[proc_macro_derive(HelloMacro)]
+#[proc_macro_derive(HelloMacro, attributes(hello))]
 pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
