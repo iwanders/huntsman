@@ -1,10 +1,11 @@
 
-
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
 use syn;
+
+
 
 fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
@@ -72,3 +73,9 @@ pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
     impl_hello_macro(&ast)
 }
 
+
+
+#[proc_macro_attribute]
+pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
+    return item;
+}
