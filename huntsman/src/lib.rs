@@ -44,7 +44,7 @@ impl Huntsman {
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> Result<(), String> {
         for i in 0..9 {
-            let mut leds : huntsman_comm::SetLedState = Default::default();
+            let mut leds: huntsman_comm::SetLedState = Default::default();
             leds.count = 0x16;
             leds.id = i;
             for l in 0..leds.count as usize {
@@ -59,11 +59,19 @@ impl Huntsman {
         return Ok(());
     }
 
-    pub fn set_color_single(&mut self, r: u8, g: u8, b: u8, count: u8, index: u8) -> Result<(), String> {
-        let mut leds : huntsman_comm::SetLedState = Default::default();
-        leds.count = count;
+    pub fn set_color_single(
+        &mut self,
+        r: u8,
+        g: u8,
+        b: u8,
+        count: u8,
+        index: u8,
+        start: u8,
+    ) -> Result<(), String> {
+        let mut leds: huntsman_comm::SetLedState = Default::default();
+        leds.count = start + count;
         leds.id = index;
-        for l in 0..leds.count as usize {
+        for l in start as usize ..leds.count as usize {
             leds.leds[l].r = r;
             leds.leds[l].g = g;
             leds.leds[l].b = b;
