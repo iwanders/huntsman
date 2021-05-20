@@ -45,7 +45,19 @@ pub fn main() -> Result<(), String> {
                         .short("b")
                         .takes_value(true)
                         .default_value("0"),
-                ),
+                )
+                .arg(
+                    Arg::with_name("count")
+                        .short("c")
+                        .takes_value(true)
+                        .default_value("22"),
+                )
+                .arg(
+                    Arg::with_name("index")
+                        .short("i")
+                        .takes_value(true)
+                )
+                
         )
         .get_matches();
 
@@ -81,7 +93,21 @@ pub fn main() -> Result<(), String> {
             .to_string()
             .parse::<u8>()
             .expect("Parsing b as a number didn't work");
-        h.set_color(r, g, b);
+
+        match matches.value_of("index") {
+            Some(v) => {
+                let index = v.to_string().parse::<u8>().expect("Failed to parse index as number");
+                let count_in = matches.value_of("count").expect("count be set");
+                let count = count_in
+                    .to_string()
+                    .parse::<u8>()
+                    .expect("Parsing count as a number didn't work");
+                return h.set_color_single(r, g, b, count + 1, index);
+            },
+            None => {return  h.set_color(r, g, b);},
+        }
+
+        
     }
 
     return Ok(());

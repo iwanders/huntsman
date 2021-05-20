@@ -42,7 +42,7 @@ pub trait Command {
     fn payload(&self) -> Vec<u8>;
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct RGB {
     pub r: u8,
     pub g: u8,
@@ -54,9 +54,23 @@ impl RGB {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct SetLedState {
+    /// Seems to be row.
+    ///                     
+    /// |  key row             | 0| 1| 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9|10|11|12|13|14|15|16|17|18|19|20|21|22|
+    /// |----------------------|--|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+    /// |  0          |  |esc  |   | f1  | f2  | f3  | f4  |f5   | f6  | f7 | f8 | f9  |  f10 | f11  | f12 | prt | scrl | pause | prev  | play | next | volume  |  |
+    /// |  1          |  | ` |  1 | 2  |  3 | 4 | 5  | 6  | 7  | 8 | 9  | 0  | -  | =  | bksp | ins | home | pup | nmlk | / | * | - |  |
+    /// |  2          |  | tab  | q  | w  | e  |  r | t  | y  | u  | i | o | p | [ | ] | \ | del | end  | pwnd | 7 | 8 | 9 | + |  |
+    /// |  3          |  | caps | a  | s  | d  |  f | g  | h  | j  | k | l | ; | ' | enter |  |  |  |  | 4 | 5 | 6 |  |  |
+    /// |  4          |  |  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+    /// |  5          |  |  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+    /// |  6          | 0|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+    /// |  7          | 0|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+    /// |  8          | 0|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
     pub id: u8,
+    /// Seems to be specifying up to which column?
     pub count: u8,
     pub leds: [RGB; 22], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
