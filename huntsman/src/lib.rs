@@ -23,7 +23,7 @@ impl Huntsman {
         self.print_comm = state;
     }
 
-    fn set_command(&mut self, command: &dyn huntsman_comm::DebuggableCommand) -> Result<(), String> {
+    fn set_command(&mut self, command: &dyn huntsman_comm::Command) -> Result<(), String> {
         let v = command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", command, v);

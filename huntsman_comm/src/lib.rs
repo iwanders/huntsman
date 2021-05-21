@@ -8,7 +8,7 @@ fn prepare_checksum(v: &Vec<u8>) -> u8 {
     return checksum;
 }
 
-pub trait Command {
+pub trait Command : std::fmt::Debug {
     fn serialize(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::new();
         v.push(0);
@@ -41,8 +41,6 @@ pub trait Command {
     fn command_id(&self) -> u32;
     fn payload(&self) -> Vec<u8>;
 }
-
-pub trait DebuggableCommand: Command + std::fmt::Debug {}
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct RGB {
@@ -111,7 +109,6 @@ impl Command for SetLedState {
         return v;
     }
 }
-impl DebuggableCommand for SetLedState {}
 
 
 #[cfg(test)]
