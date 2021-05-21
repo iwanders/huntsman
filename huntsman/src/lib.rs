@@ -2,17 +2,33 @@ use std::{thread, time};
 mod hid_hal;
 pub struct Huntsman {
     hal: hid_hal::HidApiHal,
+    print_comm: bool,
 }
 
 impl Huntsman {
     pub fn new() -> Result<Huntsman, String> {
         match hid_hal::HidApiHal::new() {
             Ok(mut hal) => match &mut hal.connect(0x1532, 0x226, 2) {
-                Ok(()) => Ok(Huntsman { hal: hal }),
+                Ok(()) => Ok(Huntsman {
+                    hal: hal,
+                    print_comm: false,
+                }),
                 Err(e) => Err(e.to_string()),
             },
             Err(e) => Err(e.to_string()),
         }
+    }
+
+    pub fn set_print_comm(&mut self, state: bool) {
+        self.print_comm = state;
+    }
+
+    fn set_command(&mut self, command: &dyn huntsman_comm::DebuggableCommand) -> Result<(), String> {
+        let v = command.serialize();
+        if self.print_comm {
+            println!("{:?} -> {:?}", command, v);
+        }
+        return self.hal.control(&v.as_slice());
     }
 
     pub fn do_flashy_things(&mut self, delay: u64) -> Result<(), String> {
@@ -31,9 +47,7 @@ impl Huntsman {
                         }
                     }
                 }
-                let res = self
-                    .hal
-                    .control(huntsman_comm::Command::serialize(&leds).as_slice())?;
+                return self.set_command(&leds);
                 //~ thread::sleep(time::Duration::from_millis(1));
             }
             thread::sleep(time::Duration::from_millis(delay));
@@ -52,9 +66,7 @@ impl Huntsman {
                 leds.leds[l].g = g;
                 leds.leds[l].b = b;
             }
-            let res = self
-                .hal
-                .control(huntsman_comm::Command::serialize(&leds).as_slice())?;
+            return self.set_command(&leds);
         }
         return Ok(());
     }
@@ -71,15 +83,11 @@ impl Huntsman {
         let mut leds: huntsman_comm::SetLedState = Default::default();
         leds.count = start + count;
         leds.id = index;
-        for l in start as usize ..leds.count as usize {
+        for l in start as usize..leds.count as usize {
             leds.leds[l].r = r;
             leds.leds[l].g = g;
             leds.leds[l].b = b;
         }
-        println!("Setting: {:?}", leds);
-        let res = self
-            .hal
-            .control(huntsman_comm::Command::serialize(&leds).as_slice())?;
-        return Ok(());
+        return self.set_command(&leds);
     }
 }

@@ -62,12 +62,14 @@ pub fn main() -> Result<(), String> {
         )
         .get_matches();
 
+    let mut h = huntsman::Huntsman::new()?;
+
     match matches.occurrences_of("c") {
-        1 => {}
+        1 => {
+            h.set_print_comm(true);
+        }
         _ => {}
     }
-
-    let mut h = huntsman::Huntsman::new()?;
 
     if let Some(matches) = matches.subcommand_matches("flashy_thing") {
         let delay_in = matches.value_of("delay").expect("Delay be set");

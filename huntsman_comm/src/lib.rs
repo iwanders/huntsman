@@ -42,6 +42,8 @@ pub trait Command {
     fn payload(&self) -> Vec<u8>;
 }
 
+pub trait DebuggableCommand: Command + std::fmt::Debug {}
+
 #[derive(Default, Copy, Clone, Debug)]
 pub struct RGB {
     pub r: u8,
@@ -109,6 +111,8 @@ impl Command for SetLedState {
         return v;
     }
 }
+impl DebuggableCommand for SetLedState {}
+
 
 #[cfg(test)]
 mod tests {
