@@ -8,7 +8,7 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 pub fn main() -> Result<(), String> {
-    let matches = App::new("Huntsman Thing")
+    let mut app = App::new("Huntsman Thing")
         .about("Does awesome things")
         .arg(
             Arg::with_name("c")
@@ -69,12 +69,25 @@ pub fn main() -> Result<(), String> {
                         .takes_value(true)
                         .default_value("0"),
                 )
-                .arg(Arg::with_name("index").short("i").takes_value(true)),
-        )
-        .get_matches();
+                .arg(Arg::with_name("index").short("i").takes_value(true))
+        );
+    let matches = app.clone().get_matches();  // weird that get_matches() takes 'self', instead of &self
 
+    // Abort with the help if no subcommand is given.
+    match matches.subcommand()
+    {
+        (_something, Some(_subcmd)) => {},
+        _ => {  &mut app.print_help();
+                println!();
+                return Err("No subcommand given.".to_string());
+            }
+    }
+
+
+    // We have a subcommand, try to make the Huntsman object.
     let mut h = huntsman::Huntsman::new()?;
 
+    // Set the print communication flag.
     match matches.occurrences_of("c") {
         1 => {
             h.set_print_comm(true);
