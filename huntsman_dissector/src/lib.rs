@@ -58,11 +58,6 @@ impl HuntsmanDissector {
     const EXPECTED_MSG_LENGTH: usize = 90;
 }
 
-enum Direction {
-    HostToDevice,
-    DeviceToHost,
-}
-
 impl HuntsmanDissector {
     fn get_id(self: &Self, desired_field: &dissector::PacketField) -> epan::proto::HFIndex {
         for (field, index) in &self.field_mapping {
@@ -140,7 +135,7 @@ impl HuntsmanDissector {
             1,
             Encoding::BIG_ENDIAN,
         );
-        offset += 1;
+        //~ offset += 1;
 
         root.add_item(
             self.get_id(&HuntsmanDissector::CHECKSUM),
@@ -149,7 +144,7 @@ impl HuntsmanDissector {
             1,
             Encoding::BIG_ENDIAN,
         );
-        offset += 1;
+        //~ offset += 1;
 
         tvb.reported_length()
     }

@@ -37,9 +37,9 @@ impl HidApiHal {
         endpoint_id: u32,
     ) -> Result<(), String> {
         for device in self.api.device_list() {
-            if (device.vendor_id() == vendor_id
+            if device.vendor_id() == vendor_id
                 && device.product_id() == product_id
-                && device.interface_number() == endpoint_id as i32)
+                && device.interface_number() == endpoint_id as i32
             {
                 match device.open_device(&self.api) {
                     Ok(d) => {

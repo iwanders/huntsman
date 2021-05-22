@@ -33,12 +33,13 @@ impl Huntsman {
 
     pub fn do_flashy_things(&mut self, delay: u64) -> Result<(), String> {
         let mut counter: usize = 0;
-        while (counter < 500) {
+        loop {
             for i in 0..9 {
-                let mut leds = huntsman_comm::SetLedState::make_test_red();
+                let mut leds: huntsman_comm::SetLedState = Default::default();
                 leds.id = i;
+                leds.count = 0x16;
                 for l in 0..leds.count as usize {
-                    match (counter % 3) {
+                    match counter % 3 {
                         0 => leds.leds[l].r = 0xff,
                         1 => leds.leds[l].g = 0xff,
                         2 => leds.leds[l].b = 0xff,
@@ -53,7 +54,7 @@ impl Huntsman {
             thread::sleep(time::Duration::from_millis(delay));
             counter += 1;
         }
-        return Ok(());
+        //~ return Ok(());
     }
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> Result<(), String> {

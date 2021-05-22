@@ -77,7 +77,7 @@ pub fn main() -> Result<(), String> {
             .to_string()
             .parse::<u64>()
             .expect("Parsing delay as a number didn't work");
-        h.do_flashy_things(delay);
+        h.do_flashy_things(delay)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("set_color") {
