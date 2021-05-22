@@ -27,6 +27,17 @@ pub fn main() -> Result<(), String> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("set_brightness")
+                .about("Sets the brightness")
+                .arg(
+                    Arg::with_name("value")
+                        //~ .short("d")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The brightness to set as a float [0, 1.0] inclusive."),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("set_color")
                 .arg(
                     Arg::with_name("red")
@@ -78,6 +89,15 @@ pub fn main() -> Result<(), String> {
             .parse::<u64>()
             .expect("Parsing delay as a number didn't work");
         h.do_flashy_things(delay)?;
+    }
+
+    if let Some(matches) = matches.subcommand_matches("set_brightness") {
+        let value_in = matches.value_of("value").expect("Value to be set");
+        let value = value_in
+            .to_string()
+            .parse::<f32>()
+            .expect("Parsing value as a float didn't work");
+        h.set_brightness(value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("set_color") {

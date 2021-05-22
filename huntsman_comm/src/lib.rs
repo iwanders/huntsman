@@ -70,8 +70,8 @@ pub struct SetLedState {
     /// |  7*          | `? | tab  | caps | shift  | ctrl  |  win | alt  | llspace  | lspace  | rspace | rrspace | alt | fn | context | ctrl | left | down | right | 0 |  |  |  |  |
     /// |  8$          | 0| farleft | midleft  | frontleft  | alt  |  f | b  |  n | k | alt | fn | shift | ctrl | left | right | 0 | 5 | farright | midright | frontright |  |  |  |
     ///
-    ///  [*] This is the edge lighting, not the keys.
-    ///  [$] Armrest
+    ///  \[*\] This is the edge lighting, not the keys.
+    ///  \[$\] Armrest
     pub id: u8,
     /// Seems to be specifying up to which column?
     pub count: u8,
@@ -99,6 +99,27 @@ impl Command for SetLedState {
 }
 
 
+#[derive(Default, Copy, Clone, Debug)]
+pub struct SetBrightness {
+    pub value: f32
+}
+impl SetBrightness {
+    pub const CMD: u32 = 0x030f0401;
+}
+
+impl Command for SetBrightness {
+    fn command_id(&self) -> u32 {
+        return SetBrightness::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = Vec::new();
+        v.push(0); // 0 byte
+        v.push((self.value * 255.0) as u8);
+        return v;
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -118,10 +139,34 @@ mod tests {
     }
 
     #[test]
-    fn test_bad_add() {
+    fn test_set_led_state() {
         let expected = parse_wireshark_value("00:1f:00:00:00:4a:0f:03:00:00:06:00:16:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:a9:00");
         // This is a command for led id 6, with red, except for last 4 bytes, they are dark.
-        let state = SetLedState::make_test_red();
+        let mut state: SetLedState = Default::default();
+        state.id = 6;
+        state.count = 0x16;
+        for i in 0..state.count as usize {
+            if i <= (state.count - 4).into() {
+                state.leds[i].r = 0xff;
+            }
+        }
         assert_eq!(state.serialize(), expected);
+    }
+
+    #[test]
+    fn test_set_brightness()
+    {
+        let expected_50_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
+        let mut brightness: SetBrightness = Default::default();
+        brightness.value = 0.5;
+        assert_eq!(brightness.serialize(), expected_50_pct);
+
+        let expected_100_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:f6:00");
+        brightness.value = 1.0;
+        assert_eq!(brightness.serialize(), expected_100_pct);
+
+        brightness.value = 2.5;  // cool, 'as u8' clamps.
+        assert_eq!(brightness.serialize(), expected_100_pct);
+        
     }
 }

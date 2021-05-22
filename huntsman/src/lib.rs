@@ -91,4 +91,11 @@ impl Huntsman {
         }
         return self.set_command(&leds);
     }
+
+    pub fn set_brightness(&mut self, value: f32) -> Result<(), String> 
+    {
+        let mut brightness: huntsman_comm::SetBrightness = Default::default();
+        brightness.value = value;
+        return self.set_command(&brightness);
+    }
 }
