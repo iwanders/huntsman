@@ -106,8 +106,16 @@ impl Huntsman {
     /// Set the brightness of the entire keyboard, specify as [0, 1.0].
     pub fn set_brightness(&mut self, value: f32) -> Result<(), String> 
     {
-        let mut brightness: huntsman_comm::SetBrightness = Default::default();
-        brightness.value = value;
-        return self.set_command(&brightness);
+        let mut cmd: huntsman_comm::SetBrightness = Default::default();
+        cmd.value = value;
+        return self.set_command(&cmd);
+    }
+
+    /// Toggle game mode on or off.
+    pub fn set_game_mode(&mut self, value: bool) -> Result<(), String>
+    {
+        let mut cmd: huntsman_comm::SetGameMode = Default::default();
+        cmd.value = value;
+        return self.set_command(&cmd);
     }
 }

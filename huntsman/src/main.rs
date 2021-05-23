@@ -38,6 +38,16 @@ pub fn main() -> Result<(), String> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("set_game_mode")
+                .about("Sets game mode on or off")
+                .arg(
+                    Arg::with_name("value")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The state to set it to."),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("set_color")
                 .arg(
                     Arg::with_name("red")
@@ -111,6 +121,14 @@ pub fn main() -> Result<(), String> {
             .parse::<f32>()
             .expect("Parsing value as a float didn't work");
         h.set_brightness(value)?;
+    }
+    if let Some(matches) = matches.subcommand_matches("set_game_mode") {
+        let value_in = matches.value_of("value").expect("Value to be set");
+        let value = value_in
+            .to_string()
+            .parse::<bool>()
+            .expect("Parsing value as a bool didn't work");
+        h.set_game_mode(value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("set_color") {

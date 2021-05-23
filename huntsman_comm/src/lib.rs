@@ -119,6 +119,25 @@ impl Command for SetBrightness {
     }
 }
 
+#[derive(Default, Copy, Clone, Debug)]
+pub struct SetGameMode {
+    pub value: bool
+}
+impl SetGameMode {
+    pub const CMD: u32 = 0x03030000;
+}
+
+impl Command for SetGameMode {
+    fn command_id(&self) -> u32 {
+        return SetGameMode::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = Vec::new();
+        v.push(8);
+        v.push(self.value as u8);
+        return v;
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -167,6 +186,18 @@ mod tests {
 
         brightness.value = 2.5;  // cool, 'as u8' clamps.
         assert_eq!(brightness.serialize(), expected_100_pct);
-        
+    }
+
+    #[test]
+    fn test_set_gamemode()
+    {
+        let enable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
+        let mut game_mode: SetGameMode = Default::default();
+        game_mode.value = true;
+        assert_eq!(game_mode.serialize(), enable);
+
+        let disable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:08:00");
+        game_mode.value = false;
+        assert_eq!(game_mode.serialize(), disable);
     }
 }
