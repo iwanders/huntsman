@@ -65,4 +65,26 @@ impl HidApiHal {
             },
         }
     }
+
+    /// Retrieve the report after sending a control message. This is an echo / ack?
+    pub fn get_report(&mut self) -> Result<Vec<u8>, String>
+    {
+        let mut buff: [u8; 91] = [0; 91]; // This also specifies the length.
+        buff[0] = 0;
+        match &mut self.connected_device {
+            None => Err("No connected device.".to_string()),
+            Some(d) => match d.get_feature_report(&mut buff) {
+                Err(e) => Err(e.to_string()),
+                Ok(len) => 
+                {
+                    let mut z: Vec<u8> = Vec::new();
+                    for i in 1..len
+                    {
+                        z.push(buff[i]);
+                    }
+                    return Ok(z);
+                }
+            },
+        }
+    }
 }

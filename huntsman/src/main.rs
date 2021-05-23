@@ -122,6 +122,7 @@ pub fn main() -> Result<(), String> {
             .expect("Parsing value as a float didn't work");
         h.set_brightness(value)?;
     }
+
     if let Some(matches) = matches.subcommand_matches("set_game_mode") {
         let value_in = matches.value_of("value").expect("Value to be set");
         let value = value_in

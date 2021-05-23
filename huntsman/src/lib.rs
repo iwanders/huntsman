@@ -116,6 +116,8 @@ impl Huntsman {
     {
         let mut cmd: huntsman_comm::SetGameMode = Default::default();
         cmd.value = value;
-        return self.set_command(&cmd);
+        let r = self.set_command(&cmd);
+        //~ println!("Retrieve: {:?}", self.hal.get_report());
+        return r;
     }
 }
