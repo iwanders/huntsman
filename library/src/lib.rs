@@ -4,6 +4,7 @@ pub struct HelloField
 {
     pub start: usize,
     pub length: usize,
+    pub unit: String,
     pub name: String,
 }
 

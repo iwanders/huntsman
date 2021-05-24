@@ -35,7 +35,16 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                         //~ println!("Field is named: {:?}", z);
                         for inner_field in &z.named
                         {
-                            println!("heh; {:?}", inner_field.ident);
+                            //~ println!("heh; {:?}", inner_field.ident);
+                            //~ let name = inner_field.ident.unwrap();
+                            println!("name; {:?}", inner_field.ident);
+                            let mut name: String = Default::default();
+                            match &inner_field.ident
+                            {
+                                Some(ident) => {println!("{:?}", ident.to_string());
+                                name = ident.to_string();},
+                                _ => {},
+                            }
                             match &inner_field.ty
                             {
                                 syn::Type::Array(arr) => {println!("Its an array");},
@@ -46,7 +55,7 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                                     println!("Its a stringified {:?}", type_path.path.segments[0].ident.to_string());
                                     let n = type_path.path.segments[0].ident.to_string();
                                     fields.push(proc_macro2::TokenStream::from(quote!(
-                                        HelloField{start: 0, length: 0, name: stringify!(#n).to_string()}
+                                        HelloField{start: 0, length: 0, unit: (#n).to_string(), name: (#name).to_string()}
                                     )));
                                     //~ fields += ", ";
                                 },
@@ -56,12 +65,16 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                     },
                 syn::Fields::Unnamed(z) =>
                     {
-                        //~ println!("Field is Unnamed: {:?}", z);
+                        println!("Field is Unnamed: {:?}", z);
                     }
                 syn::Fields::Unit =>
                     {
-                        //~ println!("Field is Unnamed: {:?}", z);
+                        println!("Field is Unit");
                     }
+                SomethingElse =>
+                {
+                        println!("Else: {:?}", SomethingElse);
+                }
                 
             }
         },
