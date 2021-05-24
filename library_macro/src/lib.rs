@@ -3,6 +3,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
+extern crate proc_macro2;
 use syn;
 
 
@@ -10,6 +11,20 @@ use syn;
 fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     println!("Full: {:?}", ast);
+
+    //~ let mut fields : TokenStream = Default::default();
+    //~ fields += "";
+    //~ let mut stream = proc_macro::TokenStream::new();
+    let mut fields: Vec<proc_macro2::TokenStream> = Vec::new();
+    //~ stream.extend((0..input.field_count).fold(vec![], |mut state:Vec<proc_macro::TokenStream>, i| {
+        //~ let field_name_str = format!("{}_{}", input.field_name, i);
+        //~ let field_name = Ident::new(&field_name_str, Span::call_site());
+        //~ let field_type = input.field_type.clone();
+        //~ state.push(quote!(pub #field_name: #field_type,
+        //~ ).into());
+        //~ state
+        //~ state
+    //~ }).into_iter());
     match &ast.data
     {
         syn::Data::Struct(data_struct) => {
@@ -29,6 +44,11 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                                     println!("Its a type_path {:?}",type_path);
                                     println!("Its a {:?}", type_path.path.segments[0].ident);
                                     println!("Its a stringified {:?}", type_path.path.segments[0].ident.to_string());
+                                    let n = type_path.path.segments[0].ident.to_string();
+                                    fields.push(proc_macro2::TokenStream::from(quote!(
+                                        HelloField{start: 0, length: 0, name: stringify!(#n).to_string()}
+                                    )));
+                                    //~ fields += ", ";
                                 },
                                 _ => {println!("Its somethign else : {:?}", &inner_field.ty);},
                             }
@@ -53,13 +73,19 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
         },
     }
     println!("During compile :O {}", name);
-    let gen = quote! {
+    //~ let mut fields : String = Default::default();
+    let mut gen = quote! {
         impl HelloMacro for #name {
             fn hello_macro() {
                 println!("Hello, Macro! My name is {}!", stringify!(#name));
             }
+            fn fields() -> Vec<HelloField>
+            {
+                return vec!(#(#fields),*);
+            }
         }
     };
+        
     gen.into()
 }
 

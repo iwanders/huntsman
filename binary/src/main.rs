@@ -4,6 +4,7 @@ extern crate library;
 use library_macro::HelloMacro;
 use library_macro::route;
 use library::HelloMacro;
+use library::HelloField;
 
 struct Z
 {
@@ -19,12 +20,15 @@ struct Pancakes
     s: Z,
 }
 
-fn main()
-{
-    Pancakes::hello_macro();
-}
-
 #[library_macro::route]
 fn foo()
 {
 }
+
+
+fn main()
+{
+    Pancakes::hello_macro();
+    println!("{:?}", Pancakes::fields());
+}
+
