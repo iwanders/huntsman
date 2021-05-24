@@ -11,6 +11,8 @@ extern crate proc_macro2;
 use syn;
 
 
+#[macro_use]
+extern crate memoffset;
 
 fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
@@ -29,9 +31,11 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
         //~ state
         //~ state
     //~ }).into_iter());
+    let root_struct = &ast.ident;
     match &ast.data
     {
         syn::Data::Struct(data_struct) => {
+            println!("Data struct: {:?}", data_struct);
             match &data_struct.fields
             {
                 syn::Fields::Named(z) =>
@@ -57,9 +61,11 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                                     println!("Its a type_path {:?}",type_path);
                                     println!("Its a {:?}", type_path.path.segments[0].ident);
                                     println!("Its a stringified {:?}", type_path.path.segments[0].ident.to_string());
-                                    let n = type_path.path.segments[0].ident.to_string();
+                                    let type_ident = &type_path.path.segments[0].ident;
+                                    let n = type_ident.to_string();
                                     fields.push(proc_macro2::TokenStream::from(quote!(
-                                        HelloField{start: 0, length: 0, unit: (#n).to_string(), name: (#name).to_string()}
+                                        //~ HelloField{start: offset_of!(root_struct, inner_field.ident), length: 0, unit: (#n).to_string(), name: (#name).to_string()}
+                                        HelloField{start: 0, length: std::mem::size_of::<#type_ident>(), unit: (#n).to_string(), name: (#name).to_string()}
                                     )));
                                     //~ fields += ", ";
                                 },
