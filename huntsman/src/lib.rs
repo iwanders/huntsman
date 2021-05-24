@@ -135,9 +135,21 @@ impl Huntsman {
         self.set_print_retrieve(true);
         // This makes it black...?
         //~ 0x060f0200	00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00
+        //              00:1f:00:00:00:06:0f:02:02:00:03:00:00:00:00:00:00:00:00
         let cmd = huntsman_comm::ArbitraryCommand {
             cmd: 0x060f0200,
-            payload: vec![0x00, 0x08, 0x00, 0x00, 0x00, 0x00],
+            //~ cmd: 0x450f8200,
+            //~ payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
+            //~ payload: vec![0x00, 0x01, 0x01, 0xFF, 0x10, 0x00], // should be wave, direction, speed, width
+            //~ payload: vec![0x00, 0x08, 0x01, 0x01, 0x00, 0x00],  // Sent by the software on shutdown? Pop a layer?
+            //~ payload: vec![0x00, 0x02, 0x00, 0x00, 0x00, 0x00], // Fades spectrum in and out.
+            //~ payload: vec![0x00, 0x03, 0x00, 0x00, 0x00, 0x00], // Cycles spectrum
+            //~ payload: vec![0x00, 0x04, 0x41, 0x01, 0x01, 0x01], // Rainbow, sometimes!?
+            //~ payload: vec![0x00, 0x05, 0x00, 0x00, 0x00, 0x00],
+            //~ payload: vec![0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // reactive, each key different color though.
+            //~ payload: vec![0x00, 0x07, 0x00, 0x00, 0x00, 0x00],  // reactive, each key different color though.
+            //~ payload: vec![0x00, 0x01, 0x01, 0xFF, 0x00, 0xFF],
+            //~ payload: vec![0x00],
         };
         return self.set_command(&cmd);
     }
