@@ -12,11 +12,12 @@ struct Z
 }
 
 #[derive(HelloMacro)]
+#[repr(C)]
 struct Pancakes
 {
     #[hello("foo")]
     x: f32,
-    arr: [u32; 3],
+    arr: [u8; 3],
     s: Z,
 }
 
@@ -26,9 +27,14 @@ fn foo()
 }
 
 
+#[macro_use]
+extern crate memoffset;
+
 fn main()
 {
     Pancakes::hello_macro();
     println!("{:?}", Pancakes::fields());
+
+    println!("Offset: {:?}", offset_of!(Pancakes, s));
 }
 

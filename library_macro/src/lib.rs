@@ -1,4 +1,8 @@
 
+
+// Sort of similar:
+// https://github.com/dtolnay/syn/tree/master/examples/heapsize 
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
