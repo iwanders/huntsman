@@ -47,11 +47,15 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                             //~ let name = inner_field.ident.unwrap();
                             println!("name; {:?}", inner_field.ident);
                             let mut name: String = Default::default();
+                            let inner_field_ident: &syn::Ident;
                             match &inner_field.ident
                             {
-                                Some(ident) => {println!("{:?}", ident.to_string());
-                                name = ident.to_string();},
-                                _ => {},
+                                Some(ident) => {
+                                    println!("{:?}", ident.to_string());
+                                    inner_field_ident = ident;
+                                    name = ident.to_string();
+                                },
+                                _ => {panic!("");},
                             }
                             match &inner_field.ty
                             {
@@ -65,7 +69,7 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
                                     let n = type_ident.to_string();
                                     fields.push(proc_macro2::TokenStream::from(quote!(
                                         //~ HelloField{start: offset_of!(root_struct, inner_field.ident), length: 0, unit: (#n).to_string(), name: (#name).to_string()}
-                                        HelloField{start: 0, length: std::mem::size_of::<#type_ident>(), unit: (#n).to_string(), name: (#name).to_string()}
+                                        HelloField{start: offset_of!(#root_struct, #inner_field_ident), length: std::mem::size_of::<#type_ident>(), unit: (#n).to_string(), name: (#name).to_string()}
                                     )));
                                     //~ fields += ", ";
                                 },
