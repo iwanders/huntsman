@@ -8,7 +8,7 @@ fn prepare_checksum(v: &Vec<u8>) -> u8 {
     return checksum;
 }
 
-pub trait Command : std::fmt::Debug {
+pub trait Command: std::fmt::Debug {
     fn serialize(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::new();
         v.push(0);
@@ -98,10 +98,9 @@ impl Command for SetLedState {
     }
 }
 
-
 #[derive(Default, Copy, Clone, Debug)]
 pub struct SetBrightness {
-    pub value: f32
+    pub value: f32,
 }
 impl SetBrightness {
     pub const CMD: u32 = 0x030f0401;
@@ -121,7 +120,7 @@ impl Command for SetBrightness {
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct SetGameMode {
-    pub value: bool
+    pub value: bool,
 }
 impl SetGameMode {
     pub const CMD: u32 = 0x03030000;
@@ -133,9 +132,24 @@ impl Command for SetGameMode {
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::new();
-        v.push(8);
+        v.push(8); // No idea what this 8 means... :/
         v.push(self.value as u8);
         return v;
+    }
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct ArbitraryCommand {
+    pub cmd: u32,
+    pub payload: Vec<u8>,
+}
+
+impl Command for ArbitraryCommand {
+    fn command_id(&self) -> u32 {
+        return self.cmd;
+    }
+    fn payload(&self) -> Vec<u8> {
+        return self.payload.clone();
     }
 }
 
@@ -173,8 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_brightness()
-    {
+    fn test_set_brightness() {
         let expected_50_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
         let mut brightness: SetBrightness = Default::default();
         brightness.value = 0.5;
@@ -184,13 +197,12 @@ mod tests {
         brightness.value = 1.0;
         assert_eq!(brightness.serialize(), expected_100_pct);
 
-        brightness.value = 2.5;  // cool, 'as u8' clamps.
+        brightness.value = 2.5; // cool, 'as u8' clamps.
         assert_eq!(brightness.serialize(), expected_100_pct);
     }
 
     #[test]
-    fn test_set_gamemode()
-    {
+    fn test_set_game_mode() {
         let enable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
         let mut game_mode: SetGameMode = Default::default();
         game_mode.value = true;

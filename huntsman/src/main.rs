@@ -15,6 +15,11 @@ pub fn main() -> Result<(), String> {
                 .short("c")
                 .help("Specifies whether to print comms."),
         )
+        .arg(
+            Arg::with_name("r")
+                .short("r")
+                .help("Specifies whether to retrieve the report after sending any command.."),
+        )
         .subcommand(
             SubCommand::with_name("flashy_thing")
                 .about("controls testing features")
@@ -47,6 +52,7 @@ pub fn main() -> Result<(), String> {
                         .help("The state to set it to."),
                 ),
         )
+        .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
         .subcommand(
             SubCommand::with_name("set_color")
                 .arg(
@@ -79,20 +85,19 @@ pub fn main() -> Result<(), String> {
                         .takes_value(true)
                         .default_value("0"),
                 )
-                .arg(Arg::with_name("index").short("i").takes_value(true))
+                .arg(Arg::with_name("index").short("i").takes_value(true)),
         );
-    let matches = app.clone().get_matches();  // weird that get_matches() takes 'self', instead of &self
+    let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
 
     // Abort with the help if no subcommand is given.
-    match matches.subcommand()
-    {
-        (_something, Some(_subcmd)) => {},
-        _ => {  &mut app.print_help();
-                println!();
-                return Err("No subcommand given.".to_string());
-            }
+    match matches.subcommand() {
+        (_something, Some(_subcmd)) => {}
+        _ => {
+            &mut app.print_help();
+            println!();
+            return Err("No subcommand given.".to_string());
+        }
     }
-
 
     // We have a subcommand, try to make the Huntsman object.
     let mut h = huntsman::Huntsman::new()?;
@@ -104,6 +109,12 @@ pub fn main() -> Result<(), String> {
         }
         _ => {}
     }
+    match matches.occurrences_of("r") {
+        1 => {
+            h.set_print_retrieve(true);
+        }
+        _ => {}
+    }
 
     if let Some(matches) = matches.subcommand_matches("flashy_thing") {
         let delay_in = matches.value_of("delay").expect("Delay be set");
@@ -112,6 +123,10 @@ pub fn main() -> Result<(), String> {
             .parse::<u64>()
             .expect("Parsing delay as a number didn't work");
         h.do_flashy_things(delay)?;
+    }
+
+    if let Some(_matches) = matches.subcommand_matches("dev_run") {
+        h.dev_run()?;
     }
 
     if let Some(matches) = matches.subcommand_matches("set_brightness") {

@@ -1,15 +1,14 @@
 use std::{thread, time};
 mod hid_hal;
 
-
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
     hal: hid_hal::HidApiHal,
     print_comm: bool,
+    print_retrieve: bool,
 }
 
 impl Huntsman {
-
     /// Construct a new Huntsman instance, this tries to connect to the usb device and errors if it can't be found.
     pub fn new() -> Result<Huntsman, String> {
         match hid_hal::HidApiHal::new() {
@@ -17,6 +16,7 @@ impl Huntsman {
                 Ok(()) => Ok(Huntsman {
                     hal: hal,
                     print_comm: false,
+                    print_retrieve: false,
                 }),
                 Err(e) => Err(e.to_string()),
             },
@@ -29,13 +29,22 @@ impl Huntsman {
         self.print_comm = state;
     }
 
+    /// Toggle whether to retrieve the feature report after sending a command
+    pub fn set_print_retrieve(&mut self, state: bool) {
+        self.print_retrieve = state;
+    }
+
     /// Function to send a command to the control endpoint.
     fn set_command(&mut self, command: &dyn huntsman_comm::Command) -> Result<(), String> {
         let v = command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", command, v);
         }
-        return self.hal.control(&v.as_slice());
+        let r = self.hal.control(&v.as_slice());
+        if self.print_retrieve && r.is_ok() {
+            println!("<- {:?}", self.hal.get_report());
+        }
+        return r;
     }
 
     /// Test function to make the keyboard flash in various colors.
@@ -56,7 +65,10 @@ impl Huntsman {
                         }
                     }
                 }
-                return self.set_command(&leds);
+                match self.set_command(&leds) {
+                    Err(e) => return Err(e.to_string()),
+                    _ => {}
+                }
                 //~ thread::sleep(time::Duration::from_millis(1));
             }
             thread::sleep(time::Duration::from_millis(delay));
@@ -104,20 +116,29 @@ impl Huntsman {
     }
 
     /// Set the brightness of the entire keyboard, specify as [0, 1.0].
-    pub fn set_brightness(&mut self, value: f32) -> Result<(), String> 
-    {
+    pub fn set_brightness(&mut self, value: f32) -> Result<(), String> {
         let mut cmd: huntsman_comm::SetBrightness = Default::default();
         cmd.value = value;
         return self.set_command(&cmd);
     }
 
     /// Toggle game mode on or off.
-    pub fn set_game_mode(&mut self, value: bool) -> Result<(), String>
-    {
+    pub fn set_game_mode(&mut self, value: bool) -> Result<(), String> {
         let mut cmd: huntsman_comm::SetGameMode = Default::default();
         cmd.value = value;
         let r = self.set_command(&cmd);
-        //~ println!("Retrieve: {:?}", self.hal.get_report());
         return r;
+    }
+
+    pub fn dev_run(&mut self) -> Result<(), String> {
+        self.set_print_comm(true);
+        self.set_print_retrieve(true);
+        // This makes it black...?
+        //~ 0x060f0200	00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00
+        let cmd = huntsman_comm::ArbitraryCommand {
+            cmd: 0x060f0200,
+            payload: vec![0x00, 0x08, 0x00, 0x00, 0x00, 0x00],
+        };
+        return self.set_command(&cmd);
     }
 }
