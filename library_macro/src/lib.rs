@@ -70,7 +70,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                     let n = type_ident.to_string();
                                     fields.push(proc_macro2::TokenStream::from(quote!(
                                         //~ HelloField{start: offset_of!(root_struct, inner_field.ident), length: 0, unit: (#n).to_string(), name: (#name).to_string()}
-                                        HelloField{start: offset_of!(#root_struct, #inner_field_ident), length: std::mem::size_of::<#type_ident>(), unit: (#n).to_string(), name: (#name).to_string()}
+                                        HelloField{start: offset_of!(#root_struct, #inner_field_ident), length: std::mem::size_of::<#type_ident>(), unit: (#n).to_string(), name: (#name).to_string()/*, children: library::HelloMacro::<#type_ident>::fields()*/}
                                     )));
                                     //~ fields += ", ";
                                 },
@@ -113,7 +113,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             }
         }
     };
-        
+    println!("Output: {:}", gen.to_string());
     gen.into()
 }
 

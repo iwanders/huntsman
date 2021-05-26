@@ -6,6 +6,7 @@ use library_macro::route;
 use library::HelloMacro;
 use library::HelloField;
 
+//~ #[derive(HelloMacro)]
 struct Z
 {
     z: f32,
