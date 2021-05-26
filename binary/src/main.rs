@@ -32,11 +32,59 @@ fn foo()
 #[macro_use]
 extern crate memoffset;
 
+
+//https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
+trait Pilot {
+    fn fly() -> u32;
+}
+
+trait Wizard {
+    fn fly() -> u32;
+}
+
+struct Human;
+
+impl Pilot for Human {
+    fn fly() -> u32 {
+        println!("This is your captain speaking.");
+        5
+    }
+}
+
+impl Wizard for Human {
+    fn fly() -> u32 {
+        println!("Up!");
+        1
+    }
+}
+
+impl Wizard for u8 {
+    fn fly() -> u32
+    {
+        println!("Up!");
+        1
+    }
+}
+
+
+impl Wizard for f32 {
+    fn fly() -> u32 {
+        println!("Up!");
+        4
+    }
+}
+
+
 fn main()
 {
     Pancakes::hello_macro();
     println!("{:?}", Pancakes::fields());  // [HelloField { start: 0, length: 4, unit: "f32", name: "x" }, HelloField { start: 8, length: 4, unit: "Z", name: "s" }]
 
     println!("Offset: {:?}", offset_of!(Pancakes, s));
+
+    <Human as Wizard>::fly();
+    <Human as Pilot>::fly();
+    println!("u8 as wizard: {}", <u8 as Wizard>::fly());
+    println!("f32 as wizard: {}", <f32 as Wizard>::fly());
 }
 
