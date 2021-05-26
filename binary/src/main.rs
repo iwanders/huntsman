@@ -21,6 +21,7 @@ struct Pancakes
     s: Z,
 }
 
+
 #[library_macro::route]
 fn foo()
 {
@@ -33,7 +34,7 @@ extern crate memoffset;
 fn main()
 {
     Pancakes::hello_macro();
-    println!("{:?}", Pancakes::fields());
+    println!("{:?}", Pancakes::fields());  // [HelloField { start: 0, length: 4, unit: "f32", name: "x" }, HelloField { start: 8, length: 4, unit: "Z", name: "s" }]
 
     println!("Offset: {:?}", offset_of!(Pancakes, s));
 }

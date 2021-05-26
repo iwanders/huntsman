@@ -1,11 +1,10 @@
 
 
 // Sort of similar:
-// https://github.com/dtolnay/syn/tree/master/examples/heapsize 
+// https://github.com/dtolnay/syn/tree/master/examples/heapsize
 
 extern crate proc_macro;
 
-use proc_macro::TokenStream;
 use quote::quote;
 extern crate proc_macro2;
 use syn;
@@ -14,9 +13,11 @@ use syn;
 #[macro_use]
 extern crate memoffset;
 
-fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
-    let name = &ast.ident;
-    println!("Full: {:?}", ast);
+fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    let name = &input.ident;
+    println!("Full: {:?}", input);
+
 
     //~ let mut fields : TokenStream = Default::default();
     //~ fields += "";
@@ -31,8 +32,8 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
         //~ state
         //~ state
     //~ }).into_iter());
-    let root_struct = &ast.ident;
-    match &ast.data
+    let root_struct = &input.ident;
+    match &input.data
     {
         syn::Data::Struct(data_struct) => {
             println!("Data struct: {:?}", data_struct);
@@ -102,7 +103,7 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
     println!("During compile :O {}", name);
     //~ let mut fields : String = Default::default();
     let mut gen = quote! {
-        impl HelloMacro for #name {
+        impl library::HelloMacro for #name {
             fn hello_macro() {
                 println!("Hello, Macro! My name is {}!", stringify!(#name));
             }
@@ -117,19 +118,20 @@ fn impl_hello_macro(ast: &syn::DeriveInput) -> TokenStream {
 }
 
 
+
 #[proc_macro_derive(HelloMacro, attributes(hello))]
-pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
+pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
-    let ast = syn::parse(input).unwrap();
+    //~ let ast = syn::parse(input).unwrap();
 
     // Build the trait implementation
-    impl_hello_macro(&ast)
+    impl_hello_macro(input)
 }
 
 
 
 #[proc_macro_attribute]
-pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn route(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     return item;
 }
