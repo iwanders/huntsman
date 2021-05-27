@@ -41,7 +41,8 @@ fn main() {
         println!("{}name: {:?}", ind, f.name);
         println!("{} start: {:?}", ind, f.start);
         println!("{} length: {:?}", ind, f.length);
-        println!("{} unit: {:?}", ind, f.unit);
+        println!("{} type_name: {:?}", ind, f.type_name);
+        println!("{} type_id: {:?}", ind, f.type_id);
         for c in &f.children {
             printer(&c, indent + 4);
         }

@@ -13,7 +13,7 @@ extern crate memoffset;
 fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
-    // println!("Full: {:?}", input);
+    println!("Full: {:#?}", input);
 
     let mut fields: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
@@ -70,7 +70,8 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                         HelloField{
                                             start: std::mem::size_of::<#type_ident>() * #i,
                                             length: std::mem::size_of::<#type_ident>(),
-                                            unit: (stringify!(#type_ident)).to_string(),
+                                            type_name: (stringify!(#type_ident)).to_string(),
+                                            type_id: std::any::TypeId::of::<#type_ident>(),
                                             name: Some((stringify!(#type_ident)).to_string() + #attributes_addition),
                                             children: vec!(<#type_ident as library::HelloMacro>::fields())}
                                     )));
@@ -92,7 +93,8 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                         HelloField{
                                             start: offset_of!(#root_struct, #inner_field_ident),
                                             length: std::mem::size_of::<#type_ident>(),
-                                            unit: (#n).to_string(),
+                                            type_name: (#n).to_string(),
+                                            type_id: std::any::TypeId::of::<#type_ident>(),
                                             name: Some((#name).to_string() + #attributes_addition),
                                             children: vec!(<#type_ident as library::HelloMacro>::fields())}
                                     )));
@@ -130,7 +132,12 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             }
             fn fields() -> HelloField
             {
-                return HelloField{start: 0, length: std::mem::size_of::<#name>(), unit: stringify!(#name).to_string(), name: Some(stringify!(#name).to_string()), children: vec!(#(#fields),*)};
+                return HelloField{start: 0,
+                                  length: std::mem::size_of::<#name>(),
+                                  type_name: stringify!(#name).to_string(),
+                                  type_id: std::any::TypeId::of::<#name>(),
+                                  name: Some(stringify!(#name).to_string()),
+                                  children: vec!(#(#fields),*)};
             }
         }
     };
