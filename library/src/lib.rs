@@ -1,7 +1,5 @@
-
 #[derive(Clone, Default, Debug)]
-pub struct HelloField
-{
+pub struct HelloField {
     pub start: usize,
     pub length: usize,
     pub unit: String,
@@ -10,20 +8,31 @@ pub struct HelloField
 }
 
 pub trait HelloMacro {
-    fn hello_macro() -> () {
-    }
+    fn hello_macro() -> () {}
     fn fields() -> HelloField;
 }
 
+//https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
+// println!("f32 as wizard: {}", <f32 as Wizard>::fly());
 impl HelloMacro for f32 {
-    fn fields() -> HelloField
-    {
-        HelloField{start: 0, length: std::mem::size_of::<f32>(), unit: "f32".to_string(), name: None, children: vec!()}
+    fn fields() -> HelloField {
+        HelloField {
+            start: 0,
+            length: std::mem::size_of::<f32>(),
+            unit: "f32".to_string(),
+            name: None,
+            children: vec![],
+        }
     }
 }
-
-
-
-//~ pub const fn size_of<T>() -> Vec<HelloField> {
-    //~ intrinsics::size_of::<T>()
-//~ }
+impl HelloMacro for u8 {
+    fn fields() -> HelloField {
+        HelloField {
+            start: 0,
+            length: std::mem::size_of::<u8>(),
+            unit: "u8".to_string(),
+            name: None,
+            children: vec![],
+        }
+    }
+}
