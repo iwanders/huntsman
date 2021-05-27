@@ -12,13 +12,13 @@ pub struct HelloField
 pub trait HelloMacro {
     fn hello_macro() -> () {
     }
-    fn fields() -> Vec<HelloField>;
+    fn fields() -> HelloField;
 }
 
 impl HelloMacro for f32 {
-    fn fields() -> Vec<HelloField>
+    fn fields() -> HelloField
     {
-        vec!(HelloField{start: 0, length: std::mem::size_of::<f32>(), unit: "f32".to_string(), name: None, children: vec!()})
+        HelloField{start: 0, length: std::mem::size_of::<f32>(), unit: "f32".to_string(), name: None, children: vec!()}
     }
 }
 

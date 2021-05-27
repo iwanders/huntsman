@@ -17,9 +17,9 @@ struct Z
 struct Pancakes
 {
     #[hello("foo")]
-    x: f32,
-    arr: [u8; 3],
-    s: Z,
+    a_float: f32,
+    array_three_char: [u8; 3],
+    struct_Z: Z,
 }
 
 
@@ -80,11 +80,31 @@ fn main()
     Pancakes::hello_macro();
     println!("{:?}", Pancakes::fields());  // [HelloField { start: 0, length: 4, unit: "f32", name: "x" }, HelloField { start: 8, length: 4, unit: "Z", name: "s" }]
 
-    println!("Offset: {:?}", offset_of!(Pancakes, s));
+    println!("Offset: {:?}", offset_of!(Pancakes, array_three_char));
 
     <Human as Wizard>::fly();
     <Human as Pilot>::fly();
     println!("u8 as wizard: {}", <u8 as Wizard>::fly());
     println!("f32 as wizard: {}", <f32 as Wizard>::fly());
+
+
+    pub fn printer(f: &library::HelloField, indent: usize)
+    {
+        let mut ind: String = String::new();
+        for i in 0..indent
+        {
+            ind += " ";
+        }
+
+        println!("{}name: {:?}", ind, f.name);
+        println!("{} start: {:?}", ind, f.start);
+        println!("{} length: {:?}", ind, f.length);
+        println!("{} unit: {:?}", ind, f.unit);
+        for c in &f.children
+        {
+            printer(&c, indent +4);
+        }
+    }
+    printer(&Pancakes::fields(), 0)
 }
 
