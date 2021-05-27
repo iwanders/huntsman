@@ -5,14 +5,24 @@ pub struct HelloField
     pub start: usize,
     pub length: usize,
     pub unit: String,
-    pub name: String,
-    //~ pub children: Vec<HelloField>;
+    pub name: Option<String>,
+    pub children: Vec<HelloField>,
 }
 
 pub trait HelloMacro {
-    fn hello_macro();
+    fn hello_macro() -> () {
+    }
     fn fields() -> Vec<HelloField>;
 }
+
+impl HelloMacro for f32 {
+    fn fields() -> Vec<HelloField>
+    {
+        vec!(HelloField{start: 0, length: std::mem::size_of::<f32>(), unit: "f32".to_string(), name: None, children: vec!()})
+    }
+}
+
+
 
 //~ pub const fn size_of<T>() -> Vec<HelloField> {
     //~ intrinsics::size_of::<T>()
