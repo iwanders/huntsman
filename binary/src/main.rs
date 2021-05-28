@@ -6,12 +6,12 @@ use library::HelloMacro;
 use library_macro::route;
 use library_macro::HelloMacro;
 
-// #[derive(HelloMacro)]
+#[derive(HelloMacro, Debug)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-// #[derive(HelloMacro)]
+#[derive(HelloMacro, Debug)]
 #[repr(C)]
 struct Pancakes {
     // #[hello("foo")]
@@ -41,6 +41,7 @@ fn main() {
         }
 
         println!("{}name: {:?}", ind, f.name);
+        println!("{} value: {:?}", ind, f.value);
         println!("{} start: {:?}", ind, f.start);
         println!("{} length: {:?}", ind, f.length);
         println!("{} type_name: {:?}", ind, f.type_name);
@@ -49,11 +50,28 @@ fn main() {
             printer(&c, indent + 4);
         }
     }
-    // let mut bound = &stack.fields();
-    // printer(bound, 0);
 
-    // printer(&bound.children[0], 0);
+
+    println!("{:?}", stack);
+    let mut bound = stack.fields();
+    printer(&bound, 0);
+
+    printer(&bound.children[0], 0);
+    match (&mut bound.children[0].children[0].value)
+    {
+        library::PrimitiveBind::U8(z) => 
+        {
+            **z = 127;
+        },
+        _ => {}
+    }
+    println!("{:?}", stack);
+
+    stack.first_char = 10;
+    println!("{:?}", stack);
+
     // &bound.children[0].assign_u8(127);
+
     let mut mu8: u8 = 3;
 
     let f = HelloField {

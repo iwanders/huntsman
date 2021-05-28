@@ -64,18 +64,20 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 }
                                 // let count = &arr.len.lit.token;
                                 // let count = 1 as usize;
-                                for i in 0..count
-                                {
-                                    fields.push(proc_macro2::TokenStream::from(quote!(
-                                        HelloField{
-                                            start: std::mem::size_of::<#type_ident>() * #i,
-                                            length: std::mem::size_of::<#type_ident>(),
-                                            type_name: (stringify!(#type_ident)).to_string(),
-                                            type_id: std::any::TypeId::of::<#type_ident>(),
-                                            name: Some((stringify!(#type_ident)).to_string() + #attributes_addition),
-                                            children: vec!(self.#inner_field_ident[#i].fields())}
-                                    )));
-                                }
+                                //split_at_mut() need to be used here, but it fits the architecture poorly atm.
+                                // for i in 0..count
+                                // {
+                                    // fields.push(proc_macro2::TokenStream::from(quote!(
+                                        // HelloField{
+                                  // value: library::PrimitiveBind::None,
+                                            // start: std::mem::size_of::<#type_ident>() * #i,
+                                            // length: std::mem::size_of::<#type_ident>(),
+                                            // type_name: (stringify!(#type_ident)).to_string(),
+                                            // type_id: std::any::TypeId::of::<#type_ident>(),
+                                            // name: Some((stringify!(#type_ident)).to_string() + #attributes_addition),
+                                            // children: vec!(self.#inner_field_ident[#i].fields())}
+                                    // )));
+                                // }
                             }
                             syn::Type::Verbatim(v) => {
                                 println!("Its an verbatim!? {:?}", v);
@@ -91,6 +93,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let n = type_ident.to_string();
                                 fields.push(proc_macro2::TokenStream::from(quote!(
                                         HelloField{
+                                            value: library::PrimitiveBind::None,
                                             start: offset_of!(#root_struct, #inner_field_ident),
                                             length: std::mem::size_of::<#type_ident>(),
                                             type_name: (#n).to_string(),
@@ -130,9 +133,10 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             fn hello_macro() {
                 println!("Hello, Macro! My name is {}!", stringify!(#name));
             }
-            fn fields(&self) -> HelloField
+            fn fields<'a>(&'a mut self) -> HelloField
             {
                 return HelloField{start: 0,
+                                  value: library::PrimitiveBind::None,
                                   length: std::mem::size_of::<#name>(),
                                   type_name: stringify!(#name).to_string(),
                                   type_id: std::any::TypeId::of::<#name>(),
