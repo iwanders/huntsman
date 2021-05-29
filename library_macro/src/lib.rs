@@ -9,11 +9,11 @@ use syn;
 
 extern crate memoffset;
 
-fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
 
-    let mut fields: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut immutable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
 
@@ -47,7 +47,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let type_ident = &arr.elem;
                                 let arr_len = &arr.len;
                                 // Create the fields for this array, unwrapping the internals.
-                                fields.push(proc_macro2::TokenStream::from(quote!(
+                                fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
                                         library::MutableField{
                                             value: library::MutRef::None,
                                             start: offset_of!(#root_struct, #inner_field_ident),
@@ -90,7 +90,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let type_ident = &type_path.path.segments[0].ident;
                                 let n = type_ident.to_string();
 
-                                fields.push(proc_macro2::TokenStream::from(quote!(
+                                fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
                                     library::MutableField{
                                         value: library::MutRef::None,
                                         start: offset_of!(#root_struct, #inner_field_ident),
@@ -141,7 +141,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                              type_name: stringify!(#name),
                              type_id: std::any::TypeId::of::<#name>(),
                              name: Some(stringify!(#name).to_string()),
-                             children: vec!(#(#fields),*)};
+                             children: vec!(#(#fields_for_mut),*)};
             }
 
             fn fields() -> library::Field {
@@ -162,5 +162,5 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
 #[proc_macro_derive(Inspectable, attributes(hello))]
 pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_hello_macro(input)
+    impl_inspectable_macro(input)
 }
