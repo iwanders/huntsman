@@ -3,7 +3,6 @@ extern crate library_macro;
 
 use library::HelloField;
 use library::HelloMacro;
-use library_macro::route;
 use library_macro::HelloMacro;
 
 #[derive(HelloMacro, Debug, Default)]
@@ -22,11 +21,20 @@ struct Pancakes {
     array_with_three_structs: [StructWithFloat; 3],
 }
 
-#[library_macro::route]
-fn foo() {}
 
 #[macro_use]
 extern crate memoffset;
+
+
+// #[derive(HelloMacro, Debug)]
+#[repr(C)]
+#[allow(dead_code)]
+enum Flour
+{
+    FullGrain(u8),
+    White(f32)
+}
+
 
 fn main() {
     // Pancakes::hello_macro();
@@ -38,7 +46,7 @@ fn main() {
 
     pub fn printer(f: &library::HelloField, indent: usize) {
         let mut ind: String = String::new();
-        for i in 0..indent {
+        for _i in 0..indent {
             ind += " ";
         }
 
@@ -59,7 +67,7 @@ fn main() {
     printer(&bound, 0);
 
     printer(&bound.children[0], 0);
-    match (&mut bound.children[0].children[0].value)
+    match &mut bound.children[0].children[0].value
     {
         library::PrimitiveBind::U8(z) => 
         {
@@ -69,7 +77,7 @@ fn main() {
     }
 
 
-    match (&mut bound.children[2].children[0].value)
+    match &mut bound.children[2].children[0].value
     {
         library::PrimitiveBind::U8(z) => 
         {
@@ -79,7 +87,7 @@ fn main() {
     }
 
 
-    match (&mut bound.children[4].children[1].children[0].children[0].value)
+    match &mut bound.children[4].children[1].children[0].children[0].value
     {
         library::PrimitiveBind::F32(z) => 
         {
@@ -112,7 +120,7 @@ fn main() {
     // println!("Mu8: {}", mu8);
     match f.value
     {
-        library::PrimitiveBind::U8(mut v) => {
+        library::PrimitiveBind::U8(v) => {
             println!("V: {}", v);
             *v = 123;
             println!("V: {}", v);
