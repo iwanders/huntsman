@@ -48,8 +48,8 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let arr_len = &arr.len;
                                 // Create the fields for this array, unwrapping the internals.
                                 fields.push(proc_macro2::TokenStream::from(quote!(
-                                        HelloField{
-                                            value: library::PrimitiveBind::None,
+                                        library::Field{
+                                            value: library::MutRef::None,
                                             start: offset_of!(#root_struct, #inner_field_ident),
                                             length: std::mem::size_of::<#type_ident>() *#arr_len ,
                                             type_name: (stringify!(#type_ident)).to_string(),
@@ -60,7 +60,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                                     let mut fields = x.fields();
                                                     fields.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
-                                                }).collect::<Vec<HelloField>>(),
+                                                }).collect::<Vec<library::Field>>(),
                                         }
                                     )
                                 ));
@@ -75,8 +75,8 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let n = type_ident.to_string();
 
                                 fields.push(proc_macro2::TokenStream::from(quote!(
-                                    HelloField{
-                                        value: library::PrimitiveBind::None,
+                                    library::Field{
+                                        value: library::MutRef::None,
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>(),
                                         type_name: (#n).to_string(),
@@ -107,19 +107,16 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
     }
     let gen = quote! {
-        impl library::HelloMacro for #name {
-            fn hello_macro() {
-                println!("Hello, Macro! My name is {}!", stringify!(#name));
-            }
-            fn fields<'a>(&'a mut self) -> HelloField
+        impl library::Inspectable for #name {
+            fn fields<'a>(&'a mut self) -> library::Field
             {
-                return HelloField{start: 0,
-                                  value: library::PrimitiveBind::None,
-                                  length: std::mem::size_of::<#name>(),
-                                  type_name: stringify!(#name).to_string(),
-                                  type_id: std::any::TypeId::of::<#name>(),
-                                  name: Some(stringify!(#name).to_string()),
-                                  children: vec!(#(#fields),*)};
+                return library::Field{start: 0,
+                             value: library::MutRef::None,
+                             length: std::mem::size_of::<#name>(),
+                             type_name: stringify!(#name).to_string(),
+                             type_id: std::any::TypeId::of::<#name>(),
+                             name: Some(stringify!(#name).to_string()),
+                             children: vec!(#(#fields),*)};
             }
         }
     };
@@ -127,7 +124,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     gen.into()
 }
 
-#[proc_macro_derive(HelloMacro, attributes(hello))]
+#[proc_macro_derive(Inspectable, attributes(hello))]
 pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_hello_macro(input)
 }

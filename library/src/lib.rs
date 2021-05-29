@@ -1,32 +1,32 @@
 #[derive(Debug)]
-pub enum PrimitiveBind<'a> {
+pub enum MutRef<'a> {
     U8(&'a mut u8),
     F32(&'a mut f32),
     None,
 }
 
 #[derive(Debug)]
-pub struct HelloField<'a> {
-    pub value: PrimitiveBind<'a>,
+pub struct Field<'a> {
+    pub value: MutRef<'a>,
     pub start: usize,
     pub length: usize,
     pub type_name: String,
     pub type_id: std::any::TypeId,
     pub name: Option<String>,
-    pub children: Vec<HelloField<'a>>,
+    pub children: Vec<Field<'a>>,
 }
 
-pub trait HelloMacro {
+pub trait Inspectable {
     fn hello_macro() -> () {}
-    fn fields<'a>(&'a mut self) -> HelloField<'a>;
+    fn fields<'a>(&'a mut self) -> Field<'a>;
 }
 
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
 // println!("f32 as wizard: {}", <f32 as Wizard>::fly());
-impl HelloMacro for f32 {
-    fn fields<'a>(&'a mut self) -> HelloField {
-        HelloField {
-            value: PrimitiveBind::F32(self),
+impl Inspectable for f32 {
+    fn fields<'a>(&'a mut self) -> Field {
+        Field {
+            value: MutRef::F32(self),
             start: 0,
             length: std::mem::size_of::<f32>(),
             type_name: "f32".to_string(),
@@ -37,10 +37,10 @@ impl HelloMacro for f32 {
     }
 }
 
-impl HelloMacro for u8 {
-    fn fields<'a>(&'a mut self) -> HelloField {
-        HelloField {
-            value: PrimitiveBind::U8(self),
+impl Inspectable for u8 {
+    fn fields<'a>(&'a mut self) -> Field {
+        Field {
+            value: MutRef::U8(self),
             start: 0,
             length: std::mem::size_of::<u8>(),
             type_name: "u8".to_string(),

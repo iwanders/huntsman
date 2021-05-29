@@ -1,16 +1,16 @@
 extern crate library;
 extern crate library_macro;
 
-use library::HelloField;
-use library::HelloMacro;
-use library_macro::HelloMacro;
+// use library::Field;
+use library::Inspectable;
+use library_macro::Inspectable;
 
-#[derive(HelloMacro, Debug, Default)]
+#[derive(Inspectable, Debug, Default)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(HelloMacro, Debug, Default)]
+#[derive(Inspectable, Debug, Default)]
 #[repr(C)]
 struct Pancakes {
     // #[hello("foo")]
@@ -24,7 +24,7 @@ struct Pancakes {
 #[macro_use]
 extern crate memoffset;
 
-// #[derive(HelloMacro, Debug)]
+// #[derive(Inspectable, Debug)]
 #[repr(C)]
 #[allow(dead_code)]
 enum Flour {
@@ -40,7 +40,7 @@ fn main() {
 
     // println!("Offset: {:?}", offset_of!(Pancakes, array_three_chars));
 
-    pub fn printer(f: &library::HelloField, indent: usize) {
+    pub fn printer(f: &library::Field, indent: usize) {
         let mut ind: String = String::new();
         for _i in 0..indent {
             ind += " ";
@@ -63,21 +63,21 @@ fn main() {
 
     printer(&bound.children[0], 0);
     match &mut bound.children[0].children[0].value {
-        library::PrimitiveBind::U8(z) => {
+        library::MutRef::U8(z) => {
             **z = 127;
         }
         _ => {}
     }
 
     match &mut bound.children[2].children[0].value {
-        library::PrimitiveBind::U8(z) => {
+        library::MutRef::U8(z) => {
             **z = 33;
         }
         _ => {}
     }
 
     match &mut bound.children[4].children[1].children[0].children[0].value {
-        library::PrimitiveBind::F32(z) => {
+        library::MutRef::F32(z) => {
             **z = 1337.3;
         }
         _ => {}
@@ -92,8 +92,8 @@ fn main() {
 
     let mut mu8: u8 = 3;
 
-    let f = HelloField {
-        value: library::PrimitiveBind::U8(&mut mu8),
+    let f = library::Field {
+        value: library::MutRef::U8(&mut mu8),
         start: 0,
         length: std::mem::size_of::<u8>(),
         type_name: "u8".to_string(),
@@ -105,7 +105,7 @@ fn main() {
     // mu8 = 10;
     // println!("Mu8: {}", mu8);
     match f.value {
-        library::PrimitiveBind::U8(v) => {
+        library::MutRef::U8(v) => {
             println!("V: {}", v);
             *v = 123;
             println!("V: {}", v);
