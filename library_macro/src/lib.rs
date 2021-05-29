@@ -65,11 +65,24 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 // let count = &arr.len.lit.token;
                                 // let count = 1 as usize;
                                 //split_at_mut() need to be used here, but it fits the architecture poorly atm.
+                                fields.push(proc_macro2::TokenStream::from(quote!(
+                                        HelloField{
+                                            value: library::PrimitiveBind::None,
+                                            start: 0,
+                                            length: std::mem::size_of::<#type_ident>(),
+                                            type_name: (stringify!(#type_ident)).to_string(),
+                                            type_id: std::any::TypeId::of::<#type_ident>(),
+                                            name: Some((#name).to_string() + #attributes_addition),
+                                            children: self.#inner_field_ident.iter_mut().map(|mut x| 
+                                                    x.fields()).collect::<Vec<HelloField>>(),
+                                        }
+                                    )
+                                ));
                                 // for i in 0..count
                                 // {
                                     // fields.push(proc_macro2::TokenStream::from(quote!(
                                         // HelloField{
-                                  // value: library::PrimitiveBind::None,
+                                            // value: library::PrimitiveBind::None,
                                             // start: std::mem::size_of::<#type_ident>() * #i,
                                             // length: std::mem::size_of::<#type_ident>(),
                                             // type_name: (stringify!(#type_ident)).to_string(),

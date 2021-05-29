@@ -6,12 +6,12 @@ use library::HelloMacro;
 use library_macro::route;
 use library_macro::HelloMacro;
 
-#[derive(HelloMacro, Debug)]
+#[derive(HelloMacro, Debug, Default)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(HelloMacro, Debug)]
+#[derive(HelloMacro, Debug, Default)]
 #[repr(C)]
 struct Pancakes {
     // #[hello("foo")]
@@ -19,6 +19,7 @@ struct Pancakes {
     a_float: f32,
     array_three_chars: [u8; 3],
     struct_z: StructWithFloat,
+    array_with_three_structs: [StructWithFloat; 3],
 }
 
 #[library_macro::route]
@@ -29,7 +30,8 @@ extern crate memoffset;
 
 fn main() {
     // Pancakes::hello_macro();
-    let mut stack: Pancakes = Pancakes{first_char: 3u8, a_float: 3.3, array_three_chars: [0, 0, 0], struct_z: StructWithFloat{float_inside: 8.8}};
+    // let mut stack: Pancakes = Pancakes{first_char: 3u8, a_float: 3.3, array_three_chars: [0, 0, 0], struct_z: StructWithFloat{float_inside: 8.8}};
+    let mut stack: Pancakes = Default::default();
     // println!("{:?}", stack.fields()); // [HelloField { start: 0, length: 4, unit: "f32", name: "x" }, HelloField { start: 8, length: 4, unit: "Z", name: "s" }]
 
     // println!("Offset: {:?}", offset_of!(Pancakes, array_three_chars));
@@ -65,6 +67,28 @@ fn main() {
         },
         _ => {}
     }
+
+
+    match (&mut bound.children[2].children[0].value)
+    {
+        library::PrimitiveBind::U8(z) => 
+        {
+            **z = 33;
+        },
+        _ => {}
+    }
+
+
+    match (&mut bound.children[4].children[1].children[0].children[0].value)
+    {
+        library::PrimitiveBind::F32(z) => 
+        {
+            **z = 1337.3;
+        },
+        _ => {}
+    }
+
+
     println!("{:?}", stack);
 
     stack.first_char = 10;
