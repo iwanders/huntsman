@@ -75,17 +75,20 @@ fn sdfsdf() {
         let for_lookup = unused_mutable_instance.fields();
 
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
+        assert_eq!(for_lookup.children[0].name.as_ref().expect("Should have a name"), "first_char");
         raw_bytes[for_lookup.children[0].start] = char_value;  // first byte.
         // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
         let int_bytes = int_value.to_le_bytes();
+        assert_eq!(for_lookup.children[1].name.as_ref().expect("Should have a name"), "an_uint");
         for i in 0..for_lookup.children[1].length
         {
             raw_bytes[for_lookup.children[1].start + i] = int_bytes[i];
         }
 
         let float_bytes = float_value.to_le_bytes();
+        assert_eq!(for_lookup.children[02].name.as_ref().expect("Should have a name"), "a_float");
         for i in 0..for_lookup.children[2].length
         {
             raw_bytes[for_lookup.children[2].start + i] = float_bytes[i];
@@ -93,6 +96,7 @@ fn sdfsdf() {
 
         // Now we get to the realm of nesting... 
         let array_offset = for_lookup.children[3].start;
+        assert_eq!(for_lookup.children[3].name.as_ref().expect("Should have a name"), "array_three_chars");
         for i in 0..for_lookup.children[3].children.len()
         {
             raw_bytes[array_offset + for_lookup.children[3].children[i].start] = char_array_value[i].to_le_bytes()[0];
