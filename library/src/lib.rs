@@ -2,7 +2,6 @@ extern crate library_macro;
 
 pub use library_macro::Inspectable;
 
-
 // Don't really know how to forward these to dependants...
 // #[macro_use]
 // extern crate memoffset;
@@ -65,7 +64,7 @@ macro_rules! make_inspectable {
                 }
             }
         }
-    }
+    };
 }
 
 make_inspectable!(i8, MutRef::I8);
