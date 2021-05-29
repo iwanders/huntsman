@@ -1,8 +1,7 @@
 #[derive(Debug)]
-pub enum PrimitiveBind<'a>
-{
+pub enum PrimitiveBind<'a> {
     U8(&'a mut u8),
-    F32(&'a  mut  f32),
+    F32(&'a mut f32),
     None,
 }
 
@@ -19,10 +18,8 @@ pub struct HelloField<'a> {
 
 pub trait HelloMacro {
     fn hello_macro() -> () {}
-    fn fields<'a>( &'a mut self) -> HelloField<'a>;
-
+    fn fields<'a>(&'a mut self) -> HelloField<'a>;
 }
-
 
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
 // println!("f32 as wizard: {}", <f32 as Wizard>::fly());
@@ -38,7 +35,6 @@ impl HelloMacro for f32 {
             children: vec![],
         }
     }
-
 }
 
 impl HelloMacro for u8 {

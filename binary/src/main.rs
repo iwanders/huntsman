@@ -21,20 +21,16 @@ struct Pancakes {
     array_with_three_structs: [StructWithFloat; 3],
 }
 
-
 #[macro_use]
 extern crate memoffset;
-
 
 // #[derive(HelloMacro, Debug)]
 #[repr(C)]
 #[allow(dead_code)]
-enum Flour
-{
+enum Flour {
     FullGrain(u8),
-    White(f32)
+    White(f32),
 }
-
 
 fn main() {
     // Pancakes::hello_macro();
@@ -61,41 +57,31 @@ fn main() {
         }
     }
 
-
     println!("{:?}", stack);
     let mut bound = stack.fields();
     printer(&bound, 0);
 
     printer(&bound.children[0], 0);
-    match &mut bound.children[0].children[0].value
-    {
-        library::PrimitiveBind::U8(z) => 
-        {
+    match &mut bound.children[0].children[0].value {
+        library::PrimitiveBind::U8(z) => {
             **z = 127;
-        },
+        }
         _ => {}
     }
 
-
-    match &mut bound.children[2].children[0].value
-    {
-        library::PrimitiveBind::U8(z) => 
-        {
+    match &mut bound.children[2].children[0].value {
+        library::PrimitiveBind::U8(z) => {
             **z = 33;
-        },
+        }
         _ => {}
     }
 
-
-    match &mut bound.children[4].children[1].children[0].children[0].value
-    {
-        library::PrimitiveBind::F32(z) => 
-        {
+    match &mut bound.children[4].children[1].children[0].children[0].value {
+        library::PrimitiveBind::F32(z) => {
             **z = 1337.3;
-        },
+        }
         _ => {}
     }
-
 
     println!("{:?}", stack);
 
@@ -118,16 +104,13 @@ fn main() {
 
     // mu8 = 10;
     // println!("Mu8: {}", mu8);
-    match f.value
-    {
+    match f.value {
         library::PrimitiveBind::U8(v) => {
             println!("V: {}", v);
             *v = 123;
             println!("V: {}", v);
         }
-        _ =>{}
+        _ => {}
     }
     println!("Mu8: {}", mu8);
-    
-
 }

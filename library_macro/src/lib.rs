@@ -23,10 +23,10 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             match &data_struct.fields {
                 syn::Fields::Named(z) => {
                     for inner_field in &z.named {
-                        let mut attributes_addition : String = String::new();
-                        if inner_field.attrs.len() != 0
-                        {
-                            attributes_addition = ":attribute_from:".to_string() + &inner_field.attrs[0].path.segments[0].ident.to_string();
+                        let mut attributes_addition: String = String::new();
+                        if inner_field.attrs.len() != 0 {
+                            attributes_addition = ":attribute_from:".to_string()
+                                + &inner_field.attrs[0].path.segments[0].ident.to_string();
                             println!("attributes: {:?}", inner_field.attrs[0]);
                         }
 
@@ -45,45 +45,45 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             syn::Type::Array(arr) => {
                                 // Element type
                                 let type_ident = &arr.elem;
-
+                                let arr_len = &arr.len;
                                 // Create the fields for this array, unwrapping the internals.
                                 fields.push(proc_macro2::TokenStream::from(quote!(
                                         HelloField{
                                             value: library::PrimitiveBind::None,
-                                            start: 0,
-                                            length: std::mem::size_of::<#type_ident>(),
+                                            start: offset_of!(#root_struct, #inner_field_ident),
+                                            length: std::mem::size_of::<#type_ident>() *#arr_len ,
                                             type_name: (stringify!(#type_ident)).to_string(),
                                             type_id: std::any::TypeId::of::<#type_ident>(),
                                             name: Some((#name).to_string() + #attributes_addition),
-                                            children: self.#inner_field_ident.iter_mut().map(|mut x| 
-                                                    x.fields()).collect::<Vec<HelloField>>(),
+                                            children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
+                                                {
+                                                    let mut fields = x.fields();
+                                                    fields.start = i * std::mem::size_of::<#type_ident>();
+                                                    fields
+                                                }).collect::<Vec<HelloField>>(),
                                         }
                                     )
                                 ));
                             }
                             syn::Type::Verbatim(v) => {
-                                panic!("Its an verbatim!? {:?}", v);  // Shouldn't really happen in a struct derive
+                                panic!("Its an verbatim!? {:?}", v); // Shouldn't really happen in a struct derive
                             }
                             syn::Type::Path(type_path) => {
+                                // Path, a name to another type, or a primitive.
                                 // println!("Its a type_path {:#?}", type_path);
-                                // println!("Its a {:#?}", type_path.path.segments[0].ident);
-                                // println!(
-                                    // "Its a stringified {:?}",
-                                    // type_path.path.segments[0].ident.to_string()
-                                // );
                                 let type_ident = &type_path.path.segments[0].ident;
                                 let n = type_ident.to_string();
 
                                 fields.push(proc_macro2::TokenStream::from(quote!(
-                                        HelloField{
-                                            value: library::PrimitiveBind::None,
-                                            start: offset_of!(#root_struct, #inner_field_ident),
-                                            length: std::mem::size_of::<#type_ident>(),
-                                            type_name: (#n).to_string(),
-                                            type_id: std::any::TypeId::of::<#type_ident>(),
-                                            name: Some((#name).to_string() + #attributes_addition),
-                                            children: vec!(self.#inner_field_ident.fields())}
-                                    )));
+                                    HelloField{
+                                        value: library::PrimitiveBind::None,
+                                        start: offset_of!(#root_struct, #inner_field_ident),
+                                        length: std::mem::size_of::<#type_ident>(),
+                                        type_name: (#n).to_string(),
+                                        type_id: std::any::TypeId::of::<#type_ident>(),
+                                        name: Some((#name).to_string() + #attributes_addition),
+                                        children: vec!(self.#inner_field_ident.fields())}
+                                )));
                             }
                             _ => {
                                 println!("Its somethign else : {:?}", &inner_field.ty);
