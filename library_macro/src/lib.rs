@@ -12,9 +12,9 @@ extern crate memoffset;
 fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
-    // println!("Full: {:#?}", input);
 
     let mut fields: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut immutable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
 
     match &input.data {
@@ -48,7 +48,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let arr_len = &arr.len;
                                 // Create the fields for this array, unwrapping the internals.
                                 fields.push(proc_macro2::TokenStream::from(quote!(
-                                        library::Field{
+                                        library::MutableField{
                                             value: library::MutRef::None,
                                             start: offset_of!(#root_struct, #inner_field_ident),
                                             length: std::mem::size_of::<#type_ident>() *#arr_len ,
@@ -57,7 +57,23 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                             name: Some((#name).to_string() + #attributes_addition),
                                             children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
                                                 {
-                                                    let mut fields = x.fields();
+                                                    let mut fields = x.fields_as_mut();
+                                                    fields.start = i * std::mem::size_of::<#type_ident>();
+                                                    fields
+                                                }).collect::<Vec<library::MutableField>>(),
+                                        }
+                                    )
+                                ));
+                                immutable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                        library::Field{
+                                            start: offset_of!(#root_struct, #inner_field_ident),
+                                            length: std::mem::size_of::<#type_ident>() *#arr_len ,
+                                            type_name: stringify!(#type_ident),
+                                            type_id: std::any::TypeId::of::<#type_ident>(),
+                                            name: Some((#name).to_string() + #attributes_addition),
+                                            children: (0..#arr_len).map(|i|
+                                                {
+                                                    let mut fields = <#type_ident as Inspectable>::fields();
                                                     fields.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
                                                 }).collect::<Vec<library::Field>>(),
@@ -75,14 +91,23 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                 let n = type_ident.to_string();
 
                                 fields.push(proc_macro2::TokenStream::from(quote!(
-                                    library::Field{
+                                    library::MutableField{
                                         value: library::MutRef::None,
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>(),
                                         type_name: #n,
                                         type_id: std::any::TypeId::of::<#type_ident>(),
                                         name: Some((#name).to_string() + #attributes_addition),
-                                        children: vec!(self.#inner_field_ident.fields())}
+                                        children: vec!(self.#inner_field_ident.fields_as_mut())}
+                                )));
+                                immutable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                    library::Field{
+                                        start: offset_of!(#root_struct, #inner_field_ident),
+                                        length: std::mem::size_of::<#type_ident>(),
+                                        type_name: #n,
+                                        type_id: std::any::TypeId::of::<#type_ident>(),
+                                        name: Some((#name).to_string() + #attributes_addition),
+                                        children: vec!(<#type_ident as Inspectable>::fields())}
                                 )));
                             }
                             _ => {
@@ -108,9 +133,9 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     let gen = quote! {
         impl library::Inspectable for #name {
-            fn fields<'a>(&'a mut self) -> library::Field
+            fn fields_as_mut<'a>(&'a mut self) -> library::MutableField
             {
-                return library::Field{start: 0,
+                return library::MutableField{start: 0,
                              value: library::MutRef::None,
                              length: std::mem::size_of::<#name>(),
                              type_name: stringify!(#name),
@@ -118,9 +143,20 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                              name: Some(stringify!(#name).to_string()),
                              children: vec!(#(#fields),*)};
             }
+
+            fn fields() -> library::Field {
+                library::Field {
+                     start: 0,
+                     length: std::mem::size_of::<#name>(),
+                     type_name: stringify!(#name),
+                     type_id: std::any::TypeId::of::<#name>(),
+                     name: Some(stringify!(#name).to_string()),
+                     children: vec!(#(#immutable_fields),*)
+                }
+            }
         }
     };
-    // println!("Output: {:}", gen.to_string());
+    println!("Output: {:}", gen.to_string());
     gen.into()
 }
 

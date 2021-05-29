@@ -31,19 +31,31 @@ pub enum MutRef<'a> {
 
 // Struct to represent a field in a struct.
 #[derive(Debug)]
-pub struct Field<'a> {
+pub struct MutableField<'a> {
     pub value: MutRef<'a>,
+
     pub start: usize,
     pub length: usize,
     pub type_name: &'static str,
     pub type_id: std::any::TypeId,
     pub name: Option<String>,
-    pub children: Vec<Field<'a>>,
+    pub children: Vec<MutableField<'a>>,
 }
 
+#[derive(Debug)]
+pub struct Field {
+    pub start: usize,
+    pub length: usize,
+    pub type_name: &'static str,
+    pub type_id: std::any::TypeId,
+    pub name: Option<String>,
+    pub children: Vec<Field>,
+}
+
+
 pub trait Inspectable {
-    fn hello_macro() -> () {}
-    fn fields<'a>(&'a mut self) -> Field<'a>;
+    fn fields_as_mut<'a>(&'a mut self) -> MutableField<'a>;
+    fn fields() -> Field where Self: Sized;   // We need to be sized anyway for all this struct stuff.
 }
 
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
@@ -52,9 +64,20 @@ pub trait Inspectable {
 macro_rules! make_inspectable {
     ($a:ty, $v: path) => {
         impl Inspectable for $a {
-            fn fields<'a>(&'a mut self) -> Field {
-                Field {
+            fn fields_as_mut<'a>(&'a mut self) -> MutableField {
+                MutableField {
                     value: $v(self),
+                    start: 0,
+                    length: std::mem::size_of::<$a>(),
+                    type_name: std::any::type_name::<$a>(),
+                    type_id: std::any::TypeId::of::<$a>(),
+                    name: None,
+                    children: vec![],
+                }
+            }
+
+            fn fields() -> Field where Self: Sized {
+                Field {
                     start: 0,
                     length: std::mem::size_of::<$a>(),
                     type_name: std::any::type_name::<$a>(),

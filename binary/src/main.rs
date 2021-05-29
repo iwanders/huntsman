@@ -40,7 +40,7 @@ fn main() {
 
     // println!("Offset: {:?}", offset_of!(Pancakes, array_three_chars));
 
-    pub fn printer(f: &library::Field, indent: usize) {
+    pub fn printer(f: &library::MutableField, indent: usize) {
         let mut ind: String = String::new();
         for _i in 0..indent {
             ind += " ";
@@ -58,7 +58,7 @@ fn main() {
     }
 
     println!("{:?}", stack);
-    let mut bound = stack.fields();
+    let mut bound = stack.fields_as_mut();
     printer(&bound, 0);
 
     printer(&bound.children[0], 0);
@@ -92,7 +92,7 @@ fn main() {
 
     let mut mu8: u8 = 3;
 
-    let f = library::Field {
+    let f = library::MutableField {
         value: library::MutRef::U8(&mut mu8),
         start: 0,
         length: std::mem::size_of::<u8>(),

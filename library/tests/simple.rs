@@ -22,7 +22,7 @@ struct Pancakes {
 #[test]
 fn test_starts() {
     let mut stack: Pancakes = Default::default();
-    let bound = stack.fields();
+    let bound = stack.fields_as_mut();
 
     assert_eq!(offset_of!(Pancakes, first_char), bound.children[0].start);
     assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].start);
@@ -95,9 +95,7 @@ fn sdfsdf() {
     };
 
     {
-        // This is pretty yucky, we need an extra instance just to obtain the field indices... :/
-        let mut unused_mutable_instance: Pancakes = Default::default();
-        let for_lookup = unused_mutable_instance.fields();
+        let for_lookup = Pancakes::fields();
 
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(
