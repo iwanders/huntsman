@@ -1,3 +1,11 @@
+extern crate library_macro;
+
+pub use library_macro::Inspectable;
+
+
+// Don't really know how to forward these to dependants...
+// #[macro_use]
+// extern crate memoffset;
 
 // Enum to hold the mutable scalar types in Rust; https://doc.rust-lang.org/rust-by-example/primitives.html#scalar-types
 #[derive(Debug)]

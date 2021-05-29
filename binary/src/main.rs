@@ -3,7 +3,7 @@ extern crate library_macro;
 
 // use library::Field;
 use library::Inspectable;
-use library_macro::Inspectable;
+// use library_macro::Inspectable;
 
 #[derive(Inspectable, Debug, Default)]
 struct StructWithFloat {

@@ -18,6 +18,10 @@ dependencies = [
 [[package]]
 name = "library"
 version = "0.1.0"
+dependencies = [
+ "library_macro",
+ "memoffset",
+]
 
 [[package]]
 name = "library_macro"
