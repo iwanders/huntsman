@@ -52,7 +52,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                             value: library::MutRef::None,
                                             start: offset_of!(#root_struct, #inner_field_ident),
                                             length: std::mem::size_of::<#type_ident>() *#arr_len ,
-                                            type_name: (stringify!(#type_ident)).to_string(),
+                                            type_name: stringify!(#type_ident),
                                             type_id: std::any::TypeId::of::<#type_ident>(),
                                             name: Some((#name).to_string() + #attributes_addition),
                                             children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
@@ -79,7 +79,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                         value: library::MutRef::None,
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>(),
-                                        type_name: (#n).to_string(),
+                                        type_name: #n,
                                         type_id: std::any::TypeId::of::<#type_ident>(),
                                         name: Some((#name).to_string() + #attributes_addition),
                                         children: vec!(self.#inner_field_ident.fields())}
@@ -113,7 +113,7 @@ fn impl_hello_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 return library::Field{start: 0,
                              value: library::MutRef::None,
                              length: std::mem::size_of::<#name>(),
-                             type_name: stringify!(#name).to_string(),
+                             type_name: stringify!(#name),
                              type_id: std::any::TypeId::of::<#name>(),
                              name: Some(stringify!(#name).to_string()),
                              children: vec!(#(#fields),*)};

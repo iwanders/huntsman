@@ -96,7 +96,7 @@ fn main() {
         value: library::MutRef::U8(&mut mu8),
         start: 0,
         length: std::mem::size_of::<u8>(),
-        type_name: "u8".to_string(),
+        type_name: "u8",
         type_id: std::any::TypeId::of::<u8>(),
         name: None,
         children: vec![],
