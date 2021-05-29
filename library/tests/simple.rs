@@ -14,7 +14,7 @@ struct Pancakes {
     first_char: u8,
     an_uint: u32,
     a_float: f32,
-    array_three_chars: [u8; 3],
+    array_three_chars: [i8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],
 }
@@ -62,19 +62,43 @@ fn struct_to_bytes_mut<T: Sized>(v: &mut T) -> &mut [u8] {
 #[test]
 fn sdfsdf() {
     let mut to_be_modified: Pancakes = Default::default();
-    let expected_result: Pancakes = Pancakes{first_char: 100, an_uint: 0xDEADBEEFu32, ..Default::default()};
-    // let mut bound = stack.fields();
+    let char_value: u8 = 100;
+    let int_value = 0xDEADBEEFu32;
+    let float_value: f32 = -1.0f32/3.0;
+    let char_array_value: [i8; 3] = [-120, 0x55, 20];
+    let expected_result: Pancakes = Pancakes{first_char: char_value, an_uint: int_value, a_float: float_value,array_three_chars: char_array_value,  ..Default::default()};
+
+
     {
+        // This is pretty yucky, we need an extra instance just to obtain the field indices... :/ 
+        let mut unused_mutable_instance: Pancakes = Default::default();
+        let for_lookup = unused_mutable_instance.fields();
+
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
-        raw_bytes[0] = 100;  // first byte.
+        raw_bytes[for_lookup.children[0].start] = char_value;  // first byte.
         // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
-        let int_bytes = 0xDEADBEEFu32.to_le_bytes();
-        raw_bytes[4] = int_bytes[0];
-        raw_bytes[5] = int_bytes[1];
-        raw_bytes[6] = int_bytes[2];
-        raw_bytes[7] = int_bytes[3];
+        let int_bytes = int_value.to_le_bytes();
+        for i in 0..for_lookup.children[1].length
+        {
+            raw_bytes[for_lookup.children[1].start + i] = int_bytes[i];
+        }
+
+        let float_bytes = float_value.to_le_bytes();
+        for i in 0..for_lookup.children[2].length
+        {
+            raw_bytes[for_lookup.children[2].start + i] = float_bytes[i];
+        }
+
+        // Now we get to the realm of nesting... 
+        let array_offset = for_lookup.children[3].start;
+        for i in 0..for_lookup.children[3].children.len()
+        {
+            raw_bytes[array_offset + for_lookup.children[3].children[i].start] = char_array_value[i].to_le_bytes()[0];
+        }
+
+        
     }
     println!("expected_result: {:?}", expected_result);
     println!("to_be_modified : {:?}", to_be_modified);
