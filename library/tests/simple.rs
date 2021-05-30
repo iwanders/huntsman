@@ -176,4 +176,23 @@ fn sdfsdf() {
         struct_to_bytes(&expected_result),
         struct_to_bytes(&to_be_modified)
     );
+
+    // Also check the to_le_bytes operation for the pancake struct.
+    let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
+    expected_result.to_le_bytes(&mut arr).expect("Should succeed");
+
+    // The expected result byte array should be identical to the array we just wrote.
+    assert_eq!(struct_to_bytes(&expected_result), arr);
+}
+
+#[test]
+fn test_to_le_bytes()
+{
+    let z : StructWithFloat = StructWithFloat{float_inside: 3.333};
+    let x = z.clone();
+    let mut arr: [u8; std::mem::size_of::<StructWithFloat>()] = [0; std::mem::size_of::<StructWithFloat>()];
+    z.to_le_bytes(&mut arr).expect("Should succeed");
+
+    assert_eq!(struct_to_bytes(&x), arr);
+    
 }

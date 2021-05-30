@@ -52,6 +52,41 @@ pub enum Ref<'a> {
     None,
 }
 
+macro_rules! expand_cases {
+    ($input:ident, $dest:ident, $( $y:path ),*) => (
+        match ($input) {
+                $($y(d) => {  let bytes = d.to_le_bytes();
+                                for i in 0..bytes.len()
+                                {
+                                    $dest[i] = bytes[i];
+                                }},)+
+                _ => {return Err(format!("Reached unhandled for conversion."))},
+        }
+    )
+}
+fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String>
+{
+    // This is very ugly :( 
+    expand_cases!(value, dest,
+        Ref::I8,
+        Ref::I16,
+        Ref::I32,
+        Ref::I64,
+        Ref::I128,
+
+        Ref::U8,
+        Ref::U16,
+        Ref::U32,
+        Ref::U64,
+        Ref::U128,
+
+        Ref::F32,
+        Ref::F64
+        // Ref::Bool  // doesn't have to_le_bytes :/
+        );
+    Ok(())
+}
+
 // use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -88,11 +123,41 @@ pub struct Field {
     pub children: Vec<Field>,
 }
 
+fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String>
+{
+    // Here we go... We inspect v, and then we do the magic thing and recurse., and out should come a perfect
+    // struct :o
+    if !v.children.is_empty()
+    {
+        for c in v.children.iter()
+        {
+            // recurse...
+            impl_to_le_bytes(&c, &mut dest[c.info.start..(c.info.start + c.info.length)])?
+        }
+    }
+    else
+    {
+        // We have reached a leaf... do the thing, check which ref it is, and invoke the serialization.
+        if dest.len() != v.info.length
+        {
+            return Err(format!("Field length doesn't match available buffer need `{}`, buffer: {}", v.info.length, dest.len()));
+        }
+        ref_to_le_bytes(&v.value, dest)?;
+    }
+    
+    Ok(())
+}
+
 pub trait Inspectable {
     fn fields_as_mut<'a>(&'a mut self) -> FieldMut<'a>;
     fn fields_as_ref<'a>(&'a self) -> FieldRef<'a>;
+
     fn fields() -> Field where Self: Sized;   // We need to be sized anyway for all this struct stuff.
 
+    fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String> where Self: Sized
+    {
+        return impl_to_le_bytes(&self.fields_as_ref(), dest);
+    }
 }
 
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
