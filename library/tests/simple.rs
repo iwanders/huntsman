@@ -1,18 +1,19 @@
 use library::*;
 
 
-#[derive(Inspectable, Debug, Default, Copy, Clone)]
+#[derive(StructHelper, Debug, Default, Copy, Clone)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(Inspectable, Debug, Default, Copy, Clone)]
+#[derive(StructHelper, Debug, Default, Copy, Clone)]
 #[repr(C)]
 struct Pancakes {
     first_char: u8,
     _x: [u8; 3],  // This is ignored in the Inspectable entry
     an_uint: u32,
     a_float: f32,
+    #[struct_helper(annotation="foo")]
     array_three_chars: [i8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],

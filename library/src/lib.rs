@@ -245,7 +245,7 @@ fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String>
     Ok(())
 }
 
-pub trait Inspectable {
+pub trait StructHelper {
     fn fields_as_mut<'a>(&'a mut self) -> FieldMut<'a>;
     fn fields_as_ref<'a>(&'a self) -> FieldRef<'a>;
 
@@ -278,7 +278,7 @@ pub trait Inspectable {
 //https://doc.rust-lang.org/rust-by-example/macros/designators.html
 macro_rules! make_inspectable {
     ($a:ty, $as_mut: path, $as_ref: path) => {
-        impl Inspectable for $a {
+        impl StructHelper for $a {
             fn fields_as_mut<'a>(&'a mut self) -> FieldMut {
                 FieldMut {
                     info: Info {

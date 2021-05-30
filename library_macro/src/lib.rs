@@ -59,7 +59,7 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
     res
 }
 
-fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
     // println!("input struct: {:#?}", input);
@@ -145,7 +145,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                             info: #info,
                                             children: (0..#arr_len).map(|i|
                                                 {
-                                                    let mut fields = <#type_ident as Inspectable>::fields();
+                                                    let mut fields = <#type_ident as StructHelper>::fields();
                                                     fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
                                                 }).collect::<Vec<library::Field>>(),
@@ -187,7 +187,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
                                     library::Field{
                                         info: #info,
-                                        children: vec!(<#type_ident as Inspectable>::fields())}
+                                        children: vec!(<#type_ident as StructHelper>::fields())}
                                 )));
                             }
                             _ => {
@@ -222,7 +222,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
         }
     );
     let gen = quote! {
-        impl library::Inspectable for #name {
+        impl library::StructHelper for #name {
             fn fields_as_mut<'a>(&'a mut self) -> library::FieldMut
             {
                 return library::FieldMut{
@@ -251,7 +251,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     gen.into()
 }
 
-#[proc_macro_derive(Inspectable, attributes(hello))]
+#[proc_macro_derive(StructHelper, attributes(struct_helper))]
 pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_inspectable_macro(input)
+    impl_struct_helper_macro(input)
 }

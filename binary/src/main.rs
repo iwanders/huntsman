@@ -2,29 +2,27 @@ extern crate library;
 extern crate library_macro;
 
 // use library::Field;
-use library::Inspectable;
+use library::*;
 // use library_macro::Inspectable;
 
-#[derive(Inspectable, Debug, Default)]
+#[derive(StructHelper, Debug, Default)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(Inspectable, Debug, Default)]
+#[derive(StructHelper, Debug, Default)]
 #[repr(C)]
-#[hello(prefix = "foo")]
+#[struct_helper(prefix = "foo")]
 struct Pancakes {
-    #[hello(display = "dec")]
+    #[struct_helper(display = "dec")]
     first_char: u8,
     a_float: f32,
-    #[hello(display = "hex")]
+    #[struct_helper(display = "hex")]
     array_three_chars: [u8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],
 }
 
-#[macro_use]
-extern crate memoffset;
 
 // #[derive(Inspectable, Debug)]
 #[repr(C)]
