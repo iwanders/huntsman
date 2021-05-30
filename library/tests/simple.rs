@@ -42,9 +42,14 @@ fn test_starts() {
     );
 }
 
-// To check our offsets in our tree, we want to be able to convert between arbitrary structs and their bytes.
-// The whole endeavour of this work is such that we can this safely from the primitives... but for tests.. we can be
-// unsafe. https://doc.rust-lang.org/std/mem/fn.transmute.html#alternatives .
+// To check our offsets in our tree and conversions we want to be able to convert between arbitrary structs and their
+// bytes. The whole endeavour of this work is such that we can this safely from the primitives... but for tests.. we
+// can be, and we should to compare whether we matched the ground truth.
+// 
+// When a struct has padding, the bytes in the padding can be populated with anything, which doesn't help when
+// we convert a struct this way to compare against our hand written one which will have the padding equal to zeros.
+//
+// https://doc.rust-lang.org/std/mem/fn.transmute.html#alternatives
 #[allow(dead_code)]
 fn struct_to_bytes<T: Sized>(v: &T) -> &[u8] {
     unsafe {
@@ -56,7 +61,6 @@ fn struct_to_bytes<T: Sized>(v: &T) -> &[u8] {
 }
 
 // And a mutable flavour...
-#[allow(dead_code)]
 fn struct_to_bytes_mut<T: Sized>(v: &mut T) -> &mut [u8] {
     unsafe {
         let rawptr = v as *mut T;
@@ -66,7 +70,7 @@ fn struct_to_bytes_mut<T: Sized>(v: &mut T) -> &mut [u8] {
 }
 
 #[test]
-fn sdfsdf() {
+fn test_roundtrips_ranges_and_most_things() {
     let mut to_be_modified: Pancakes = Default::default();
     let char_value: u8 = 100;
     let int_value = 0xDEADBEEFu32;
@@ -216,17 +220,4 @@ fn sdfsdf() {
         assert_eq!(struct_to_bytes(&expected_result), struct_to_bytes(&read_back));
         // and this fails because of padding not being zerod :(
     }
-}
-
-#[test]
-fn test_to_le_bytes() {
-    let z: StructWithFloat = StructWithFloat {
-        float_inside: 3.333,
-    };
-    let x = z.clone();
-    let mut arr: [u8; std::mem::size_of::<StructWithFloat>()] =
-        [0; std::mem::size_of::<StructWithFloat>()];
-    z.to_le_bytes(&mut arr).expect("Should succeed");
-
-    assert_eq!(struct_to_bytes(&x), arr);
 }
