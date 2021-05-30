@@ -117,12 +117,21 @@ pub struct FieldRef<'a> {
     pub children: Vec<FieldRef<'a>>,
 }
 
+impl FieldRef<'_>
+{
+    pub fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String> where Self: Sized
+    {
+        return impl_to_le_bytes(&self, dest);
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub info: Info,
     pub children: Vec<Field>,
 }
 
+// Actual working recursion function.
 fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String>
 {
     // Here we go... We inspect v, and then we do the magic thing and recurse., and out should come a perfect
