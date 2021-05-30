@@ -1,6 +1,23 @@
-// This file is ugly...
-
 use struct_helper::*;
+
+/*
+keyboard_sniffs$ ./dump.sh 2021 | sort | uniq > /tmp/sorted_all.txt
+Shows; 1f is not always 1f, sometimes it's 08
+
+0x01058a05	02:1f:00:00:00:01:05:8a:05:00...
+0x02058101	02:1f:00:00:00:02:05:81:01:01:00...
+0x030f0401	00:1f:00:00:00:03:0f:04:01:00:ff:00...
+0x030f8401	02:1f:00:00:00:03:0f:84:01:05:ff:00...
+0x05028d03	02:1f:00:00:00:05:02:8d:03:3e:00:00:00...
+0x050f8005	02:1f:00:00:00:05:0f:80:05:19:03:0c:17:00...
+0x06028d02	02:1f:00:00:00:06:02:8d:02:7a:01:11:01:09:00...
+0x07028d02	02:1f:00:00:00:07:02:8d:02:01:00:02:02:00:35:00...
+  ^^----- len                from here  01 02 03 04 05 06 07
+    ^^ --- group?
+      ^^ -- register?
+      8   = 1 << 7, msb write / read flag?
+        ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely.
+*/
 
 fn prepare_checksum(v: &Vec<u8>) -> u8 {
     let mut checksum: u8 = 0;
@@ -21,13 +38,14 @@ pub trait Command: std::fmt::Debug {
         v.push(0x0);
 
         // Now follows the command.
-        let cmd = self.command_id();
-        v.push((cmd >> (8 * 3)) as u8);
-        v.push((cmd >> (8 * 2)) as u8);
-        v.push((cmd >> (8 * 1)) as u8);
-        v.push((cmd >> 0) as u8);
+        let cmd = self.register();
+        let mut payload = self.payload();
 
-        v.append(&mut self.payload());
+        v.push((payload.len()) as u8);
+        v.push(cmd.0);
+        v.push(cmd.1);
+
+        v.append(&mut payload);
 
         // After the payload, we pad up to 88 bytes.
         while v.len() < 88 {
@@ -41,7 +59,7 @@ pub trait Command: std::fmt::Debug {
         return v;
     }
 
-    fn command_id(&self) -> u32;
+    fn register(&self) -> (u8, u8);
     fn payload(&self) -> Vec<u8>;
 }
 
@@ -78,31 +96,32 @@ pub struct SetLedState {
     pub id: u8,
     /// Seems to be specifying up to which column?
     pub count: u8,
-    pub leds: [RGB; 22], // 22 is the max seen?, corresponds with 0x16 in the count position.
+    pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
 impl SetLedState {
-    pub const CMD: u32 = 0x4a0f0300;
+    pub const CMD: (u8, u8) = (0x0f, 0x03);
 }
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
 pub struct WireSetLedState
 {
+    first: u8,
     _p0: u8,  // padding
     pub id: u8,
     _p1: u8,  // padding
     /// Seems to be specifying up to which column?
     pub count: u8,
-    pub leds: [RGB; 22], // 22 is the max seen?, corresponds with 0x16 in the count position.
+    pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
 
 impl Command for SetLedState {
-    fn command_id(&self) -> u32 {
+    fn register(&self) -> (u8, u8) {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetLedState>()];
-        let wire_ledstate: WireSetLedState = WireSetLedState{id: self.id, count: self.count, leds: self.leds, ..Default::default()};
+        let wire_ledstate: WireSetLedState = WireSetLedState{first: 0, id: self.id, count: self.count, leds: self.leds, ..Default::default()};
         wire_ledstate.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
@@ -113,24 +132,25 @@ pub struct SetBrightness {
     pub value: f32,
 }
 impl SetBrightness {
-    pub const CMD: u32 = 0x030f0401;
+    pub const CMD: (u8, u8) = (0x0f, 0x04);
 }
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
 pub struct WireSetBrightness
 {
+    pub first: u8,
     _p0: u8,  // padding
     pub value: u8
 }
 
 
 impl Command for SetBrightness {
-    fn command_id(&self) -> u32 {
+    fn register(&self) -> (u8, u8) {
         return SetBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetBrightness>()];
-        let wire_setbrightness: WireSetBrightness = WireSetBrightness{value: (self.value * 255.0) as u8, ..Default::default()};
+        let wire_setbrightness: WireSetBrightness = WireSetBrightness{first: 0x01, value: (self.value * 255.0) as u8, ..Default::default()};
         wire_setbrightness.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
@@ -141,15 +161,16 @@ pub struct SetGameMode {
     pub value: bool,
 }
 impl SetGameMode {
-    pub const CMD: u32 = 0x03030000;
+    pub const CMD: (u8, u8) = (0x03, 0x00);
 }
 
 impl Command for SetGameMode {
-    fn command_id(&self) -> u32 {
+    fn register(&self) -> (u8, u8) {
         return SetGameMode::CMD;
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::new();
+        v.push(0); // the first byte is zero.
         v.push(8); // No idea what this 8 means... :/
         v.push(self.value as u8);
         return v;
@@ -158,13 +179,13 @@ impl Command for SetGameMode {
 
 #[derive(Default, Clone, Debug)]
 pub struct ArbitraryCommand {
-    pub cmd: u32,
+    pub register: (u8, u8),
     pub payload: Vec<u8>,
 }
 
 impl Command for ArbitraryCommand {
-    fn command_id(&self) -> u32 {
-        return self.cmd;
+    fn register(&self) -> (u8, u8) {
+        return self.register;
     }
     fn payload(&self) -> Vec<u8> {
         return self.payload.clone();

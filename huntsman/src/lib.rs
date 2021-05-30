@@ -137,6 +137,11 @@ impl Huntsman {
         //~ 0x060f0200	00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00
         //              00:1f:00:00:00:06:0f:02:02:00:03:00:00:00:00:00:00:00:00
         let cmd = huntsman_comm::ArbitraryCommand {
+            // This is still in the old cmd format.
+            // 0x06 is len, but as we've seen here, it seems pretty much ignored.
+            // 0x0f, 0x02 make up the register.
+            // the 0x00 is part of the commands it seems.
+            
             cmd: 0x060f0200,
             //~ cmd: 0x450f8200,
             payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
