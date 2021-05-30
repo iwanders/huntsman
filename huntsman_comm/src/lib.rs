@@ -18,8 +18,7 @@ Shows; 1f is not always 1f, sometimes it's 08
       8   = 1 << 7, msb write / read flag?
         ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely.
 */
-
-fn prepare_checksum(v: &Vec<u8>) -> u8 {
+fn prepare_checksum(v: &[u8]) -> u8 {
     let mut checksum: u8 = 0;
     for i in 2..v.len() {
         checksum ^= v[i];
@@ -27,35 +26,62 @@ fn prepare_checksum(v: &Vec<u8>) -> u8 {
     return checksum;
 }
 
+#[derive(StructHelper, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct WireCommand
+{
+    pub status: u8, // status, direction? Only really seen 0, 2 and I think 5 when I was throwing random data it it all.
+    pub the_1f: u8, // Almost always 1f.
+    _three: [u8; 3], // these bytes always seem to be zero, ALWAYS
+    pub len: u8,
+    pub cmd_0: u8,
+    pub cmd_1: u8,
+    pub payload: [u8; 80],
+    pub checksum: u8,
+    _closing: u8,
+}
+impl Default for WireCommand {
+    fn default() -> WireCommand {
+        WireCommand {
+            status: 0,
+            the_1f: 0x1f,
+            _three: [0, 0, 0],
+            len: 0,
+            cmd_0: 0,
+            cmd_1: 0,
+            payload: [0; 80],
+            checksum: 0,
+            _closing: 0,
+        }
+    }
+}
+
 // Todo; Clean up this monster.
 pub trait Command: std::fmt::Debug {
     fn serialize(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::new();
-        v.push(0);
-        v.push(0x1f);
-        v.push(0x0);
-        v.push(0x0);
-        v.push(0x0);
-
         // Now follows the command.
         let cmd = self.register();
-        let mut payload = self.payload();
+        let payload = self.payload();
 
-        v.push((payload.len()) as u8);
-        v.push(cmd.0);
-        v.push(cmd.1);
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireCommand>()];
+        let mut wire: WireCommand = Default::default();
+        wire.cmd_0 = cmd.0;
+        wire.cmd_1 = cmd.1;
+        wire.len = payload.len() as u8;
 
-        v.append(&mut payload);
-
-        // After the payload, we pad up to 88 bytes.
-        while v.len() < 88 {
-            v.push(0);
+        // copy the payload.
+        for i in 0..payload.len()
+        {
+            wire.payload[i] = payload[i];
         }
+        // Ugh, this checksum is gross... we have to serialize first before we can calculate it.
+        wire.to_le_bytes(&mut v[..]).expect("Should succeed");
 
-        let checksum = prepare_checksum(&v);
-        v.push(checksum);
-        v.push(0);
+        // Then, we can calculate the checksum
+        wire.checksum = prepare_checksum(&v[2..]);
 
+        // And then serialize it again _just_ to populate the checksum.
+        wire.to_le_bytes(&mut v[..]).expect("Should succeed");
         return v;
     }
 
@@ -68,11 +94,6 @@ pub struct RGB {
     pub r: u8,
     pub g: u8,
     pub b: u8,
-}
-impl RGB {
-    pub fn payload(&self) -> Vec<u8> {
-        return vec![self.r, self.g, self.b];
-    }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
