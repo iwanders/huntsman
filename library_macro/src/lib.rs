@@ -10,14 +10,19 @@ use syn;
 // https://github.com/rust-lang/rust/issues/48956
 extern crate memoffset;
 
-fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    let name = &input.ident;
-    // println!("input struct: {:#?}", input);
+// Enums treated as unions... would be cool if we could handle that elegantly...
+// perhaps with a 'denoted by' field specifying which of the enums is active?
+// https://rust-lang.github.io/unsafe-code-guidelines/layout/enums.html
 
-    for option in input.attrs.into_iter() {
-        let option = option.parse_meta().unwrap();
-        println!("Option: {:#?}", option);
+// Outputs a tokenstream in the shape of [(&'static str, &'static str)]
+fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStream
+{
+    // let mut res: std::collections::HashMap<&'static str, &'static str> = std::collections::HashMap::new();
+    let mut attribute_str_pairs: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    // println!("{:#?}", list);
+    for option in list.into_iter() {
+        let option = option.parse_meta().expect("The attribute list optional must be populated");
         match option {
             syn::Meta::List(z) =>
             {
@@ -30,13 +35,27 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                             match meta_thing
                             {
                                 syn::Meta::Path(p) => {
-                                    println!("Path: {:?}", p);
+                                    // println!("Path: {:?}", p);
                                 },
                                 syn::Meta::List(l) => {
-                                    println!("Path: {:?}", l);
+                                    // println!("Path: {:?}", l);
                                 },
-                                syn::Meta::NameValue(MetaNameValue) => {
-                                    println!("MetaNameValue: {:?}", MetaNameValue);
+                                syn::Meta::NameValue(meta_name_value) => {
+                                    // println!("MetaNameValue: {:?}", meta_name_value);
+                                    // Check if we have a string entry.
+                                    match meta_name_value.lit
+                                    {
+                                        syn::Lit::Str(str_lit) =>
+                                        {
+                                            // Yes... cool, we can get the name of the path, and extract this literal.
+                                            let attribute_name = meta_name_value.path.segments[0].ident.to_string();
+                                            let value = str_lit.value();
+                                            attribute_str_pairs.push(quote!(
+                                                (#attribute_name, #value)
+                                            ))
+                                        },
+                                        _ => {},
+                                    }
                                 
                                 },
                                 
@@ -52,6 +71,21 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
             _=> {},
         }
     }
+    let res = quote!(#(#attribute_str_pairs),*);
+    // println!("res: {:}", res.to_string());
+    res
+}
+
+fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    let name = &input.ident;
+    // println!("input struct: {:#?}", input);
+
+    // https://doc.rust-lang.org/reference/attributes.html
+    // Seems it MUST be a literal expression; https://doc.rust-lang.org/reference/expressions/literal-expr.html
+    // Lets, for sake of simplicity, just handle string inputs now.
+    let outer_attribute_tokens = process_str_attributes(&input.attrs);
+
 
     let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut immutable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -63,12 +97,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
             match &data_struct.fields {
                 syn::Fields::Named(z) => {
                     for inner_field in &z.named {
-                        let mut attributes_addition: String = String::new();
-                        if inner_field.attrs.len() != 0 {
-                            attributes_addition = ":attribute_from:".to_string()
-                                + &inner_field.attrs[0].path.segments[0].ident.to_string();
-                            println!("attributes: {:?}", inner_field.attrs[0]);
-                        }
+                        let inner_attribute_tokens = process_str_attributes(&inner_field.attrs);
 
                         let name: String;
                         let inner_field_ident: &syn::Ident;
@@ -93,7 +122,8 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                         length: std::mem::size_of::<#type_ident>() *#arr_len ,
                                         type_name: stringify!(#type_ident),
                                         type_id: std::any::TypeId::of::<#type_ident>(),
-                                        name: Some((#name).to_string() + #attributes_addition),
+                                        name: Some((#name)),
+                                        attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                     }
                                 );
                                 // Create the fields for this array, unwrapping the internals.
@@ -134,11 +164,12 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
                                 let info = quote!(
                                         library::Info{
-                                        start: offset_of!(#root_struct, #inner_field_ident),
-                                        length: std::mem::size_of::<#type_ident>(),
-                                        type_name: #n,
-                                        type_id: std::any::TypeId::of::<#type_ident>(),
-                                        name: Some((#name).to_string() + #attributes_addition)
+                                            start: offset_of!(#root_struct, #inner_field_ident),
+                                            length: std::mem::size_of::<#type_ident>(),
+                                            type_name: #n,
+                                            type_id: std::any::TypeId::of::<#type_ident>(),
+                                            name: Some((#name)),
+                                            attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                         });
 
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
@@ -180,7 +211,8 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
              length: std::mem::size_of::<#name>(),
              type_name: stringify!(#name),
              type_id: std::any::TypeId::of::<#name>(),
-             name: Some(stringify!(#name).to_string()),
+             name: Some(stringify!(#name)),
+             attrs: [#outer_attribute_tokens].iter().cloned().collect(),
         }
     );
     let gen = quote! {

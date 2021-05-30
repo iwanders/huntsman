@@ -29,6 +29,8 @@ pub enum MutRef<'a> {
     None,
 }
 
+// use std::collections::HashMap;
+
 #[derive(Debug)]
 pub struct Info
 {
@@ -36,7 +38,10 @@ pub struct Info
     pub length: usize,
     pub type_name: &'static str,
     pub type_id: std::any::TypeId,
-    pub name: Option<String>,
+    pub name: Option<&'static str>,
+    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing annotations
+    // to be completely specified by the user.
+    pub attrs: std::collections::HashMap<&'static str, &'static str>,
 }
 
 // Struct to represent a field in a struct.
@@ -72,6 +77,7 @@ macro_rules! make_inspectable {
                         type_name: std::any::type_name::<$a>(),
                         type_id: std::any::TypeId::of::<$a>(),
                         name: None,
+                        attrs: std::collections::HashMap::new(),
                     },
                     value: $v(self),
                     children: vec![],
@@ -86,6 +92,7 @@ macro_rules! make_inspectable {
                         type_name: std::any::type_name::<$a>(),
                         type_id: std::any::TypeId::of::<$a>(),
                         name: None,
+                        attrs: std::collections::HashMap::new(),
                     },
                     children: vec![],
                 }

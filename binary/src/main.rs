@@ -10,12 +10,19 @@ struct StructWithFloat {
     float_inside: f32,
 }
 
+enum Endian
+{
+    Little,
+    Big
+}
+
 #[derive(Inspectable, Debug, Default)]
 #[repr(C)]
-#[hello(prefix = "foo", zulu = 3, 3)]
+#[hello(prefix = "foo", zulu = 3)]
 struct Pancakes {
     first_char: u8,
     a_float: f32,
+    #[hello(display = "hex")]
     array_three_chars: [u8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],
@@ -33,7 +40,7 @@ enum Flour {
 }
 
 fn main() {
-    return;
+    // return;
     // Pancakes::hello_macro();
     // let mut stack: Pancakes = Pancakes{first_char: 3u8, a_float: 3.3, array_three_chars: [0, 0, 0], struct_z: StructWithFloat{float_inside: 8.8}};
     let mut stack: Pancakes = Default::default();
@@ -53,6 +60,7 @@ fn main() {
         println!("{} length: {:?}", ind, f.info.length);
         println!("{} type_name: {:?}", ind, f.info.type_name);
         println!("{} type_id: {:?}", ind, f.info.type_id);
+        println!("{} attrs: {:?}", ind, f.info.attrs);
         for c in &f.children {
             printer(&c, indent + 4);
         }
@@ -100,7 +108,8 @@ fn main() {
         length: std::mem::size_of::<u8>(),
         type_name: "u8",
         type_id: std::any::TypeId::of::<u8>(),
-        name: None,},
+        name: None,
+        attrs: std::collections::HashMap::new()},
         children: vec![],
     };
 
