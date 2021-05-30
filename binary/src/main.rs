@@ -10,7 +10,6 @@ struct StructWithFloat {
     float_inside: f32,
 }
 
-
 #[derive(Inspectable, Debug, Default)]
 #[repr(C)]
 #[hello(prefix = "foo")]
@@ -99,16 +98,16 @@ fn main() {
 
     let f = library::FieldMut {
         value: library::MutRef::U8(&mut mu8),
-        info: library::Info{
-        start: 0,
-        length: std::mem::size_of::<u8>(),
-        type_name: "u8",
-        type_id: std::any::TypeId::of::<u8>(),
-        name: None,
-        attrs: std::collections::HashMap::new()},
+        info: library::Info {
+            start: 0,
+            length: std::mem::size_of::<u8>(),
+            type_name: "u8",
+            type_id: std::any::TypeId::of::<u8>(),
+            name: None,
+            attrs: std::collections::HashMap::new(),
+        },
         children: vec![],
     };
-
 
     // mu8 = 10;
     // println!("Mu8: {}", mu8);

@@ -24,7 +24,10 @@ fn test_starts() {
     let mut stack: Pancakes = Default::default();
     let bound = stack.fields_as_mut();
 
-    assert_eq!(offset_of!(Pancakes, first_char), bound.children[0].info.start);
+    assert_eq!(
+        offset_of!(Pancakes, first_char),
+        bound.children[0].info.start
+    );
     assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].info.start);
     assert_eq!(offset_of!(Pancakes, a_float), bound.children[2].info.start);
     assert_eq!(
@@ -100,18 +103,20 @@ fn sdfsdf() {
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(
             for_lookup.children[0]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "first_char"
         );
         raw_bytes[for_lookup.children[0].info.start] = char_value; // first byte.
-                                                              // 3 bytes padding.
+                                                                   // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
         let int_bytes = int_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[1]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "an_uint"
         );
@@ -122,7 +127,8 @@ fn sdfsdf() {
         let float_bytes = float_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[2]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "a_float"
         );
@@ -134,7 +140,8 @@ fn sdfsdf() {
         let array_offset = for_lookup.children[3].info.start;
         assert_eq!(
             for_lookup.children[3]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "array_three_chars"
         );
@@ -146,7 +153,8 @@ fn sdfsdf() {
         let float_z_bytes = float_z_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[4]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "struct_z"
         );
@@ -156,7 +164,8 @@ fn sdfsdf() {
 
         assert_eq!(
             for_lookup.children[5]
-                .info.name
+                .info
+                .name
                 .expect("Should have a name"),
             "array_with_three_structs"
         );
@@ -164,9 +173,9 @@ fn sdfsdf() {
         for i in 0..for_lookup.children[5].children.len() {
             let b = float_array[i].to_le_bytes();
             for j in 0..for_lookup.children[5].children[i].info.length {
-                raw_bytes
-                    [for_lookup.children[5].info.start + for_lookup.children[5].children[i].info.start + j] =
-                    b[j];
+                raw_bytes[for_lookup.children[5].info.start
+                    + for_lookup.children[5].children[i].info.start
+                    + j] = b[j];
             }
         }
     }
@@ -180,7 +189,9 @@ fn sdfsdf() {
     // Also check the to_le_bytes operation for the pancake struct.
     {
         let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-        expected_result.to_le_bytes(&mut arr).expect("Should succeed");
+        expected_result
+            .to_le_bytes(&mut arr)
+            .expect("Should succeed");
 
         // The expected result byte array should be identical to the array we just wrote.
         assert_eq!(struct_to_bytes(&expected_result), arr);
@@ -189,7 +200,10 @@ fn sdfsdf() {
     // If we do the same trick on the fieldref it should also work.
     {
         let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-        expected_result.fields_as_ref().to_le_bytes(&mut arr).expect("Should succeed");
+        expected_result
+            .fields_as_ref()
+            .to_le_bytes(&mut arr)
+            .expect("Should succeed");
         println!("arr: {:?}", arr);
 
         // The expected result byte array should be identical to the array we just wrote.
@@ -198,13 +212,14 @@ fn sdfsdf() {
 }
 
 #[test]
-fn test_to_le_bytes()
-{
-    let z : StructWithFloat = StructWithFloat{float_inside: 3.333};
+fn test_to_le_bytes() {
+    let z: StructWithFloat = StructWithFloat {
+        float_inside: 3.333,
+    };
     let x = z.clone();
-    let mut arr: [u8; std::mem::size_of::<StructWithFloat>()] = [0; std::mem::size_of::<StructWithFloat>()];
+    let mut arr: [u8; std::mem::size_of::<StructWithFloat>()] =
+        [0; std::mem::size_of::<StructWithFloat>()];
     z.to_le_bytes(&mut arr).expect("Should succeed");
 
     assert_eq!(struct_to_bytes(&x), arr);
-    
 }

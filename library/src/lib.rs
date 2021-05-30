@@ -70,34 +70,31 @@ macro_rules! expand_cases {
         }
     )
 }
-fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String>
-{
-    // This is very ugly :( 
-    expand_cases!(value, dest,
+fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
+    // This is very ugly :(
+    expand_cases!(
+        value,
+        dest,
         Ref::I8,
         Ref::I16,
         Ref::I32,
         Ref::I64,
         Ref::I128,
-
         Ref::U8,
         Ref::U16,
         Ref::U32,
         Ref::U64,
         Ref::U128,
-
         Ref::F32,
-        Ref::F64
-        // Ref::Bool  // doesn't have to_le_bytes :/
-        );
+        Ref::F64 // Ref::Bool  // doesn't have to_le_bytes :/
+    );
     Ok(())
 }
 
 // use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct Info
-{
+pub struct Info {
     pub start: usize,
     pub length: usize,
     pub type_name: &'static str,
@@ -123,9 +120,10 @@ pub struct FieldRef<'a> {
     pub children: Vec<FieldRef<'a>>,
 }
 
-impl FieldRef<'_>
-{
-    pub fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String> where Self: Sized
+impl FieldRef<'_> {
+    pub fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String>
+    where
+        Self: Sized,
     {
         return impl_to_le_bytes(&self, dest);
     }
@@ -138,29 +136,27 @@ pub struct Field {
 }
 
 // Actual working recursion function.
-fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String>
-{
+fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
     // Here we go... We inspect v, and then we do the magic thing and recurse., and out should come a perfect
     // struct :o
-    if !v.children.is_empty()
-    {
-        for c in v.children.iter()
-        {
+    if !v.children.is_empty() {
+        for c in v.children.iter() {
             // recurse...
             impl_to_le_bytes(&c, &mut dest[c.info.start..(c.info.start + c.info.length)])?
         }
-    }
-    else
-    {
+    } else {
         // We have reached a leaf... perform a final check
-        if dest.len() != v.info.length
-        {
-            return Err(format!("Field length doesn't match available buffer need `{}`, buffer: {}", v.info.length, dest.len()));
+        if dest.len() != v.info.length {
+            return Err(format!(
+                "Field length doesn't match available buffer need `{}`, buffer: {}",
+                v.info.length,
+                dest.len()
+            ));
         }
         // And then convert the wrapped reference appropriately.
         ref_to_le_bytes(&v.value, dest)?;
     }
-    
+
     Ok(())
 }
 
@@ -168,9 +164,13 @@ pub trait Inspectable {
     fn fields_as_mut<'a>(&'a mut self) -> FieldMut<'a>;
     fn fields_as_ref<'a>(&'a self) -> FieldRef<'a>;
 
-    fn fields() -> Field where Self: Sized;   // We need to be sized anyway for all this struct stuff.
+    fn fields() -> Field
+    where
+        Self: Sized; // We need to be sized anyway for all this struct stuff.
 
-    fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String> where Self: Sized
+    fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String>
+    where
+        Self: Sized,
     {
         return impl_to_le_bytes(&self.fields_as_ref(), dest);
     }
@@ -184,7 +184,7 @@ macro_rules! make_inspectable {
         impl Inspectable for $a {
             fn fields_as_mut<'a>(&'a mut self) -> FieldMut {
                 FieldMut {
-                    info: Info{
+                    info: Info {
                         start: 0,
                         length: std::mem::size_of::<$a>(),
                         type_name: std::any::type_name::<$a>(),
@@ -199,7 +199,7 @@ macro_rules! make_inspectable {
 
             fn fields_as_ref<'a>(&'a self) -> FieldRef {
                 FieldRef {
-                    info: Info{
+                    info: Info {
                         start: 0,
                         length: std::mem::size_of::<$a>(),
                         type_name: std::any::type_name::<$a>(),
@@ -212,9 +212,12 @@ macro_rules! make_inspectable {
                 }
             }
 
-            fn fields() -> Field where Self: Sized {
+            fn fields() -> Field
+            where
+                Self: Sized,
+            {
                 Field {
-                    info: Info{
+                    info: Info {
                         start: 0,
                         length: std::mem::size_of::<$a>(),
                         type_name: std::any::type_name::<$a>(),
