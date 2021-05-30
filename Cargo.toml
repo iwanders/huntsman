@@ -5,4 +5,5 @@ members = [
     "huntsman_dissector",
     "huntsman_comm",
     "huntsman",
+    "struct_helper",
 ]
