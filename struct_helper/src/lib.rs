@@ -1,7 +1,7 @@
 extern crate struct_helper_derive;
 
-pub use struct_helper_derive::*;
 pub use memoffset::*;
+pub use struct_helper_derive::*;
 
 // #[macro_use]
 // extern crate memoffset;
@@ -13,7 +13,6 @@ that's defined in this crate.
 The whole reference situation is ugly atm, but it's useful as it allows building the struct by reading the primitives
 from bytes, or writing bytes from the primitives.
 */
-
 
 // Don't really know how to forward these to dependants...
 // #[macro_use]
@@ -105,7 +104,6 @@ fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
     Ok(())
 }
 
-
 macro_rules! expand_cases_from_le_bytes {
     ($value:ident, $src:ident, $( ($y:path, $e:ty) ),*) => (
         match ($value) {
@@ -129,12 +127,11 @@ macro_rules! expand_cases_from_le_bytes {
         }
     )
 }
-fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String>
-{
+fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String> {
     expand_cases_from_le_bytes!(
         value,
         src,
-        (MutRef::I8, i8),  // just because we miss decltype :(
+        (MutRef::I8, i8), // just because we miss decltype :(
         (MutRef::I16, i16),
         (MutRef::I32, i32),
         (MutRef::I64, i64),
@@ -145,8 +142,7 @@ fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String>
         (MutRef::U64, u64),
         (MutRef::U128, u128),
         (MutRef::F32, f32),
-        (MutRef::F64, f64)
-        // Ref::Bool  // doesn't have to_le_bytes :/
+        (MutRef::F64, f64) // Ref::Bool  // doesn't have to_le_bytes :/
     );
     Ok(())
 }
@@ -220,8 +216,7 @@ fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
     Ok(())
 }
 
-fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String>
-{
+fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String> {
     if !v.children.is_empty() {
         for i in 0..v.children.len() {
             // recurse...

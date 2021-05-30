@@ -1,6 +1,5 @@
 use struct_helper::*;
 
-
 #[derive(StructHelper, Debug, Default, Copy, Clone)]
 struct StructWithFloat {
     float_inside: f32,
@@ -10,10 +9,10 @@ struct StructWithFloat {
 #[repr(C)]
 struct Pancakes {
     first_char: u8,
-    _x: [u8; 3],  // This is ignored in the Inspectable entry
+    _x: [u8; 3], // This is ignored in the Inspectable entry
     an_uint: u32,
     a_float: f32,
-    #[struct_helper(annotation="foo")]
+    #[struct_helper(annotation = "foo")]
     array_three_chars: [i8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],
@@ -44,7 +43,7 @@ fn test_starts() {
 // To check our offsets in our tree and conversions we want to be able to convert between arbitrary structs and their
 // bytes. The whole endeavour of this work is such that we can this safely from the primitives... but for tests.. we
 // can be, and we should to compare whether we matched the ground truth.
-// 
+//
 // When a struct has padding, the bytes in the padding can be populated with anything, which doesn't help when
 // we convert a struct this way to compare against our hand written one which will have the padding equal to zeros.
 //
@@ -216,7 +215,10 @@ fn test_roundtrips_ranges_and_most_things() {
 
         // And check whether we can read from the array.
         let read_back = Pancakes::from_le_bytes(&arr).expect("Should succeed");
-        assert_eq!(struct_to_bytes(&expected_result), struct_to_bytes(&read_back));
+        assert_eq!(
+            struct_to_bytes(&expected_result),
+            struct_to_bytes(&read_back)
+        );
         // and this fails because of padding not being zerod :(
     }
 }
