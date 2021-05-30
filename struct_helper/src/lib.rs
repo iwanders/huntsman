@@ -1,6 +1,6 @@
-extern crate library_macro;
+extern crate struct_helper_derive;
 
-pub use library_macro::*;
+pub use struct_helper_derive::*;
 pub use memoffset::*;
 
 // #[macro_use]

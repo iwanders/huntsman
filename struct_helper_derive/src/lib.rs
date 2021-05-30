@@ -104,7 +104,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                 let arr_len = &arr.len;
 
                                 let info = quote!(
-                                    library::Info{
+                                    struct_helper::Info{
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>() *#arr_len ,
                                         type_name: stringify!(#type_ident),
@@ -115,40 +115,40 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                 );
                                 // Create the fields for this array, unwrapping the internals.
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                        library::FieldMut{
-                                            value: library::MutRef::None,
+                                        struct_helper::FieldMut{
+                                            value: struct_helper::MutRef::None,
                                             info: #info,
                                             children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
                                                 {
                                                     let mut fields = x.fields_as_mut();
                                                     fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
-                                                }).collect::<Vec<library::FieldMut>>(),
+                                                }).collect::<Vec<struct_helper::FieldMut>>(),
                                         }
                                     )
                                 ));
                                 fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
-                                        library::FieldRef{
-                                            value: library::Ref::None,
+                                        struct_helper::FieldRef{
+                                            value: struct_helper::Ref::None,
                                             info: #info,
                                             children: self.#inner_field_ident.iter().enumerate().map(|(i, mut x)|
                                                 {
                                                     let mut fields = x.fields_as_ref();
                                                     fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
-                                                }).collect::<Vec<library::FieldRef>>(),
+                                                }).collect::<Vec<struct_helper::FieldRef>>(),
                                         }
                                     )
                                 ));
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
-                                        library::Field{
+                                        struct_helper::Field{
                                             info: #info,
                                             children: (0..#arr_len).map(|i|
                                                 {
                                                     let mut fields = <#type_ident as StructHelper>::fields();
                                                     fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
-                                                }).collect::<Vec<library::Field>>(),
+                                                }).collect::<Vec<struct_helper::Field>>(),
                                         }
                                     )
                                 ));
@@ -163,7 +163,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                 let n = type_ident.to_string();
 
                                 let info = quote!(
-                                library::Info{
+                                struct_helper::Info{
                                     start: offset_of!(#root_struct, #inner_field_ident),
                                     length: std::mem::size_of::<#type_ident>(),
                                     type_name: #n,
@@ -173,19 +173,19 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                 });
 
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                    library::FieldMut{
-                                        value: library::MutRef::None,
+                                    struct_helper::FieldMut{
+                                        value: struct_helper::MutRef::None,
                                         info: #info,
                                         children: vec!(self.#inner_field_ident.fields_as_mut())}
                                 )));
                                 fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
-                                    library::FieldRef{
-                                        value: library::Ref::None,
+                                    struct_helper::FieldRef{
+                                        value: struct_helper::Ref::None,
                                         info: #info,
                                         children: vec!(self.#inner_field_ident.fields_as_ref())}
                                 )));
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
-                                    library::Field{
+                                    struct_helper::Field{
                                         info: #info,
                                         children: vec!(<#type_ident as StructHelper>::fields())}
                                 )));
@@ -212,7 +212,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
         }
     }
     let info = quote!(
-        library::Info{
+        struct_helper::Info{
              start: 0,
              length: std::mem::size_of::<#name>(),
              type_name: stringify!(#name),
@@ -222,25 +222,25 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
         }
     );
     let gen = quote! {
-        impl library::StructHelper for #name {
-            fn fields_as_mut<'a>(&'a mut self) -> library::FieldMut
+        impl struct_helper::StructHelper for #name {
+            fn fields_as_mut<'a>(&'a mut self) -> struct_helper::FieldMut
             {
-                return library::FieldMut{
-                             value: library::MutRef::None,
+                return struct_helper::FieldMut{
+                             value: struct_helper::MutRef::None,
                              info: #info,
                              children: vec!(#(#fields_for_mut),*)};
             }
 
-            fn fields_as_ref<'a>(&'a self) -> library::FieldRef
+            fn fields_as_ref<'a>(&'a self) -> struct_helper::FieldRef
             {
-                return library::FieldRef{
-                             value: library::Ref::None,
+                return struct_helper::FieldRef{
+                             value: struct_helper::Ref::None,
                              info: #info,
                              children: vec!(#(#fields_for_ref),*)};
             }
 
-            fn fields() -> library::Field {
-                library::Field {
+            fn fields() -> struct_helper::Field {
+                struct_helper::Field {
                      info: #info,
                      children: vec!(#(#fields_static),*)
                 }

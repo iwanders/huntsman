@@ -1,4 +1,4 @@
-use library::*;
+use struct_helper::*;
 
 
 #[derive(StructHelper, Debug, Default, Copy, Clone)]

@@ -1,11 +1,17 @@
 [package]
-name = "library"
+name = "struct_helper_derive"
 version = "0.1.0"
 authors = ["Ivor Wanders <ivor@iwanders.net>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+proc-macro = true
+
 [dependencies]
-library_macro = { path = "../library_macro" }
+syn = { version = "1.0", features = ["derive", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0.27"
 memoffset = "0.6.3"
+

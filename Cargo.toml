@@ -1,7 +1,5 @@
 [workspace]
 
 members = [
-    "binary",
-    "library",
-    "library_macro",
+    "struct_helper",
 ]

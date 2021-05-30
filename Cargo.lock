@@ -7,33 +7,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "binary"
-version = "0.1.0"
-dependencies = [
- "library",
- "library_macro",
- "memoffset",
-]
-
-[[package]]
-name = "library"
-version = "0.1.0"
-dependencies = [
- "library_macro",
- "memoffset",
-]
-
-[[package]]
-name = "library_macro"
-version = "0.1.0"
-dependencies = [
- "memoffset",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "memoffset"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -58,6 +31,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "struct_helper"
+version = "0.1.0"
+dependencies = [
+ "memoffset",
+ "struct_helper_derive",
+]
+
+[[package]]
+name = "struct_helper_derive"
+version = "0.1.0"
+dependencies = [
+ "memoffset",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
