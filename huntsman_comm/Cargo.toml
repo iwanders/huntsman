@@ -9,3 +9,6 @@ license = "MIT OR Apache-2.0"
 name = "huntsman_comm"
 path = "src/lib.rs"
 crate-type = ["lib"]
+
+[dependencies]
+struct_helper = { path = "../struct_helper" }

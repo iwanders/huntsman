@@ -1,5 +1,7 @@
 // This file is ugly...
 
+use struct_helper::*;
+
 fn prepare_checksum(v: &Vec<u8>) -> u8 {
     let mut checksum: u8 = 0;
     for i in 2..v.len() {
@@ -8,6 +10,7 @@ fn prepare_checksum(v: &Vec<u8>) -> u8 {
     return checksum;
 }
 
+// Todo; Clean up this monster.
 pub trait Command: std::fmt::Debug {
     fn serialize(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::new();
@@ -42,7 +45,7 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
 pub struct RGB {
     pub r: u8,
     pub g: u8,
@@ -81,20 +84,27 @@ impl SetLedState {
     pub const CMD: u32 = 0x4a0f0300;
 }
 
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct WireSetLedState
+{
+    _p0: u8,  // padding
+    pub id: u8,
+    _p1: u8,  // padding
+    /// Seems to be specifying up to which column?
+    pub count: u8,
+    pub leds: [RGB; 22], // 22 is the max seen?, corresponds with 0x16 in the count position.
+}
+
 impl Command for SetLedState {
     fn command_id(&self) -> u32 {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::new();
-        v.push(0); // 0 byte
-        v.push(self.id);
-        v.push(0); // another 0.
-        v.push(self.count); // Count of leds, though always 0x16 in data seen.
-        for rgb in self.leds.iter() {
-            v.append(&mut rgb.payload());
-        }
-        return v;
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetLedState>()];
+        let wire_ledstate: WireSetLedState = WireSetLedState{id: self.id, count: self.count, leds: self.leds, ..Default::default()};
+        wire_ledstate.to_le_bytes(&mut v[..]).expect("Should succeed");
+        v
     }
 }
 
@@ -105,16 +115,24 @@ pub struct SetBrightness {
 impl SetBrightness {
     pub const CMD: u32 = 0x030f0401;
 }
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct WireSetBrightness
+{
+    _p0: u8,  // padding
+    pub value: u8
+}
+
 
 impl Command for SetBrightness {
     fn command_id(&self) -> u32 {
         return SetBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::new();
-        v.push(0); // 0 byte
-        v.push((self.value * 255.0) as u8);
-        return v;
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetBrightness>()];
+        let wire_setbrightness: WireSetBrightness = WireSetBrightness{value: (self.value * 255.0) as u8, ..Default::default()};
+        wire_setbrightness.to_le_bytes(&mut v[..]).expect("Should succeed");
+        v
     }
 }
 
