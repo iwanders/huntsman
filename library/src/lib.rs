@@ -55,11 +55,17 @@ pub enum Ref<'a> {
 macro_rules! expand_cases {
     ($input:ident, $dest:ident, $( $y:path ),*) => (
         match ($input) {
-                $($y(d) => {  let bytes = d.to_le_bytes();
-                                for i in 0..bytes.len()
-                                {
-                                    $dest[i] = bytes[i];
-                                }},)+
+                $($y(d) => {
+                    let bytes = d.to_le_bytes();
+                    if bytes.len() != $dest.len()
+                    {
+                        return Err(format!("Type is {} long, doesn't fit into {} provided.", bytes.len(), $dest.len()));
+                    }
+                    for i in 0..bytes.len()
+                    {
+                        $dest[i] = bytes[i];
+                    }
+                },)+
                 _ => {return Err(format!("Reached unhandled for conversion."))},
         }
     )
@@ -146,11 +152,12 @@ fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String>
     }
     else
     {
-        // We have reached a leaf... do the thing, check which ref it is, and invoke the serialization.
+        // We have reached a leaf... perform a final check
         if dest.len() != v.info.length
         {
             return Err(format!("Field length doesn't match available buffer need `{}`, buffer: {}", v.info.length, dest.len()));
         }
+        // And then convert the wrapped reference appropriately.
         ref_to_le_bytes(&v.value, dest)?;
     }
     
