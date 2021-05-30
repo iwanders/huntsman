@@ -39,8 +39,8 @@ pub struct Info
     pub type_name: &'static str,
     pub type_id: std::any::TypeId,
     pub name: Option<&'static str>,
-    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing annotations
-    // to be completely specified by the user.
+    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
+    // annotations to be completely specified by the user.
     pub attrs: std::collections::HashMap<&'static str, &'static str>,
 }
 

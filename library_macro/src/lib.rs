@@ -17,10 +17,8 @@ extern crate memoffset;
 // Outputs a tokenstream in the shape of [(&'static str, &'static str)]
 fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStream
 {
-    // let mut res: std::collections::HashMap<&'static str, &'static str> = std::collections::HashMap::new();
     let mut attribute_str_pairs: Vec<proc_macro2::TokenStream> = Vec::new();
 
-    // println!("{:#?}", list);
     for option in list.into_iter() {
         let option = option.parse_meta().expect("The attribute list optional must be populated");
         match option {
@@ -34,14 +32,8 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
                         {
                             match meta_thing
                             {
-                                syn::Meta::Path(p) => {
-                                    // println!("Path: {:?}", p);
-                                },
-                                syn::Meta::List(l) => {
-                                    // println!("Path: {:?}", l);
-                                },
                                 syn::Meta::NameValue(meta_name_value) => {
-                                    // println!("MetaNameValue: {:?}", meta_name_value);
+                                    // We have something shapend like `foo = 3` or `foo = "bar"` 
                                     // Check if we have a string entry.
                                     match meta_name_value.lit
                                     {
@@ -58,12 +50,14 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
                                     }
                                 
                                 },
+                                _ => {}, // path, list etc.
                                 
                             }
                         }
                         syn::NestedMeta::Lit(l) => 
                         {
-                            println!("Literal: {:?}", l);
+                            // Literal without a path & equal sign.
+                            // println!("Literal: {:?}", l);
                         }
                     }
                 }
@@ -71,8 +65,8 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
             _=> {},
         }
     }
+    // Concatenate the extracted pairs.
     let res = quote!(#(#attribute_str_pairs),*);
-    // println!("res: {:}", res.to_string());
     res
 }
 

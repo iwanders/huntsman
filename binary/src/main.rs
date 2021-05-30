@@ -10,16 +10,12 @@ struct StructWithFloat {
     float_inside: f32,
 }
 
-enum Endian
-{
-    Little,
-    Big
-}
 
 #[derive(Inspectable, Debug, Default)]
 #[repr(C)]
-#[hello(prefix = "foo", zulu = 3)]
+#[hello(prefix = "foo")]
 struct Pancakes {
+    #[hello(display = "dec")]
     first_char: u8,
     a_float: f32,
     #[hello(display = "hex")]
