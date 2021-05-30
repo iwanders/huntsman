@@ -149,7 +149,7 @@ fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String> {
 
 // use std::collections::HashMap;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ElementType
 {
     Path,
@@ -158,7 +158,7 @@ pub enum ElementType
     Other,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Info {
     pub start: usize,
     pub length: usize,
@@ -195,11 +195,32 @@ impl FieldRef<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Field {
     pub info: Info,
     pub children: Vec<Field>,
 }
+
+impl Field {
+    pub fn find(&self, name: &str) -> Option<Field>
+    {
+        for i in 0..self.children.len()
+        {
+            match self.children[i].info.name
+            {
+                Some(n) => {
+                    if n == name
+                    {
+                        return Some(self.children[i].clone());
+                    }
+                },
+                None => {},
+            }
+        }
+        return None;
+    }
+}
+
 
 // Actual working recursion function.
 fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
