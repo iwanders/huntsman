@@ -2,6 +2,16 @@ extern crate library_macro;
 
 pub use library_macro::Inspectable;
 
+/*
+This architecture can only deal with primitives, if someone puts something in their struct and wants to implement
+their own Inspectable, or to_le_bytes function on that, that doesn't work because it can't be captured in the (Mut)Ref
+that's defined in this crate.
+
+The whole reference situation is ugly atm, but it's useful as it allows building the struct by reading the primitives
+from bytes, or writing bytes from the primitives.
+*/
+
+
 // Don't really know how to forward these to dependants...
 // #[macro_use]
 // extern crate memoffset;
@@ -52,7 +62,7 @@ pub enum Ref<'a> {
     None,
 }
 
-macro_rules! expand_cases {
+macro_rules! expand_cases_to_le_bytes {
     ($input:ident, $dest:ident, $( $y:path ),*) => (
         match ($input) {
                 $($y(d) => {
@@ -70,9 +80,10 @@ macro_rules! expand_cases {
         }
     )
 }
+
 fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
     // This is very ugly :(
-    expand_cases!(
+    expand_cases_to_le_bytes!(
         value,
         dest,
         Ref::I8,
@@ -87,6 +98,52 @@ fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
         Ref::U128,
         Ref::F32,
         Ref::F64 // Ref::Bool  // doesn't have to_le_bytes :/
+    );
+    Ok(())
+}
+
+
+macro_rules! expand_cases_from_le_bytes {
+    ($value:ident, $src:ident, $( ($y:path, $e:ty) ),*) => (
+        match ($value) {
+                $($y(d) => {
+                    // do some smart to assign into d.
+                    // d = f32::from_le_bytes(bytes: [u8; 4])
+                    let mut bytes = d.to_le_bytes(); // just to create an appropriately sized array easily.
+                    if bytes.len() != $src.len()
+                    {
+                        return Err(format!("Type is {} long, doesn't fit into {} provided.", bytes.len(), $src.len()));
+                    }
+                    // Now, we can read the bytes.
+                    for i in 0..bytes.len()
+                    {
+                        bytes[i] = $src[i];
+                    }
+                    // and perform the real read.
+                    **d = <$e>::from_le_bytes(bytes);
+                },)+
+                _ => {return Err(format!("Reached unhandled for conversion."))},
+        }
+    )
+}
+fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String>
+{
+    expand_cases_from_le_bytes!(
+        value,
+        src,
+        (MutRef::I8, i8),  // just because we miss decltype :(
+        (MutRef::I16, i16),
+        (MutRef::I32, i32),
+        (MutRef::I64, i64),
+        (MutRef::I128, i128),
+        (MutRef::U8, u8),
+        (MutRef::U16, u16),
+        (MutRef::U32, u32),
+        (MutRef::U64, u64),
+        (MutRef::U128, u128),
+        (MutRef::F32, f32),
+        (MutRef::F64, f64)
+        // Ref::Bool  // doesn't have to_le_bytes :/
     );
     Ok(())
 }
@@ -160,6 +217,31 @@ fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
     Ok(())
 }
 
+fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String>
+{
+    if !v.children.is_empty() {
+        for i in 0..v.children.len() {
+            // recurse...
+            let start = v.children[i].info.start;
+            let len = v.children[i].info.length;
+            impl_from_le_bytes(&mut v.children[i], &src[start..(start + len)])?
+        }
+    } else {
+        // We have reached a leaf... perform a final check
+        if src.len() != v.info.length {
+            return Err(format!(
+                "Field length doesn't match available buffer need `{}`, buffer: {}",
+                v.info.length,
+                src.len()
+            ));
+        }
+        // And then convert the wrapped reference appropriately.
+        mut_from_le_bytes(&mut v.value, src)?;
+    }
+
+    Ok(())
+}
+
 pub trait Inspectable {
     fn fields_as_mut<'a>(&'a mut self) -> FieldMut<'a>;
     fn fields_as_ref<'a>(&'a self) -> FieldRef<'a>;
@@ -173,6 +255,18 @@ pub trait Inspectable {
         Self: Sized,
     {
         return impl_to_le_bytes(&self.fields_as_ref(), dest);
+    }
+
+    // from_le_bytes(src: &[u8]) -> Result<Self, String> is a bit more involved if we don't want to assume default
+    // constructability... Need to tackle it on the derive side mostly... if we assume default constructability, it
+    // becomes a lot easier and we can just grab the mutable field tree and recurse.
+    fn from_le_bytes(src: &[u8]) -> Result<Self, String>
+    where
+        Self: Sized + Default,
+    {
+        let mut v: Self = Default::default();
+        impl_from_le_bytes(&mut v.fields_as_mut(), src)?;
+        Ok(v)
     }
 }
 

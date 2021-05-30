@@ -12,6 +12,7 @@ struct StructWithFloat {
 #[repr(C)]
 struct Pancakes {
     first_char: u8,
+    _x: [u8; 3],  // This is ignored in the Inspectable entry
     an_uint: u32,
     a_float: f32,
     array_three_chars: [i8; 3],
@@ -78,6 +79,7 @@ fn sdfsdf() {
     let float_3_value: f32 = 3156416.0f32 / 3.0;
     let expected_result: Pancakes = Pancakes {
         first_char: char_value,
+        _x: [0; 3],
         an_uint: int_value,
         a_float: float_value,
         array_three_chars: char_array_value,
@@ -208,6 +210,11 @@ fn sdfsdf() {
 
         // The expected result byte array should be identical to the array we just wrote.
         assert_eq!(struct_to_bytes(&expected_result), arr);
+
+        // And check whether we can read from the array.
+        let read_back = Pancakes::from_le_bytes(&arr).expect("Should succeed");
+        assert_eq!(struct_to_bytes(&expected_result), struct_to_bytes(&read_back));
+        // and this fails because of padding not being zerod :(
     }
 }
 

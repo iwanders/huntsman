@@ -95,6 +95,10 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 panic!("No identifier for this field?");
                             }
                         }
+                        if name.starts_with("_")
+                        {
+                            continue;
+                        }
                         match &inner_field.ty {
                             syn::Type::Array(arr) => {
                                 // Element type
