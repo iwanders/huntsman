@@ -1,4 +1,7 @@
-use struct_helper::*;
+
+use struct_helper::StructHelper;
+pub mod wire;
+pub use wire::RGB;
 
 /*
 keyboard_sniffs$ ./dump.sh 2021 | sort | uniq > /tmp/sorted_all.txt
@@ -19,61 +22,14 @@ Shows; 1f is not always 1f, sometimes it's 08
         ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely.
 */
 
-#[derive(StructHelper, Copy, Clone, Debug)]
-#[repr(C)]
-pub struct WireCommand
-{
-    pub status: u8, // status, direction? Only really seen 0, 2 and I think 5 when I was throwing random data it it all.
-    pub the_1f: u8, // Almost always 1f.
-    _three: [u8; 3], // these bytes always seem to be zero, ALWAYS
-    pub len: u8,
-    pub cmd_0: u8,
-    pub cmd_1: u8,
-    pub payload: [u8; 80],
-    pub checksum: u8,
-    _closing: u8,
-}
-
-impl WireCommand
-{
-    /// Direct implementation to update the checksum based on the currently populated fields.
-    pub fn update_checksum(&mut self)
-    {
-        self.checksum = 0;
-        self.checksum ^= self.len;
-        self.checksum ^= self.cmd_0;
-        self.checksum ^= self.cmd_1;
-        for i in 0..self.payload.len() {
-            self.checksum ^= self.payload[i];
-        }
-    }
-}
-
-impl Default for WireCommand {
-    fn default() -> WireCommand {
-        WireCommand {
-            status: 0,
-            the_1f: 0x1f,
-            _three: [0, 0, 0],
-            len: 0,
-            cmd_0: 0,
-            cmd_1: 0,
-            payload: [0; 80],
-            checksum: 0,
-            _closing: 0,
-        }
-    }
-}
-
-// Todo; Clean up this monster.
 pub trait Command: std::fmt::Debug {
     fn serialize(&self) -> Vec<u8> {
         // Now follows the command.
         let cmd = self.register();
         let payload = self.payload();
 
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireCommand>()];
-        let mut wire: WireCommand = Default::default();
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::Command>()];
+        let mut wire: wire::Command = Default::default();
         wire.cmd_0 = cmd.0;
         wire.cmd_1 = cmd.1;
         wire.len = payload.len() as u8;
@@ -90,13 +46,6 @@ pub trait Command: std::fmt::Debug {
 
     fn register(&self) -> (u8, u8);
     fn payload(&self) -> Vec<u8>;
-}
-
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
-pub struct RGB {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -126,26 +75,14 @@ impl SetLedState {
     pub const CMD: (u8, u8) = (0x0f, 0x03);
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
-#[repr(C)]
-pub struct WireSetLedState
-{
-    first: u8,
-    _p0: u8,  // padding
-    pub id: u8,
-    _p1: u8,  // padding
-    /// Seems to be specifying up to which column?
-    pub count: u8,
-    pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
-}
 
 impl Command for SetLedState {
     fn register(&self) -> (u8, u8) {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetLedState>()];
-        let wire_ledstate: WireSetLedState = WireSetLedState{first: 0, id: self.id, count: self.count, leds: self.leds, ..Default::default()};
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedState>()];
+        let wire_ledstate: wire::SetLedState = wire::SetLedState{first: 0, id: self.id, count: self.count, leds: self.leds, ..Default::default()};
         wire_ledstate.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
@@ -158,23 +95,14 @@ pub struct SetBrightness {
 impl SetBrightness {
     pub const CMD: (u8, u8) = (0x0f, 0x04);
 }
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
-#[repr(C)]
-pub struct WireSetBrightness
-{
-    pub first: u8,
-    _p0: u8,  // padding
-    pub value: u8
-}
-
 
 impl Command for SetBrightness {
     fn register(&self) -> (u8, u8) {
         return SetBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<WireSetBrightness>()];
-        let wire_setbrightness: WireSetBrightness = WireSetBrightness{first: 0x01, value: (self.value * 255.0) as u8, ..Default::default()};
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetBrightness>()];
+        let wire_setbrightness: wire::SetBrightness = wire::SetBrightness{first: 0x01, value: (self.value * 255.0) as u8, ..Default::default()};
         wire_setbrightness.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
