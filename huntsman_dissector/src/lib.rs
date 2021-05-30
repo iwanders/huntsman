@@ -1,59 +1,35 @@
 extern crate wireshark_dissector_rs;
 
 use wireshark_dissector_rs::dissector;
+use wireshark_dissector_rs::dissector::PacketField;
 use wireshark_dissector_rs::epan;
+
+extern crate huntsman_comm;
+
+extern crate struct_helper;
+use struct_helper::StructHelper;
+use huntsman_comm::wire;
+// use struct_helper::StructHelper;
 
 // Lift these to make it less verbose.
 type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;
 type Encoding = epan::proto::Encoding;
 
-#[repr(usize)]
-enum TreeIdentifier {
-    Root,
-    Last,
-}
 struct HuntsmanDissector {
-    field_mapping: Vec<(dissector::PacketField, epan::proto::HFIndex)>,
+    field_mapping: Vec<(PacketField, epan::proto::HFIndex)>,
     tree_indices: Vec<epan::proto::ETTIndex>,
 }
+
+enum TreeIdentifier
+{
+    Root,
+    Last
+}
+
 impl HuntsmanDissector {
-    const ROOT: dissector::PacketField = dissector::PacketField {
-        name: "Huntsman Protocol",
-        abbrev: "huntsman.proto",
-        field_type: FieldType::PROTOCOL,
-        display: FieldDisplay::BASE_NONE,
-    };
-    const FULL_PAYLOAD: dissector::PacketField = dissector::PacketField {
-        name: "Payload",
-        abbrev: "huntsman.payload",
-        field_type: FieldType::BYTES,
-        display: FieldDisplay::BASE_NONE,
-    };
-    const DIRECTION: dissector::PacketField = dissector::PacketField {
-        name: "Direction or status?",
-        abbrev: "huntsman.status",
-        field_type: FieldType::UINT8, // Should really add enum support...
-        display: FieldDisplay::BASE_DEC,
-    };
-    const SEQUENCE: dissector::PacketField = dissector::PacketField {
-        name: "Some sequence_number",
-        abbrev: "huntsman.sequence",
-        field_type: FieldType::UINT8,
-        display: FieldDisplay::BASE_DEC,
-    };
-    const CHECKSUM: dissector::PacketField = dissector::PacketField {
-        name: "Checksum",
-        abbrev: "huntsman.checksum", // second last byte... pretty sure about this one.
-        field_type: FieldType::UINT8,
-        display: FieldDisplay::BASE_HEX,
-    };
-    const COMMAND: dissector::PacketField = dissector::PacketField {
-        name: "Command?",
-        abbrev: "huntsman.command",
-        field_type: FieldType::UINT32,
-        display: FieldDisplay::BASE_HEX,
-    };
+    const ROOT: PacketField = PacketField::fixed("Huntsman Protocol","huntsman.proto", FieldType::PROTOCOL,FieldDisplay::BASE_NONE);
+    const FULL_PAYLOAD: PacketField = PacketField::fixed("Payload","huntsman.payload",FieldType::BYTES,FieldDisplay::BASE_NONE);
 
     const EXPECTED_MSG_LENGTH: usize = 90;
 }
@@ -111,41 +87,6 @@ impl HuntsmanDissector {
             Encoding::BIG_ENDIAN,
         );
 
-        root.add_item(
-            self.get_id(&HuntsmanDissector::DIRECTION),
-            tvb,
-            offset,
-            1,
-            Encoding::BIG_ENDIAN,
-        );
-        offset += 1;
-
-        root.add_item(
-            self.get_id(&HuntsmanDissector::COMMAND),
-            tvb,
-            offset + 4,
-            4,
-            Encoding::BIG_ENDIAN,
-        );
-        offset += 9;
-        root.add_item(
-            self.get_id(&HuntsmanDissector::SEQUENCE),
-            tvb,
-            offset,
-            1,
-            Encoding::BIG_ENDIAN,
-        );
-        //~ offset += 1;
-
-        root.add_item(
-            self.get_id(&HuntsmanDissector::CHECKSUM),
-            tvb,
-            data_start_offset + length - 2,
-            1,
-            Encoding::BIG_ENDIAN,
-        );
-        //~ offset += 1;
-
         tvb.reported_length()
     }
 }
@@ -155,10 +96,6 @@ impl dissector::Dissector for HuntsmanDissector {
         let mut f = Vec::new();
         f.push(HuntsmanDissector::ROOT);
         f.push(HuntsmanDissector::FULL_PAYLOAD);
-        f.push(HuntsmanDissector::DIRECTION);
-        f.push(HuntsmanDissector::CHECKSUM);
-        f.push(HuntsmanDissector::SEQUENCE);
-        f.push(HuntsmanDissector::COMMAND);
         return f;
     }
 
@@ -252,3 +189,97 @@ static plugin_release: [libc::c_char; 4] = [50, 46, 54, 0]; // "2.6"
 static plugin_want_major: u32 = 3;
 #[no_mangle]
 static plugin_want_minor: u32 = 5;
+
+
+
+
+#[derive(Default, Debug, Clone, Copy)]
+struct FieldFlags
+{
+    hidden: bool
+}
+
+#[derive(Default, Debug, Clone)]
+struct DissectionField
+{
+    start: usize,
+    length: usize,
+    abbrev: Vec<String>,
+    flags: FieldFlags,
+    type_name: &'static str,
+}
+
+fn flatten_field_tree(field: &struct_helper::Field, flags: &FieldFlags, prefix: Vec<String>, offset: usize) -> Vec<DissectionField>
+{
+    let mut res : Vec<DissectionField> = Vec::new();
+    let mut updated_prefix = prefix;
+    match field.info.name
+    {
+        Some(n) => {
+            updated_prefix.push(n.to_string());
+        },
+        None =>{},
+    }
+
+    let mut updated_flags = flags.clone();
+    // println!("attrs: {:?}", field.info.attrs);
+    match field.info.attrs.get("dissection_hide")
+    {
+        Some(v) => updated_flags.hidden = *v == "true",
+        None => {},
+    }
+
+
+    for k in 0..field.children.len()
+    {
+        let c = &field.children[k];
+        let mut child_prefix = updated_prefix.clone();
+        println!("K: {:#?}", c);
+        if field.info.element_type == struct_helper::ElementType::Array
+        {
+            child_prefix.push(format!("[{}]", k));
+        }
+        // println!("
+        res.append(&mut flatten_field_tree(c, &updated_flags, child_prefix, field.info.start + offset));
+    }
+    if field.children.is_empty()
+    {
+        // We are a leaf.
+        res.push(DissectionField{
+            flags: updated_flags,
+            abbrev: updated_prefix,
+            start: offset,
+            length: field.info.length,
+            type_name: field.info.type_name,
+        });
+    }
+    return res;
+}
+
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn wrangle_commands_into_fields()
+    {
+        let dissection_fields: Vec<PacketField> = Vec::new();
+        let command_fields = wire::Command::fields();
+        println!("{:#?}", command_fields);
+        let flags: FieldFlags = Default::default();
+        let command_flattened = flatten_field_tree(&command_fields, &flags, vec!(), 0);
+        println!("{:?}", command_flattened);
+        println!("{:?}", command_fields.find("checksum"));
+        // wire::Command
+
+        let ledstate_fields = wire::SetLedState::fields();
+        let ledstate_flattened = flatten_field_tree(&ledstate_fields, &flags, vec!(), command_fields.find("payload").expect("Payload should exist").info.start);
+        println!("{:?}", ledstate_flattened);
+        
+        // wire::SetLedState
+        // wire::SetBrightness
+    }
+}
+

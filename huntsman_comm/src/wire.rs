@@ -19,6 +19,7 @@ pub struct Command
     pub len: u8,
     pub cmd_0: u8,
     pub cmd_1: u8,
+    #[struct_helper(dissection_hide="true")]
     pub payload: [u8; 80],
     pub checksum: u8,
     pub _closing: u8,

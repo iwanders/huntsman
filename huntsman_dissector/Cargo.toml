@@ -7,6 +7,8 @@ license = "GPL-2.0-or-later" # Links against wireshark through the wireshark dis
 
 [dependencies]
 wireshark_dissector_rs = { path = "../wireshark_dissector_rs" }
+huntsman_comm = { path = "../huntsman_comm" }
+struct_helper = { path = "../struct_helper" }
 libc = "0.2.93"
 
 [lib]
