@@ -44,7 +44,7 @@ fn main() {
 
     // println!("Offset: {:?}", offset_of!(Pancakes, array_three_chars));
 
-    pub fn printer(f: &library::MutableField, indent: usize) {
+    pub fn printer(f: &library::FieldMut, indent: usize) {
         let mut ind: String = String::new();
         for _i in 0..indent {
             ind += " ";
@@ -97,7 +97,7 @@ fn main() {
 
     let mut mu8: u8 = 3;
 
-    let f = library::MutableField {
+    let f = library::FieldMut {
         value: library::MutRef::U8(&mut mu8),
         info: library::Info{
         start: 0,

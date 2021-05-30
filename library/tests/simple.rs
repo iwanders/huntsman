@@ -101,7 +101,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[0]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "first_char"
         );
@@ -113,7 +112,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[1]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "an_uint"
         );
@@ -125,7 +123,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[2]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "a_float"
         );
@@ -138,7 +135,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[3]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "array_three_chars"
         );
@@ -151,7 +147,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[4]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "struct_z"
         );
@@ -162,7 +157,6 @@ fn sdfsdf() {
         assert_eq!(
             for_lookup.children[5]
                 .info.name
-                .as_ref()
                 .expect("Should have a name"),
             "array_with_three_structs"
         );

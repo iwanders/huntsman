@@ -54,10 +54,9 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
                                 
                             }
                         }
-                        syn::NestedMeta::Lit(l) => 
+                        _ => 
                         {
-                            // Literal without a path & equal sign.
-                            // println!("Literal: {:?}", l);
+                            // Literal without a path & equal sign etc.
                         }
                     }
                 }
@@ -82,7 +81,8 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
 
     let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
-    let mut immutable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_for_ref: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_static: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
 
     match &input.data {
@@ -122,7 +122,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 );
                                 // Create the fields for this array, unwrapping the internals.
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                        library::MutableField{
+                                        library::FieldMut{
                                             value: library::MutRef::None,
                                             info: #info,
                                             children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
@@ -130,11 +130,24 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                                     let mut fields = x.fields_as_mut();
                                                     fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
-                                                }).collect::<Vec<library::MutableField>>(),
+                                                }).collect::<Vec<library::FieldMut>>(),
                                         }
                                     )
                                 ));
-                                immutable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
+                                        library::FieldRef{
+                                            value: library::Ref::None,
+                                            info: #info,
+                                            children: self.#inner_field_ident.iter().enumerate().map(|(i, mut x)|
+                                                {
+                                                    let mut fields = x.fields_as_ref();
+                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
+                                                    fields
+                                                }).collect::<Vec<library::FieldRef>>(),
+                                        }
+                                    )
+                                ));
+                                fields_static.push(proc_macro2::TokenStream::from(quote!(
                                         library::Field{
                                             info: #info,
                                             children: (0..#arr_len).map(|i|
@@ -167,12 +180,18 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                         });
 
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                    library::MutableField{
+                                    library::FieldMut{
                                         value: library::MutRef::None,
                                         info: #info,
                                         children: vec!(self.#inner_field_ident.fields_as_mut())}
                                 )));
-                                immutable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
+                                    library::FieldRef{
+                                        value: library::Ref::None,
+                                        info: #info,
+                                        children: vec!(self.#inner_field_ident.fields_as_ref())}
+                                )));
+                                fields_static.push(proc_macro2::TokenStream::from(quote!(
                                     library::Field{
                                         info: #info,
                                         children: vec!(<#type_ident as Inspectable>::fields())}
@@ -211,18 +230,26 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     );
     let gen = quote! {
         impl library::Inspectable for #name {
-            fn fields_as_mut<'a>(&'a mut self) -> library::MutableField
+            fn fields_as_mut<'a>(&'a mut self) -> library::FieldMut
             {
-                return library::MutableField{
+                return library::FieldMut{
                              value: library::MutRef::None,
                              info: #info,
                              children: vec!(#(#fields_for_mut),*)};
             }
 
+            fn fields_as_ref<'a>(&'a self) -> library::FieldRef
+            {
+                return library::FieldRef{
+                             value: library::Ref::None,
+                             info: #info,
+                             children: vec!(#(#fields_for_ref),*)};
+            }
+
             fn fields() -> library::Field {
                 library::Field {
                      info: #info,
-                     children: vec!(#(#immutable_fields),*)
+                     children: vec!(#(#fields_static),*)
                 }
             }
         }
