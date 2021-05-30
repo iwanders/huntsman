@@ -1,7 +1,10 @@
 extern crate library_macro;
 
-pub use library_macro::Inspectable;
+pub use library_macro::*;
+pub use memoffset::*;
 
+// #[macro_use]
+// extern crate memoffset;
 /*
 This architecture can only deal with primitives, if someone puts something in their struct and wants to implement
 their own Inspectable, or to_le_bytes function on that, that doesn't work because it can't be captured in the (Mut)Ref

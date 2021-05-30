@@ -2,13 +2,11 @@
 // https://github.com/dtolnay/syn/tree/master/examples/heapsize
 
 extern crate proc_macro;
-
 use quote::quote;
 extern crate proc_macro2;
 use syn;
 
 // https://github.com/rust-lang/rust/issues/48956
-extern crate memoffset;
 
 // Enums treated as unions... would be cool if we could handle that elegantly...
 // perhaps with a 'denoted by' field specifying which of the enums is active?

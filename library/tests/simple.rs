@@ -1,7 +1,5 @@
-use library::Inspectable;
+use library::*;
 
-#[macro_use]
-extern crate memoffset;
 
 #[derive(Inspectable, Debug, Default, Copy, Clone)]
 struct StructWithFloat {
