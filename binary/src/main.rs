@@ -46,12 +46,12 @@ fn main() {
             ind += " ";
         }
 
-        println!("{}name: {:?}", ind, f.name);
+        println!("{}name: {:?}", ind, f.info.name);
         println!("{} value: {:?}", ind, f.value);
-        println!("{} start: {:?}", ind, f.start);
-        println!("{} length: {:?}", ind, f.length);
-        println!("{} type_name: {:?}", ind, f.type_name);
-        println!("{} type_id: {:?}", ind, f.type_id);
+        println!("{} start: {:?}", ind, f.info.start);
+        println!("{} length: {:?}", ind, f.info.length);
+        println!("{} type_name: {:?}", ind, f.info.type_name);
+        println!("{} type_id: {:?}", ind, f.info.type_id);
         for c in &f.children {
             printer(&c, indent + 4);
         }
@@ -94,11 +94,12 @@ fn main() {
 
     let f = library::MutableField {
         value: library::MutRef::U8(&mut mu8),
+        info: library::Info{
         start: 0,
         length: std::mem::size_of::<u8>(),
         type_name: "u8",
         type_id: std::any::TypeId::of::<u8>(),
-        name: None,
+        name: None,},
         children: vec![],
     };
 

@@ -29,26 +29,45 @@ pub enum MutRef<'a> {
     None,
 }
 
-// Struct to represent a field in a struct.
-#[derive(Debug)]
-pub struct MutableField<'a> {
-    pub value: MutRef<'a>,
+pub trait FieldInfo
+{
+    fn name() -> Option<String>;
+    fn start() -> usize;
+    fn length() -> usize;
+    fn type_name() -> &'static str;
+    fn type_id() -> std::any::TypeId;
+}
 
+#[derive(Debug)]
+pub struct Info
+{
     pub start: usize,
     pub length: usize,
     pub type_name: &'static str,
     pub type_id: std::any::TypeId,
     pub name: Option<String>,
+}
+
+// impl FieldInfo for Info
+// {
+    // fn name(&self) -> Option<String>
+    // {
+        // self.name
+    // }
+// }
+
+
+// Struct to represent a field in a struct.
+#[derive(Debug)]
+pub struct MutableField<'a> {
+    pub info: Info,
+    pub value: MutRef<'a>,
     pub children: Vec<MutableField<'a>>,
 }
 
 #[derive(Debug)]
 pub struct Field {
-    pub start: usize,
-    pub length: usize,
-    pub type_name: &'static str,
-    pub type_id: std::any::TypeId,
-    pub name: Option<String>,
+    pub info: Info,
     pub children: Vec<Field>,
 }
 
@@ -66,23 +85,27 @@ macro_rules! make_inspectable {
         impl Inspectable for $a {
             fn fields_as_mut<'a>(&'a mut self) -> MutableField {
                 MutableField {
+                    info: Info{
+                        start: 0,
+                        length: std::mem::size_of::<$a>(),
+                        type_name: std::any::type_name::<$a>(),
+                        type_id: std::any::TypeId::of::<$a>(),
+                        name: None,
+                    },
                     value: $v(self),
-                    start: 0,
-                    length: std::mem::size_of::<$a>(),
-                    type_name: std::any::type_name::<$a>(),
-                    type_id: std::any::TypeId::of::<$a>(),
-                    name: None,
                     children: vec![],
                 }
             }
 
             fn fields() -> Field where Self: Sized {
                 Field {
-                    start: 0,
-                    length: std::mem::size_of::<$a>(),
-                    type_name: std::any::type_name::<$a>(),
-                    type_id: std::any::TypeId::of::<$a>(),
-                    name: None,
+                    info: Info{
+                        start: 0,
+                        length: std::mem::size_of::<$a>(),
+                        type_name: std::any::type_name::<$a>(),
+                        type_id: std::any::TypeId::of::<$a>(),
+                        name: None,
+                    },
                     children: vec![],
                 }
             }

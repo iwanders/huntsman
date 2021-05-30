@@ -48,22 +48,24 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 let type_ident = &arr.elem;
                                 let arr_len = &arr.len;
 
-                                let shared = quote!(
-                                    start: offset_of!(#root_struct, #inner_field_ident),
-                                    length: std::mem::size_of::<#type_ident>() *#arr_len ,
-                                    type_name: stringify!(#type_ident),
-                                    type_id: std::any::TypeId::of::<#type_ident>(),
-                                    name: Some((#name).to_string() + #attributes_addition),
+                                let info = quote!(
+                                    library::Info{
+                                        start: offset_of!(#root_struct, #inner_field_ident),
+                                        length: std::mem::size_of::<#type_ident>() *#arr_len ,
+                                        type_name: stringify!(#type_ident),
+                                        type_id: std::any::TypeId::of::<#type_ident>(),
+                                        name: Some((#name).to_string() + #attributes_addition),
+                                    }
                                 );
                                 // Create the fields for this array, unwrapping the internals.
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
                                         library::MutableField{
                                             value: library::MutRef::None,
-                                            #shared
+                                            info: #info,
                                             children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
                                                 {
                                                     let mut fields = x.fields_as_mut();
-                                                    fields.start = i * std::mem::size_of::<#type_ident>();
+                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
                                                 }).collect::<Vec<library::MutableField>>(),
                                         }
@@ -71,11 +73,11 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 ));
                                 immutable_fields.push(proc_macro2::TokenStream::from(quote!(
                                         library::Field{
-                                            #shared
+                                            info: #info,
                                             children: (0..#arr_len).map(|i|
                                                 {
                                                     let mut fields = <#type_ident as Inspectable>::fields();
-                                                    fields.start = i * std::mem::size_of::<#type_ident>();
+                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
                                                     fields
                                                 }).collect::<Vec<library::Field>>(),
                                         }
@@ -91,22 +93,24 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                 let type_ident = &type_path.path.segments[0].ident;
                                 let n = type_ident.to_string();
 
-                                let shared = quote!(
+                                let info = quote!(
+                                        library::Info{
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>(),
                                         type_name: #n,
                                         type_id: std::any::TypeId::of::<#type_ident>(),
-                                        name: Some((#name).to_string() + #attributes_addition));
+                                        name: Some((#name).to_string() + #attributes_addition)
+                                        });
 
                                 fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
                                     library::MutableField{
                                         value: library::MutRef::None,
-                                        #shared,
+                                        info: #info,
                                         children: vec!(self.#inner_field_ident.fields_as_mut())}
                                 )));
                                 immutable_fields.push(proc_macro2::TokenStream::from(quote!(
                                     library::Field{
-                                        #shared,
+                                        info: #info,
                                         children: vec!(<#type_ident as Inspectable>::fields())}
                                 )));
                             }
@@ -131,12 +135,14 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
             panic!("Unions aren't supported. {:?}", data_union);
         }
     }
-    let shared = quote!(
+    let info = quote!(
+        library::Info{
              start: 0,
              length: std::mem::size_of::<#name>(),
              type_name: stringify!(#name),
              type_id: std::any::TypeId::of::<#name>(),
              name: Some(stringify!(#name).to_string()),
+        }
     );
     let gen = quote! {
         impl library::Inspectable for #name {
@@ -144,13 +150,13 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
             {
                 return library::MutableField{
                              value: library::MutRef::None,
-                             #shared
+                             info: #info,
                              children: vec!(#(#fields_for_mut),*)};
             }
 
             fn fields() -> library::Field {
                 library::Field {
-                     #shared
+                     info: #info,
                      children: vec!(#(#immutable_fields),*)
                 }
             }

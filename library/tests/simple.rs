@@ -24,17 +24,17 @@ fn test_starts() {
     let mut stack: Pancakes = Default::default();
     let bound = stack.fields_as_mut();
 
-    assert_eq!(offset_of!(Pancakes, first_char), bound.children[0].start);
-    assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].start);
-    assert_eq!(offset_of!(Pancakes, a_float), bound.children[2].start);
+    assert_eq!(offset_of!(Pancakes, first_char), bound.children[0].info.start);
+    assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].info.start);
+    assert_eq!(offset_of!(Pancakes, a_float), bound.children[2].info.start);
     assert_eq!(
         offset_of!(Pancakes, array_three_chars),
-        bound.children[3].start
+        bound.children[3].info.start
     );
-    assert_eq!(offset_of!(Pancakes, struct_z), bound.children[4].start);
+    assert_eq!(offset_of!(Pancakes, struct_z), bound.children[4].info.start);
     assert_eq!(
         offset_of!(Pancakes, array_with_three_structs),
-        bound.children[5].start
+        bound.children[5].info.start
     );
 }
 
@@ -100,68 +100,68 @@ fn sdfsdf() {
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(
             for_lookup.children[0]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "first_char"
         );
-        raw_bytes[for_lookup.children[0].start] = char_value; // first byte.
+        raw_bytes[for_lookup.children[0].info.start] = char_value; // first byte.
                                                               // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
         let int_bytes = int_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[1]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "an_uint"
         );
-        for i in 0..for_lookup.children[1].length {
-            raw_bytes[for_lookup.children[1].start + i] = int_bytes[i];
+        for i in 0..for_lookup.children[1].info.length {
+            raw_bytes[for_lookup.children[1].info.start + i] = int_bytes[i];
         }
 
         let float_bytes = float_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[2]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "a_float"
         );
-        for i in 0..for_lookup.children[2].length {
-            raw_bytes[for_lookup.children[2].start + i] = float_bytes[i];
+        for i in 0..for_lookup.children[2].info.length {
+            raw_bytes[for_lookup.children[2].info.start + i] = float_bytes[i];
         }
 
         // Now we get to the realm of nesting...
-        let array_offset = for_lookup.children[3].start;
+        let array_offset = for_lookup.children[3].info.start;
         assert_eq!(
             for_lookup.children[3]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "array_three_chars"
         );
         for i in 0..for_lookup.children[3].children.len() {
-            raw_bytes[array_offset + for_lookup.children[3].children[i].start] =
+            raw_bytes[array_offset + for_lookup.children[3].children[i].info.start] =
                 char_array_value[i].to_le_bytes()[0];
         }
 
         let float_z_bytes = float_z_value.to_le_bytes();
         assert_eq!(
             for_lookup.children[4]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "struct_z"
         );
-        for i in 0..for_lookup.children[4].length {
-            raw_bytes[for_lookup.children[4].start + i] = float_z_bytes[i];
+        for i in 0..for_lookup.children[4].info.length {
+            raw_bytes[for_lookup.children[4].info.start + i] = float_z_bytes[i];
         }
 
         assert_eq!(
             for_lookup.children[5]
-                .name
+                .info.name
                 .as_ref()
                 .expect("Should have a name"),
             "array_with_three_structs"
@@ -169,9 +169,9 @@ fn sdfsdf() {
         let float_array = [float_1_value, float_2_value, float_3_value];
         for i in 0..for_lookup.children[5].children.len() {
             let b = float_array[i].to_le_bytes();
-            for j in 0..for_lookup.children[5].children[i].length {
+            for j in 0..for_lookup.children[5].children[i].info.length {
                 raw_bytes
-                    [for_lookup.children[5].start + for_lookup.children[5].children[i].start + j] =
+                    [for_lookup.children[5].info.start + for_lookup.children[5].children[i].info.start + j] =
                     b[j];
             }
         }
