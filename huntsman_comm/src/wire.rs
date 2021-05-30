@@ -17,8 +17,8 @@ pub struct Command
     pub the_1f: u8, // Almost always 1f.
     pub _three: [u8; 3], // these bytes always seem to be zero, ALWAYS
     pub len: u8,
-    pub cmd_0: u8,
-    pub cmd_1: u8,
+    pub cmd_major: u8,
+    pub cmd_minor: u8,
     #[struct_helper(dissection_hide="true")]
     pub payload: [u8; 80],
     pub checksum: u8,
@@ -32,8 +32,8 @@ impl Command
     {
         self.checksum = 0;
         self.checksum ^= self.len;
-        self.checksum ^= self.cmd_0;
-        self.checksum ^= self.cmd_1;
+        self.checksum ^= self.cmd_major;
+        self.checksum ^= self.cmd_minor;
         for i in 0..self.payload.len() {
             self.checksum ^= self.payload[i];
         }
@@ -47,8 +47,8 @@ impl Default for Command {
             the_1f: 0x1f,
             _three: [0, 0, 0],
             len: 0,
-            cmd_0: 0,
-            cmd_1: 0,
+            cmd_major: 0,
+            cmd_minor: 0,
             payload: [0; 80],
             checksum: 0,
             _closing: 0,

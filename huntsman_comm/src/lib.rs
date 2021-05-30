@@ -30,8 +30,8 @@ pub trait Command: std::fmt::Debug {
 
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::Command>()];
         let mut wire: wire::Command = Default::default();
-        wire.cmd_0 = cmd.0;
-        wire.cmd_1 = cmd.1;
+        wire.cmd_major = cmd.0;
+        wire.cmd_minor = cmd.1;
         wire.len = payload.len() as u8;
 
         // copy the payload.

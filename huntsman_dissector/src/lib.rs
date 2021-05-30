@@ -115,7 +115,7 @@ impl HuntsmanDissector {
         // Iterate over all the fields.
         let flags: FieldFlags = Default::default();
         let command_fields = wire::Command::fields();
-        let command_flattened = flatten_field_tree(&command_fields, &flags, vec!(), 0);
+        let command_flattened = flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0);
 
         // This should really be a recursion, something with foldouts as well...
         for f in command_flattened.iter()
@@ -136,6 +136,7 @@ impl HuntsmanDissector {
         }
 
         offset += command_fields.find("payload").expect("Payload should exist").info.start;
+        let _z = offset;
 
         tvb.reported_length()
     }
@@ -313,7 +314,7 @@ fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField>
         dissector::PacketField {
             name: dissector::StringContainer::String(String::from(x.abbrev.last().unwrap())),
             abbrev: dissector::StringContainer::String(String::from(make_id(&x.abbrev))),
-            field_type: FieldType::UINT8,
+            field_type: FieldType::UINT8, // need to select this based on the type.
             display: FieldDisplay::BASE_HEX,
         }
     }).collect()
@@ -323,7 +324,7 @@ fn collect_payloads<T: StructHelper>(v: &mut Vec<DissectionField>, offset: usize
 {
     let ledstate_fields = <T>::fields();
     let flags: FieldFlags = Default::default();
-    v.append(&mut flatten_field_tree(&ledstate_fields, &flags, vec!(), offset));
+    v.append(&mut flatten_field_tree(&ledstate_fields, &flags, vec!("huntsman".to_string()), offset));
 }
 
 fn make_all_fields() -> Vec<DissectionField>
@@ -332,7 +333,7 @@ fn make_all_fields() -> Vec<DissectionField>
 
     let command_fields = wire::Command::fields();
     let flags: FieldFlags = Default::default();
-    all_fields.append(&mut flatten_field_tree(&command_fields, &flags, vec!(), 0));
+    all_fields.append(&mut flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0));
 
     let payload_offset = command_fields.find("payload").expect("Payload should exist").info.start;
 
