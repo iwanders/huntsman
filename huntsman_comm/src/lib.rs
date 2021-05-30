@@ -18,13 +18,6 @@ Shows; 1f is not always 1f, sometimes it's 08
       8   = 1 << 7, msb write / read flag?
         ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely.
 */
-fn prepare_checksum(v: &[u8]) -> u8 {
-    let mut checksum: u8 = 0;
-    for i in 2..v.len() {
-        checksum ^= v[i];
-    }
-    return checksum;
-}
 
 #[derive(StructHelper, Copy, Clone, Debug)]
 #[repr(C)]
@@ -40,6 +33,22 @@ pub struct WireCommand
     pub checksum: u8,
     _closing: u8,
 }
+
+impl WireCommand
+{
+    /// Direct implementation to update the checksum based on the currently populated fields.
+    pub fn update_checksum(&mut self)
+    {
+        self.checksum = 0;
+        self.checksum ^= self.len;
+        self.checksum ^= self.cmd_0;
+        self.checksum ^= self.cmd_1;
+        for i in 0..self.payload.len() {
+            self.checksum ^= self.payload[i];
+        }
+    }
+}
+
 impl Default for WireCommand {
     fn default() -> WireCommand {
         WireCommand {
@@ -74,14 +83,8 @@ pub trait Command: std::fmt::Debug {
         {
             wire.payload[i] = payload[i];
         }
-        // Ugh, this checksum is gross... we have to serialize first before we can calculate it.
-        wire.to_le_bytes(&mut v[..]).expect("Should succeed");
-
-        // Then, we can calculate the checksum
-        wire.checksum = prepare_checksum(&v[2..]);
-
-        // And then serialize it again _just_ to populate the checksum.
-        wire.to_le_bytes(&mut v[..]).expect("Should succeed");
+        wire.update_checksum();  // update the checksum based on the currently populated values.
+        wire.to_le_bytes(&mut v[..]).expect("Should succeed");  // serialize the struct.
         return v;
     }
 
