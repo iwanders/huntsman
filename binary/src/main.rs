@@ -12,8 +12,8 @@ struct StructWithFloat {
 
 #[derive(Inspectable, Debug, Default)]
 #[repr(C)]
+#[hello(prefix = "foo", zulu = 3, 3)]
 struct Pancakes {
-    // #[hello("foo")]
     first_char: u8,
     a_float: f32,
     array_three_chars: [u8; 3],
@@ -33,6 +33,7 @@ enum Flour {
 }
 
 fn main() {
+    return;
     // Pancakes::hello_macro();
     // let mut stack: Pancakes = Pancakes{first_char: 3u8, a_float: 3.3, array_three_chars: [0, 0, 0], struct_z: StructWithFloat{float_inside: 8.8}};
     let mut stack: Pancakes = Default::default();
@@ -102,6 +103,7 @@ fn main() {
         name: None,},
         children: vec![],
     };
+
 
     // mu8 = 10;
     // println!("Mu8: {}", mu8);

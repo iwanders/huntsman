@@ -29,15 +29,6 @@ pub enum MutRef<'a> {
     None,
 }
 
-pub trait FieldInfo
-{
-    fn name() -> Option<String>;
-    fn start() -> usize;
-    fn length() -> usize;
-    fn type_name() -> &'static str;
-    fn type_id() -> std::any::TypeId;
-}
-
 #[derive(Debug)]
 pub struct Info
 {
@@ -47,15 +38,6 @@ pub struct Info
     pub type_id: std::any::TypeId,
     pub name: Option<String>,
 }
-
-// impl FieldInfo for Info
-// {
-    // fn name(&self) -> Option<String>
-    // {
-        // self.name
-    // }
-// }
-
 
 // Struct to represent a field in a struct.
 #[derive(Debug)]
@@ -70,7 +52,6 @@ pub struct Field {
     pub info: Info,
     pub children: Vec<Field>,
 }
-
 
 pub trait Inspectable {
     fn fields_as_mut<'a>(&'a mut self) -> MutableField<'a>;

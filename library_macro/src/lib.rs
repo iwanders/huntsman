@@ -13,6 +13,45 @@ extern crate memoffset;
 fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
+    // println!("input struct: {:#?}", input);
+
+    for option in input.attrs.into_iter() {
+        let option = option.parse_meta().unwrap();
+        println!("Option: {:#?}", option);
+        match option {
+            syn::Meta::List(z) =>
+            {
+                for x in z.nested
+                {
+                    match x
+                    {
+                        syn::NestedMeta::Meta(meta_thing) =>
+                        {
+                            match meta_thing
+                            {
+                                syn::Meta::Path(p) => {
+                                    println!("Path: {:?}", p);
+                                },
+                                syn::Meta::List(l) => {
+                                    println!("Path: {:?}", l);
+                                },
+                                syn::Meta::NameValue(MetaNameValue) => {
+                                    println!("MetaNameValue: {:?}", MetaNameValue);
+                                
+                                },
+                                
+                            }
+                        }
+                        syn::NestedMeta::Lit(l) => 
+                        {
+                            println!("Literal: {:?}", l);
+                        }
+                    }
+                }
+            }
+            _=> {},
+        }
+    }
 
     let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut immutable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -162,7 +201,7 @@ fn impl_inspectable_macro(input: proc_macro::TokenStream) -> proc_macro::TokenSt
             }
         }
     };
-    println!("Output: {:}", gen.to_string());
+    // println!("Output: {:}", gen.to_string());
     gen.into()
 }
 
