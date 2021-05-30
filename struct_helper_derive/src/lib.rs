@@ -13,8 +13,10 @@ use syn;
 // https://rust-lang.github.io/unsafe-code-guidelines/layout/enums.html
 
 // Outputs a tokenstream in the shape of [(&'static str, &'static str)]
-fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStream {
+fn process_str_attributes(list: &Vec<syn::Attribute>) -> (proc_macro2::TokenStream, std::collections::HashMap<String, String>) {
     let mut attribute_str_pairs: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    let mut map: std::collections::HashMap<String, String>= std::collections::HashMap::new();
 
     for option in list.into_iter() {
         let option = option
@@ -35,6 +37,7 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
                                             let attribute_name =
                                                 meta_name_value.path.segments[0].ident.to_string();
                                             let value = str_lit.value();
+                                            map.insert(attribute_name.clone(), value.clone());
                                             attribute_str_pairs.push(quote!(
                                                 (#attribute_name, #value)
                                             ))
@@ -56,7 +59,7 @@ fn process_str_attributes(list: &Vec<syn::Attribute>) -> proc_macro2::TokenStrea
     }
     // Concatenate the extracted pairs.
     let res = quote!(#(#attribute_str_pairs),*);
-    res
+    (res, map)
 }
 
 fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -67,7 +70,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     // https://doc.rust-lang.org/reference/attributes.html
     // Seems it MUST be a literal expression; https://doc.rust-lang.org/reference/expressions/literal-expr.html
     // Lets, for sake of simplicity, just handle string inputs now.
-    let outer_attribute_tokens = process_str_attributes(&input.attrs);
+    let (outer_attribute_tokens, _outer_map) = process_str_attributes(&input.attrs);
 
     let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut fields_for_ref: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -80,7 +83,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
             match &data_struct.fields {
                 syn::Fields::Named(z) => {
                     for inner_field in &z.named {
-                        let inner_attribute_tokens = process_str_attributes(&inner_field.attrs);
+                        let (inner_attribute_tokens, inner_map) = process_str_attributes(&inner_field.attrs);
 
                         let name: String;
                         let inner_field_ident: &syn::Ident;
@@ -96,6 +99,15 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                         if name.starts_with("_") {
                             continue;
                         }
+                        match inner_map.get("ignore")
+                        {
+                            Some(v) => {if v == "true"
+                            {
+                                continue;
+                            }},
+                            None => {},
+                        }
+
                         match &inner_field.ty {
                             syn::Type::Array(arr) => {
                                 // Element type
@@ -109,6 +121,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         type_name: stringify!(#type_ident),
                                         type_id: std::any::TypeId::of::<#type_ident>(),
                                         name: Some((#name)),
+                                        element_type: struct_helper::ElementType::Array,
                                         attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                     }
                                 );
@@ -168,6 +181,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                     type_name: #n,
                                     type_id: std::any::TypeId::of::<#type_ident>(),
                                     name: Some((#name)),
+                                    element_type: struct_helper::ElementType::Path,
                                     attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                 });
 
@@ -217,6 +231,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
              type_name: stringify!(#name),
              type_id: std::any::TypeId::of::<#name>(),
              name: Some(stringify!(#name)),
+             element_type: struct_helper::ElementType::Other,
              attrs: [#outer_attribute_tokens].iter().cloned().collect(),
         }
     );
@@ -246,7 +261,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
             }
         }
     };
-    // println!("Output: {:}", gen.to_string());
+    println!("Output: {:}", gen.to_string());
     gen.into()
 }
 

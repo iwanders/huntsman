@@ -149,6 +149,15 @@ fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String> {
 
 // use std::collections::HashMap;
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum ElementType
+{
+    Path,
+    Array,
+    Scalar,
+    Other,
+}
+
 #[derive(Debug)]
 pub struct Info {
     pub start: usize,
@@ -156,6 +165,7 @@ pub struct Info {
     pub type_name: &'static str,
     pub type_id: std::any::TypeId,
     pub name: Option<&'static str>,
+    pub element_type: ElementType,
     // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
     // annotations to be completely specified by the user.
     pub attrs: std::collections::HashMap<&'static str, &'static str>,
@@ -282,6 +292,7 @@ macro_rules! make_inspectable {
                         type_name: std::any::type_name::<$a>(),
                         type_id: std::any::TypeId::of::<$a>(),
                         name: None,
+                        element_type: ElementType::Scalar,
                         attrs: std::collections::HashMap::new(),
                     },
                     value: $as_mut(self),
@@ -297,6 +308,7 @@ macro_rules! make_inspectable {
                         type_name: std::any::type_name::<$a>(),
                         type_id: std::any::TypeId::of::<$a>(),
                         name: None,
+                        element_type: ElementType::Scalar,
                         attrs: std::collections::HashMap::new(),
                     },
                     value: $as_ref(self),
@@ -315,6 +327,7 @@ macro_rules! make_inspectable {
                         type_name: std::any::type_name::<$a>(),
                         type_id: std::any::TypeId::of::<$a>(),
                         name: None,
+                        element_type: ElementType::Scalar,
                         attrs: std::collections::HashMap::new(),
                     },
                     children: vec![],
