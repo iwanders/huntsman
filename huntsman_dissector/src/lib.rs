@@ -16,16 +16,14 @@ type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;
 type Encoding = epan::proto::Encoding;
 
+use std::collections::HashMap;
+
 struct HuntsmanDissector {
     field_mapping: Vec<(PacketField, epan::proto::HFIndex)>,
     tree_indices: Vec<epan::proto::ETTIndex>,
     dissection_fields: Vec<DissectionField>,
-}
-
-enum TreeIdentifier
-{
-    Root,
-    Last
+    foldouts: Vec<String>,
+    fold_mapping: HashMap<String, epan::proto::ETTIndex>,
 }
 
 impl HuntsmanDissector {
@@ -43,6 +41,11 @@ impl HuntsmanDissector {
             }
         }
         panic!("Couldn't find field id for {:?}", desired_field);
+    }
+
+    fn get_ett_id(&self, name: &str) -> epan::proto::ETTIndex
+    {
+        *self.fold_mapping.get(name).expect("Should have this index, otherwise its a bug.")
     }
 
     fn get_id_by_name(&self, name: &str) -> epan::proto::HFIndex {
@@ -67,21 +70,15 @@ impl HuntsmanDissector {
         panic!("Couldn't find field id for {:?}", name);
     }
 
-    fn get_tree_id(self: &Self, identifier: TreeIdentifier) -> epan::proto::ETTIndex {
-        match identifier {
-            TreeIdentifier::Root => return self.tree_indices[0],
-            TreeIdentifier::Last => {
-                panic!("Nope");
-            }
-        };
-    }
-
     fn new() -> HuntsmanDissector {
-        let fields = make_all_fields();
+        let (fields, mut foldouts) = make_all_fields();
+        foldouts.push("ROOT".to_string());
         HuntsmanDissector {
             field_mapping: Vec::new(),
             tree_indices: Vec::new(),
             dissection_fields: fields,
+            fold_mapping: Default::default(),
+            foldouts: foldouts,
         }
     }
 
@@ -102,7 +99,7 @@ impl HuntsmanDissector {
             0,
             Encoding::BIG_ENDIAN,
         );
-        let mut root = root_item.add_subtree(self.get_tree_id(TreeIdentifier::Root));
+        let mut root = root_item.add_subtree(self.get_ett_id("ROOT"));
 
         root.add_item(
             self.get_id(&HuntsmanDissector::FULL_PAYLOAD),
@@ -115,30 +112,91 @@ impl HuntsmanDissector {
         // Iterate over all the fields.
         let flags: FieldFlags = Default::default();
         let command_fields = wire::Command::fields();
-        let command_flattened = flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0);
+        // let command_flattened = flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0);
+        self.dissection_recurser(tvb, &mut root, &command_fields, vec!("huntsman".to_string()), offset, flags);
 
-        // This should really be a recursion, something with foldouts as well...
-        for f in command_flattened.iter()
-        {
-            if f.flags.hidden
-            {
-                continue;
-            }
-            let name = make_id(&f.abbrev);
-            let hfid = self.get_id_by_name(&name);
-            root.add_item(
-                hfid,
-                tvb,
-                data_start_offset + f.start,
-                f.length,
-                Encoding::BIG_ENDIAN,
-            );
-        }
+        let left = (tvb.reported_length_remaining(offset)) as usize;
+        let command_block = tvb.get_mem(offset, left);
+        let command : wire::Command = wire::Command::from_le_bytes(&command_block).expect("Should be good");
 
         offset += command_fields.find("payload").expect("Payload should exist").info.start;
+        let cmd_id = (command.cmd_major, command.cmd_minor);
+        match cmd_id
+        {
+            huntsman_comm::SetLedState::CMD => 
+            {
+                let fields = wire::SetLedState::fields();
+                self.dissection_recurser(tvb, &mut root, &fields, vec!("huntsman".to_string()), offset, flags);
+
+            },
+            _ => {},
+        }
+
+        // self.dissection_recurser(tvb, &mut root, &command_fields, vec!("huntsman".to_string()), offset, flags);
         let _z = offset;
 
         tvb.reported_length()
+    }
+
+
+    fn dissection_recurser(&self, tvb: &mut epan::TVB, tree: &mut epan::ProtoTree, field: &struct_helper::Field, prefix: Vec<String>, offset: usize, flags: FieldFlags)
+    {
+        let mut updated_prefix = prefix;
+        match field.info.name
+        {
+            Some(n) => {
+                updated_prefix.push(n.to_string());
+            },
+            None =>{},
+        }
+
+        let mut updated_flags = flags.clone();
+        // println!("attrs: {:?}", field.info.attrs);
+        match field.info.attrs.get("dissection_hide")
+        {
+            Some(v) => updated_flags.hidden = *v == "true",
+            None => {},
+        }
+
+        let mut use_tree: epan::ProtoTree;
+        if (field.children.len() > 1)
+        {
+            let subtree_id = make_id(&updated_prefix);
+            let ettid = self.get_ett_id(&subtree_id);
+            // first have to make an item, only then can we make the tree onto the item.
+            let mut root_item = tree.add_item(
+                self.get_id(&HuntsmanDissector::ROOT),
+                tvb,
+                offset,
+                0,
+                Encoding::BIG_ENDIAN,
+            );
+            use_tree = root_item.add_subtree(ettid);
+        }
+        else
+        {
+            use_tree = *tree;
+        }
+
+        for k in 0..field.children.len()
+        {
+            let c = &field.children[k];
+            let child_prefix = updated_prefix.clone();
+            self.dissection_recurser(tvb, &mut use_tree, c, child_prefix, field.info.start + offset, updated_flags);
+        }
+
+        if field.children.is_empty() && !updated_flags.hidden
+        {
+            let name = make_id(&updated_prefix);
+            let hfid = self.get_id_by_name(&name);
+            tree.add_item(
+                hfid,
+                tvb,
+                offset + field.info.start,
+                field.info.length,
+                Encoding::BIG_ENDIAN,
+            );
+        }
     }
 }
 
@@ -214,11 +272,15 @@ impl dissector::Dissector for HuntsmanDissector {
     }
 
     fn get_tree_count(self: &Self) -> usize {
-        return TreeIdentifier::Last as usize;
+        return self.foldouts.len();
     }
 
     fn set_tree_indices(self: &mut Self, ett_indices: Vec<epan::proto::ETTIndex>) {
-        self.tree_indices = ett_indices;
+        ett_indices.iter().enumerate().for_each(|(i, index)|
+        {
+            self.fold_mapping.insert(self.foldouts[i].clone(), *index);
+        });
+        // self.tree_indices = ett_indices;
     }
 }
 
@@ -261,9 +323,11 @@ struct DissectionField
     type_name: &'static str,
 }
 
-fn flatten_field_tree(field: &struct_helper::Field, flags: &FieldFlags, prefix: Vec<String>, offset: usize) -> Vec<DissectionField>
+fn flatten_field_tree(field: &struct_helper::Field, flags: &FieldFlags, prefix: Vec<String>, offset: usize) -> (Vec<DissectionField>, Vec<String>)
 {
     let mut res : Vec<DissectionField> = Vec::new();
+    let mut foldouts: Vec<String> = Vec::new();
+
     let mut updated_prefix = prefix;
     match field.info.name
     {
@@ -281,12 +345,22 @@ fn flatten_field_tree(field: &struct_helper::Field, flags: &FieldFlags, prefix: 
         None => {},
     }
 
+    if (field.children.len() > 1)
+    {
+        foldouts.push(make_id(&updated_prefix));
+    }
+
     for k in 0..field.children.len()
     {
         let c = &field.children[k];
         let child_prefix = updated_prefix.clone();
-        res.append(&mut flatten_field_tree(c, &updated_flags, child_prefix, field.info.start + offset));
+        let  (mut fields, mut folds) = flatten_field_tree(c, &updated_flags, child_prefix, field.info.start + offset);
+        res.append(&mut fields);
+        foldouts.append(&mut folds);
     }
+
+
+
     if field.children.is_empty()
     {
         // We are a leaf.
@@ -298,7 +372,7 @@ fn flatten_field_tree(field: &struct_helper::Field, flags: &FieldFlags, prefix: 
             type_name: field.info.type_name,
         });
     }
-    return res;
+    return (res, foldouts);
 }
 
 fn make_id(v: &Vec<String>) -> String
@@ -320,29 +394,37 @@ fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField>
     }).collect()
 }
 
-fn collect_payloads<T: StructHelper>(v: &mut Vec<DissectionField>, offset: usize)
+fn collect_payloads<T: StructHelper>(dissections: &mut Vec<DissectionField>, folds: &mut Vec<String>, offset: usize)
 {
     let ledstate_fields = <T>::fields();
     let flags: FieldFlags = Default::default();
-    v.append(&mut flatten_field_tree(&ledstate_fields, &flags, vec!("huntsman".to_string()), offset));
+    let (mut field_res, mut fold_res) = flatten_field_tree(&ledstate_fields, &flags, vec!("huntsman".to_string()), offset);
+    dissections.append(&mut field_res);
+    folds.append(&mut fold_res);
 }
 
-fn make_all_fields() -> Vec<DissectionField>
+fn make_all_fields() -> (Vec<DissectionField>, Vec<String>)
 {
     let mut all_fields: Vec<DissectionField> = Vec::new();
+    let mut folds: Vec<String> = Vec::new();
 
     let command_fields = wire::Command::fields();
     let flags: FieldFlags = Default::default();
-    all_fields.append(&mut flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0));
+    let (mut field_res, mut fold_res) = flatten_field_tree(&command_fields, &flags, vec!("huntsman".to_string()), 0);
+    all_fields.append(&mut field_res);
+    folds.append(&mut fold_res);
 
     let payload_offset = command_fields.find("payload").expect("Payload should exist").info.start;
 
-    collect_payloads::<wire::SetLedState>(&mut all_fields, payload_offset);
-    collect_payloads::<wire::SetBrightness>(&mut all_fields, payload_offset);
+    collect_payloads::<wire::SetLedState>(&mut all_fields, &mut folds, payload_offset);
+    collect_payloads::<wire::SetBrightness>(&mut all_fields, &mut folds, payload_offset);
     
+    folds.sort_unstable();
+    folds.dedup();
 
-    all_fields
+    (all_fields, folds)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -352,22 +434,9 @@ mod tests {
     #[test]
     fn wrangle_commands_into_fields()
     {
-        let command_fields = wire::Command::fields();
-        println!("{:#?}", command_fields);
-        let flags: FieldFlags = Default::default();
-        let command_flattened = flatten_field_tree(&command_fields, &flags, vec!(), 0);
-        println!("{:?}", command_flattened);
-        println!("{:?}", command_fields.find("checksum"));
-        // wire::Command
-
-        let payload_offset = command_fields.find("payload").expect("Payload should exist").info.start;
-        let ledstate_fields = wire::SetLedState::fields();
-        let ledstate_flattened = flatten_field_tree(&ledstate_fields, &flags, vec!(), payload_offset);
-        println!("{:?}", ledstate_flattened);
-
-        let mut r: Vec<DissectionField> = Vec::new();
-        collect_payloads::<wire::SetLedState>(&mut r, payload_offset);
-        collect_payloads::<wire::SetBrightness>(&mut r, payload_offset);
+        let command_fields = make_all_fields();
+        println!("{:#?}", command_fields.0);
+        println!("{:#?}", command_fields.1);
 
     }
 }
