@@ -261,7 +261,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
             }
         }
     };
-    println!("Output: {:}", gen.to_string());
+    // println!("Output: {:}", gen.to_string());
     gen.into()
 }
 

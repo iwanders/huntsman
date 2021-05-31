@@ -352,7 +352,6 @@ mod tests {
     #[test]
     fn wrangle_commands_into_fields()
     {
-        let dissection_fields: Vec<PacketField> = Vec::new();
         let command_fields = wire::Command::fields();
         println!("{:#?}", command_fields);
         let flags: FieldFlags = Default::default();
