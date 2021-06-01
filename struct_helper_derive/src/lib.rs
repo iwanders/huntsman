@@ -13,10 +13,15 @@ use syn;
 // https://rust-lang.github.io/unsafe-code-guidelines/layout/enums.html
 
 // Outputs a tokenstream in the shape of [(&'static str, &'static str)]
-fn process_str_attributes(list: &Vec<syn::Attribute>) -> (proc_macro2::TokenStream, std::collections::HashMap<String, String>) {
+fn process_str_attributes(
+    list: &Vec<syn::Attribute>,
+) -> (
+    proc_macro2::TokenStream,
+    std::collections::HashMap<String, String>,
+) {
     let mut attribute_str_pairs: Vec<proc_macro2::TokenStream> = Vec::new();
 
-    let mut map: std::collections::HashMap<String, String>= std::collections::HashMap::new();
+    let mut map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
     for option in list.into_iter() {
         let option = option
@@ -83,7 +88,8 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
             match &data_struct.fields {
                 syn::Fields::Named(z) => {
                     for inner_field in &z.named {
-                        let (inner_attribute_tokens, inner_map) = process_str_attributes(&inner_field.attrs);
+                        let (inner_attribute_tokens, inner_map) =
+                            process_str_attributes(&inner_field.attrs);
 
                         let name: String;
                         let inner_field_ident: &syn::Ident;
@@ -99,13 +105,13 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                         if name.starts_with("_") {
                             continue;
                         }
-                        match inner_map.get("ignore")
-                        {
-                            Some(v) => {if v == "true"
-                            {
-                                continue;
-                            }},
-                            None => {},
+                        match inner_map.get("ignore") {
+                            Some(v) => {
+                                if v == "true" {
+                                    continue;
+                                }
+                            }
+                            None => {}
                         }
 
                         match &inner_field.ty {

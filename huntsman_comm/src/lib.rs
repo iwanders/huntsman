@@ -1,4 +1,3 @@
-
 use struct_helper::StructHelper;
 pub mod wire;
 pub use wire::RGB;
@@ -35,12 +34,11 @@ pub trait Command: std::fmt::Debug {
         wire.len = payload.len() as u8;
 
         // copy the payload.
-        for i in 0..payload.len()
-        {
+        for i in 0..payload.len() {
             wire.payload[i] = payload[i];
         }
-        wire.update_checksum();  // update the checksum based on the currently populated values.
-        wire.to_le_bytes(&mut v[..]).expect("Should succeed");  // serialize the struct.
+        wire.update_checksum(); // update the checksum based on the currently populated values.
+        wire.to_le_bytes(&mut v[..]).expect("Should succeed"); // serialize the struct.
         return v;
     }
 
@@ -75,15 +73,22 @@ impl SetLedState {
     pub const CMD: (u8, u8) = (0x0f, 0x03);
 }
 
-
 impl Command for SetLedState {
     fn register(&self) -> (u8, u8) {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedState>()];
-        let wire_ledstate: wire::SetLedState = wire::SetLedState{first: 0, id: self.id, count: self.count, leds: self.leds, ..Default::default()};
-        wire_ledstate.to_le_bytes(&mut v[..]).expect("Should succeed");
+        let wire_ledstate: wire::SetLedState = wire::SetLedState {
+            first: 0,
+            id: self.id,
+            count: self.count,
+            leds: self.leds,
+            ..Default::default()
+        };
+        wire_ledstate
+            .to_le_bytes(&mut v[..])
+            .expect("Should succeed");
         v
     }
 }
@@ -102,8 +107,14 @@ impl Command for SetBrightness {
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetBrightness>()];
-        let wire_setbrightness: wire::SetBrightness = wire::SetBrightness{first: 0x01, value: (self.value * 255.0) as u8, ..Default::default()};
-        wire_setbrightness.to_le_bytes(&mut v[..]).expect("Should succeed");
+        let wire_setbrightness: wire::SetBrightness = wire::SetBrightness {
+            first: 0x01,
+            value: (self.value * 255.0) as u8,
+            ..Default::default()
+        };
+        wire_setbrightness
+            .to_le_bytes(&mut v[..])
+            .expect("Should succeed");
         v
     }
 }

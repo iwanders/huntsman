@@ -136,9 +136,11 @@ impl Huntsman {
         // This makes it black...?
         //  0x060f0200	00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00
         //              00:1f:00:00:00:06:0f:02:02:00:03:00:00:00:00:00:00:00:00
+
+        #[rustfmt::skip] // Really don't want this to get formatted...
         let cmd = huntsman_comm::ArbitraryCommand {
             // 0x06 is len, but as we've seen here, it seems pretty much ignored.
-            
+
             register: (0x0f, 0x02),
             //  cmd: 0x450f8200,
             // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
@@ -161,7 +163,7 @@ impl Huntsman {
 
             payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
             //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
-            
+
 
             //  payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.
             //  payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color randomly lighting keys, same pattern as reactive.
