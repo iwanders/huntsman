@@ -138,11 +138,13 @@ impl HuntsmanDissector {
                         );
                     }
                     Location::MultipleChildrenStart => {
+                        let name = make_field_abbrev(&make_fold_item_label(prefix));
+                        let hfid = self.get_id_by_name(&name);
                         let mut root_item = proto_stack.last_mut().as_mut().unwrap().add_item(
-                            self.get_id(&HuntsmanDissector::ROOT),
+                            hfid,
                             tvb,
                             offset,
-                            0,
+                            field.info.length,
                             Encoding::BIG_ENDIAN,
                         );
                         
@@ -414,11 +416,37 @@ fn make_fold_label(v: &Vec<Prefix>) -> String {
         .join(".")
 }
 
+const LABEL_STR: &'static str = "_LABEL_";
+fn make_fold_item_label(v: &Vec<Prefix>) -> Vec<Prefix>
+{
+    let mut label_prefix = v.clone();
+    label_prefix.push(fold_item_label());
+    label_prefix
+}
+fn fold_item_label() -> Prefix
+{
+    Prefix::Label(LABEL_STR.to_string())
+}
+
 /// Last element from the vector, expecting its a string.
 fn get_name(v: &Vec<Prefix>) -> String {
-    match v.last().expect("should havee something") {
-        Prefix::Label(s) => s.clone(),
-        _ => panic!(),
+    let mut x = v.clone();
+    loop {
+        let last_element = x.pop().expect("should have something");
+        
+        match &last_element {
+            Prefix::Label(s) => if *s == LABEL_STR.to_string()
+            {
+                continue
+            },
+
+            Prefix::Index(i) => {},
+        }
+
+        match last_element {
+            Prefix::Label(s) => {return s.clone();},
+            _ => panic!(),
+        }
     }
 }
 
@@ -430,8 +458,16 @@ fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField> 
                 abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(
                     &x.abbrev,
                 ))),
-                field_type: FieldType::UINT8, // need to select this based on the type.
-                display: FieldDisplay::BASE_HEX,
+                field_type: match x.type_name {
+                    "label" => FieldType::NONE,
+                    "u8" => FieldType::UINT8,
+                    _ => FieldType::NONE,
+                },
+                display: match x.type_name {
+                    "label" => FieldDisplay::BASE_NONE,
+                    "u8" => FieldDisplay::BASE_HEX,
+                    _ => FieldDisplay::BASE_NONE,
+                },
             }
         })
         .collect()
@@ -457,6 +493,7 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                 Location::Leaf => {
                     // println!("Location: {:?}", loc);
                     // println!("prefix: {:?}", prefix);
+                    // Actual field to dissect.
                     all_fields.push(DissectionField {
                         flags: *flags,
                         abbrev: prefix.clone(),
@@ -467,6 +504,14 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                 },
                 Location::MultipleChildrenStart => {
                     folds.push(make_fold_label(&prefix));
+                    // Placehold field just such that we can get a nice label.
+                    all_fields.push(DissectionField {
+                        flags: *flags,
+                        abbrev: make_fold_item_label(prefix),
+                        start: offset,
+                        length: field.info.length,
+                        type_name: "label",
+                    });
                 },
                 Location::MultipleChildrenEnd => {},
             };
