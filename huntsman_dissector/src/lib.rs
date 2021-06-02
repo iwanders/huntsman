@@ -109,6 +109,13 @@ impl HuntsmanDissector {
         let flags: FieldFlags = Default::default();
         let command_fields = wire::Command::fields();
 
+        let mut proto_stack: Vec<epan::ProtoTree> = vec!(*proto);
+
+        // Cheat here, just retrieve the byte slice from wireshark, then construct the command from that in one go.
+        // We could also have wireshark assembly it through the references during the tree traversal.
+        let left = (tvb.reported_length_remaining(offset)) as usize;
+        let command_block = tvb.get_mem(offset, left);
+
         let mut all_leaf_fields: Visitor =
             &mut |loc: Location,
                   field: &struct_helper::Field,
@@ -122,7 +129,7 @@ impl HuntsmanDissector {
                     Location::Leaf => {
                         let name = make_field_abbrev(prefix);
                         let hfid = self.get_id_by_name(&name);
-                        proto.add_item(
+                        proto_stack.last_mut().as_mut().unwrap().add_item(
                             hfid,
                             tvb,
                             offset + field.info.start,
@@ -130,7 +137,21 @@ impl HuntsmanDissector {
                             Encoding::BIG_ENDIAN,
                         );
                     }
-                    Location::MultipleChildren => {}
+                    Location::MultipleChildrenStart => {
+                        let mut root_item = proto_stack.last_mut().as_mut().unwrap().add_item(
+                            self.get_id(&HuntsmanDissector::ROOT),
+                            tvb,
+                            offset,
+                            0,
+                            Encoding::BIG_ENDIAN,
+                        );
+                        
+                        let thing = root_item.add_subtree(self.get_ett_id(&make_fold_label(&prefix))).clone();
+                        proto_stack.push(thing);
+                    }
+                    Location::MultipleChildrenEnd => {
+                        proto_stack.pop();
+                    }
                 };
             };
         flatten_field_tree(
@@ -143,10 +164,6 @@ impl HuntsmanDissector {
 
         // Should we somehow return the value on which we expect the next parser to build? The payload chunk?
 
-        // Cheat here, just retrieve the byte slice from wireshark, then construct the command from that in one go.
-        // We could also have wireshark assembly it through the references during the tree traversal.
-        let left = (tvb.reported_length_remaining(offset)) as usize;
-        let command_block = tvb.get_mem(offset, left);
         let command: wire::Command =
             wire::Command::from_le_bytes(&command_block).expect("Should be good");
 
@@ -159,26 +176,24 @@ impl HuntsmanDissector {
         let cmd_id = (command.cmd_major, command.cmd_minor);
         match cmd_id {
             huntsman_comm::SetLedState::CMD => {
-                // let fields = wire::SetLedState::fields();
-                // self.dissection_recurser(
-                // tvb,
-                // &mut root,
-                // &fields,
-                // vec!["huntsman".to_string()],
-                // offset,
-                // flags,
-                // );
+                let fields = wire::SetLedState::fields();
+                flatten_field_tree(
+                    &fields,
+                    &flags,
+                    vec![Prefix::Label("huntsman".to_string())],
+                    offset,
+                    &mut all_leaf_fields,
+                );
             }
             huntsman_comm::SetBrightness::CMD => {
-                // let fields = wire::SetBrightness::fields();
-                // self.dissection_recurser(
-                // tvb,
-                // &mut root,
-                // &fields,
-                // vec!["huntsman".to_string()],
-                // offset,
-                // flags,
-                // );
+                let fields = wire::SetBrightness::fields();
+                flatten_field_tree(
+                    &fields,
+                    &flags,
+                    vec![Prefix::Label("huntsman".to_string())],
+                    offset,
+                    &mut all_leaf_fields,
+                );
             }
             _ => {}
         }
@@ -301,7 +316,8 @@ struct DissectionField {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Location {
-    MultipleChildren,
+    MultipleChildrenStart,
+    MultipleChildrenEnd,
     Leaf,
 }
 
@@ -337,7 +353,7 @@ fn flatten_field_tree(
 
     if field.children.len() > 1 {
         visitor(
-            Location::MultipleChildren,
+            Location::MultipleChildrenStart,
             &field,
             &updated_prefix,
             &updated_flags,
@@ -360,15 +376,19 @@ fn flatten_field_tree(
         );
     }
 
-    if field.children.is_empty() {
-        // We are a leaf, add the final field we'll be dissecting as.
+    if field.children.len() > 1 {
         visitor(
-            Location::Leaf,
+            Location::MultipleChildrenEnd,
             &field,
             &updated_prefix,
             &updated_flags,
             offset,
         );
+    }
+
+    if field.children.is_empty() {
+        // We are a leaf, add the final field we'll be dissecting as.
+        visitor(Location::Leaf,&field,&updated_prefix,&updated_flags,offset,);
     }
 }
 
@@ -444,10 +464,11 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                         length: field.info.length,
                         type_name: field.info.type_name,
                     });
-                }
-                Location::MultipleChildren => {
+                },
+                Location::MultipleChildrenStart => {
                     folds.push(make_fold_label(&prefix));
-                }
+                },
+                Location::MultipleChildrenEnd => {},
             };
         };
     flatten_field_tree(
