@@ -56,7 +56,7 @@ impl HuntsmanDissector {
         *self
             .fold_mapping
             .get(name)
-            .expect("Should have this index, otherwise its a bug.")
+            .expect(format!("Should have '{}' in index, otherwise its a bug.", name).as_str())
     }
 
     fn get_id_by_name(&self, name: &str) -> epan::proto::HFIndex {
@@ -108,14 +108,39 @@ impl HuntsmanDissector {
         // Iterate over all the fields.
         let flags: FieldFlags = Default::default();
         let command_fields = wire::Command::fields();
-        self.dissection_recurser(
-            tvb,
-            &mut root,
+
+        let mut all_leaf_fields: Visitor =
+            &mut |loc: Location,
+                  field: &struct_helper::Field,
+                  prefix: &Vec<Prefix>,
+                  flags: &FieldFlags,
+                  offset: usize| {
+                if flags.hidden {
+                    return;
+                }
+                match loc {
+                    Location::Leaf => {
+                        let name = make_field_abbrev(prefix);
+                        let hfid = self.get_id_by_name(&name);
+                        proto.add_item(
+                            hfid,
+                            tvb,
+                            offset + field.info.start,
+                            field.info.length,
+                            Encoding::BIG_ENDIAN,
+                        );
+                    }
+                    Location::MultipleChildren => {}
+                };
+            };
+        flatten_field_tree(
             &command_fields,
-            vec!["huntsman".to_string()],
+            &flags,
+            vec![Prefix::Label("huntsman".to_string())],
             offset,
-            flags,
+            &mut all_leaf_fields,
         );
+
         // Should we somehow return the value on which we expect the next parser to build? The payload chunk?
 
         // Cheat here, just retrieve the byte slice from wireshark, then construct the command from that in one go.
@@ -134,26 +159,26 @@ impl HuntsmanDissector {
         let cmd_id = (command.cmd_major, command.cmd_minor);
         match cmd_id {
             huntsman_comm::SetLedState::CMD => {
-                let fields = wire::SetLedState::fields();
-                self.dissection_recurser(
-                    tvb,
-                    &mut root,
-                    &fields,
-                    vec!["huntsman".to_string()],
-                    offset,
-                    flags,
-                );
+                // let fields = wire::SetLedState::fields();
+                // self.dissection_recurser(
+                // tvb,
+                // &mut root,
+                // &fields,
+                // vec!["huntsman".to_string()],
+                // offset,
+                // flags,
+                // );
             }
             huntsman_comm::SetBrightness::CMD => {
-                let fields = wire::SetBrightness::fields();
-                self.dissection_recurser(
-                    tvb,
-                    &mut root,
-                    &fields,
-                    vec!["huntsman".to_string()],
-                    offset,
-                    flags,
-                );
+                // let fields = wire::SetBrightness::fields();
+                // self.dissection_recurser(
+                // tvb,
+                // &mut root,
+                // &fields,
+                // vec!["huntsman".to_string()],
+                // offset,
+                // flags,
+                // );
             }
             _ => {}
         }
@@ -161,73 +186,6 @@ impl HuntsmanDissector {
         let _z = offset;
 
         tvb.reported_length()
-    }
-
-    fn dissection_recurser(
-        &self,
-        tvb: &mut epan::TVB,
-        tree: &mut epan::ProtoTree,
-        field: &struct_helper::Field,
-        prefix: Vec<String>,
-        offset: usize,
-        flags: FieldFlags,
-    ) {
-        let mut updated_prefix = prefix;
-        match field.info.name {
-            Some(n) => {
-                updated_prefix.push(n.to_string());
-            }
-            None => {}
-        }
-
-        let mut updated_flags = flags.clone();
-        // println!("attrs: {:?}", field.info.attrs);
-        match field.info.attrs.get("dissection_hide") {
-            Some(v) => updated_flags.hidden = *v == "true",
-            None => {}
-        }
-
-        let mut use_tree: epan::ProtoTree;
-        if field.children.len() > 1 {
-            let subtree_id = make_id(&updated_prefix);
-            let ettid = self.get_ett_id(&subtree_id);
-            // first have to make an item, only then can we make the tree onto the item.
-            let mut root_item = tree.add_item(
-                self.get_id(&HuntsmanDissector::ROOT),
-                tvb,
-                offset,
-                0,
-                Encoding::BIG_ENDIAN,
-            );
-            use_tree = root_item.add_subtree(ettid);
-        } else {
-            use_tree = *tree;
-        }
-
-        for k in 0..field.children.len() {
-            let c = &field.children[k];
-            let child_prefix = updated_prefix.clone();
-            self.dissection_recurser(
-                tvb,
-                &mut use_tree,
-                c,
-                child_prefix,
-                field.info.start + offset,
-                updated_flags,
-            );
-        }
-
-        if field.children.is_empty() && !updated_flags.hidden {
-            let name = make_id(&updated_prefix);
-            let hfid = self.get_id_by_name(&name);
-            tree.add_item(
-                hfid,
-                tvb,
-                offset + field.info.start,
-                field.info.length,
-                Encoding::BIG_ENDIAN,
-            );
-        }
     }
 }
 
@@ -342,20 +300,19 @@ struct DissectionField {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum Location
-{
+enum Location {
     MultipleChildren,
     Leaf,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum Prefix
-{
+enum Prefix {
     Label(String),
     Index(usize),
 }
 
-type Visitor<'a> = &'a mut  dyn FnMut(Location, &struct_helper::Field, &Vec<Prefix>, &FieldFlags, usize) -> ();
+type Visitor<'a> =
+    &'a mut dyn FnMut(Location, &struct_helper::Field, &Vec<Prefix>, &FieldFlags, usize) -> ();
 
 fn flatten_field_tree(
     field: &struct_helper::Field,
@@ -363,8 +320,7 @@ fn flatten_field_tree(
     prefix: Vec<Prefix>,
     offset: usize,
     visitor: &mut Visitor,
-){
-
+) {
     let mut updated_prefix = prefix;
     match field.info.name {
         Some(n) => {
@@ -380,57 +336,67 @@ fn flatten_field_tree(
     }
 
     if field.children.len() > 1 {
-        visitor(Location::MultipleChildren, &field, &updated_prefix, &updated_flags, offset);
+        visitor(
+            Location::MultipleChildren,
+            &field,
+            &updated_prefix,
+            &updated_flags,
+            offset,
+        );
     }
 
     for k in 0..field.children.len() {
         let c = &field.children[k];
         let mut child_prefix = updated_prefix.clone();
-        if field.children.len() > 1
-        {
+        if field.children.len() > 1 {
             child_prefix.push(Prefix::Index(k));
         }
-        flatten_field_tree(&c, &updated_flags, child_prefix, field.info.start + offset, visitor);
+        flatten_field_tree(
+            &c,
+            &updated_flags,
+            child_prefix,
+            field.info.start + offset,
+            visitor,
+        );
     }
 
     if field.children.is_empty() {
         // We are a leaf, add the final field we'll be dissecting as.
-        visitor(Location::Leaf, &field, &updated_prefix, &updated_flags, offset);
+        visitor(
+            Location::Leaf,
+            &field,
+            &updated_prefix,
+            &updated_flags,
+            offset,
+        );
     }
 }
 
-fn make_id(v: &Vec<String>) -> String {
-    v.join(".")
-}
-
-
 /// Concantenate all strings in the vector.
 fn make_field_abbrev(v: &Vec<Prefix>) -> String {
-    v.iter().filter_map(|x|{
-        match x
-        {
+    v.iter()
+        .filter_map(|x| match x {
             Prefix::Label(s) => Some(s.clone()),
-            _=> None
-        }
-    }).collect::<Vec<String>>().join(".")
+            _ => None,
+        })
+        .collect::<Vec<String>>()
+        .join(".")
 }
 
 /// Make an arbitrary label out of the current vector, including all integers.
-fn make_fold_label(v: &Vec<Prefix>) -> String
-{
-    v.iter().map(|x|{
-        match x {
+fn make_fold_label(v: &Vec<Prefix>) -> String {
+    v.iter()
+        .map(|x| match x {
             Prefix::Label(s) => s.clone(),
             Prefix::Index(i) => i.to_string(),
-        }
-    }).collect::<Vec<String>>().join(".")
+        })
+        .collect::<Vec<String>>()
+        .join(".")
 }
 
 /// Last element from the vector, expecting its a string.
-fn get_name(v: &Vec<Prefix>) -> String
-{
-    match v.last().expect("should havee something")
-    {
+fn get_name(v: &Vec<Prefix>) -> String {
+    match v.last().expect("should havee something") {
         Prefix::Label(s) => s.clone(),
         _ => panic!(),
     }
@@ -441,7 +407,9 @@ fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField> 
         .map(|x| {
             dissector::PacketField {
                 name: dissector::StringContainer::String(String::from(get_name(&x.abbrev))),
-                abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(&x.abbrev))),
+                abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(
+                    &x.abbrev,
+                ))),
                 field_type: FieldType::UINT8, // need to select this based on the type.
                 display: FieldDisplay::BASE_HEX,
             }
@@ -453,38 +421,42 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
     let mut all_fields: Vec<DissectionField> = Vec::new();
     let mut folds: Vec<String> = Vec::new();
 
-
     let command_fields = wire::Command::fields();
     let flags: FieldFlags = Default::default();
 
-    let mut all_leaf_fields: Visitor = &mut |loc: Location, field: &struct_helper::Field, prefix: &Vec<Prefix>, flags: &FieldFlags, offset: usize|
-    {
-        if flags.hidden
-        {
-            return
-        }
-        match loc
-        {
-            Location::Leaf =>
-            {
-                // println!("Location: {:?}", loc);
-                // println!("prefix: {:?}", prefix);
-                all_fields.push(DissectionField {
-                    flags: *flags,
-                    abbrev: prefix.clone(),
-                    start: offset,
-                    length: field.info.length,
-                    type_name: field.info.type_name,
-                });
-            },
-            Location::MultipleChildren =>
-            {
-                folds.push(make_fold_label(&prefix));
+    let mut all_leaf_fields: Visitor =
+        &mut |loc: Location,
+              field: &struct_helper::Field,
+              prefix: &Vec<Prefix>,
+              flags: &FieldFlags,
+              offset: usize| {
+            if flags.hidden {
+                return;
             }
-
+            match loc {
+                Location::Leaf => {
+                    // println!("Location: {:?}", loc);
+                    // println!("prefix: {:?}", prefix);
+                    all_fields.push(DissectionField {
+                        flags: *flags,
+                        abbrev: prefix.clone(),
+                        start: offset,
+                        length: field.info.length,
+                        type_name: field.info.type_name,
+                    });
+                }
+                Location::MultipleChildren => {
+                    folds.push(make_fold_label(&prefix));
+                }
+            };
         };
-    };
-    flatten_field_tree(&command_fields, &flags, vec!(Prefix::Label("huntsman".to_string())), 0, &mut all_leaf_fields);
+    flatten_field_tree(
+        &command_fields,
+        &flags,
+        vec![Prefix::Label("huntsman".to_string())],
+        0,
+        &mut all_leaf_fields,
+    );
 
     let payload_offset = command_fields
         .find("payload")
@@ -493,13 +465,24 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
         .start;
 
     let ledstate_fields = wire::SetLedState::fields();
-    flatten_field_tree(&ledstate_fields, &flags, vec!(Prefix::Label("huntsman".to_string())), 0, &mut all_leaf_fields);
+    flatten_field_tree(
+        &ledstate_fields,
+        &flags,
+        vec![Prefix::Label("huntsman".to_string())],
+        payload_offset,
+        &mut all_leaf_fields,
+    );
     let brightness_fields = wire::SetBrightness::fields();
-    flatten_field_tree(&brightness_fields, &flags, vec!(Prefix::Label("huntsman".to_string())), 0, &mut all_leaf_fields);
+    flatten_field_tree(
+        &brightness_fields,
+        &flags,
+        vec![Prefix::Label("huntsman".to_string())],
+        payload_offset,
+        &mut all_leaf_fields,
+    );
 
     (all_fields, folds)
 }
-
 
 #[cfg(test)]
 mod tests {
