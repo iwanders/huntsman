@@ -155,6 +155,14 @@ impl Command for ArbitraryCommand {
     }
 }
 
+/// Helper function for the dissector that provides the fields for the provided commands.
+pub fn get_command_fields() -> Vec<((u8, u8), Box<dyn Fn() -> struct_helper::Field>)> {
+    vec![
+        (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
+        (SetBrightness::CMD, Box::new(wire::SetBrightness::fields)),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.

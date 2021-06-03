@@ -192,24 +192,16 @@ impl HuntsmanDissector {
 
         let cmd_id = (command.cmd_major, command.cmd_minor);
         let mut fields: Option<struct_helper::Field> = None;
-        match cmd_id {
-            huntsman_comm::SetLedState::CMD => {
-                fields = Some(wire::SetLedState::fields());
+
+        for (cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+            if cmd_id == *cmd {
+                fields = Some(field_fun());
+                break;
             }
-            huntsman_comm::SetBrightness::CMD => {
-                fields = Some(wire::SetBrightness::fields());
-            }
-            _ => {}
         }
+
         if let Some(f) = fields {
-            field_recurser(
-                &f,
-                &flags,
-                prefix_start(),
-                offset,
-                &mut dissection_visitor,
-            );
-            
+            field_recurser(&f, &flags, prefix_start(), offset, &mut dissection_visitor);
         }
 
         // Return how many bytes we read.
@@ -310,14 +302,17 @@ static plugin_want_major: u32 = 3;
 #[no_mangle]
 static plugin_want_minor: u32 = 5;
 
-
 // Below of this is mostly data wrangling, converting struct helper fields to PacketFields and some
 // helpers to make names and ids.
+
+
+/// Flags applied through the struct helper on fields.
 #[derive(Default, Debug, Clone, Copy)]
 struct FieldFlags {
     hidden: bool,
 }
 
+/// Internal data structur we use to represent a dissection field.
 #[derive(Default, Debug, Clone)]
 struct DissectionField {
     start: usize,
@@ -335,6 +330,7 @@ enum Location {
     Leaf,
 }
 
+/// Enum to hold an index or string, these elements in a vector make up the name for elements.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Prefix {
     Label(String),
@@ -344,6 +340,8 @@ enum Prefix {
 type Visitor<'a> =
     &'a mut dyn FnMut(Location, &struct_helper::Field, &Vec<Prefix>, &FieldFlags, usize) -> ();
 
+/// Worker function to traverse the tree of [`struct_helper::Field`], calling a visitor at certain
+/// locations of interest.
 fn field_recurser(
     field: &struct_helper::Field,
     flags: &FieldFlags,
@@ -434,16 +432,21 @@ fn make_fold_label(v: &Vec<Prefix>) -> String {
         .join(".")
 }
 
+/// Namespace for all our prefixes / abbreviations.
 fn prefix_start() -> Vec<Prefix> {
     vec![Prefix::Label("huntsman".to_string())]
 }
 
 const LABEL_STR: &'static str = "_LABEL_";
+
+/// Make a fold label from a current prefix.
 fn make_fold_item_label(v: &Vec<Prefix>) -> Vec<Prefix> {
     let mut label_prefix = v.clone();
     label_prefix.push(fold_item_label());
     label_prefix
 }
+
+/// Make the prefix we apply at the end for labels.
 fn fold_item_label() -> Prefix {
     Prefix::Label(LABEL_STR.to_string())
 }
@@ -472,6 +475,8 @@ fn get_name(v: &Vec<Prefix>) -> String {
     }
 }
 
+/// Function to conver the dissection field we use in this dissector to a packet field that's
+/// used by the Dissector object.
 fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField> {
     v.iter()
         .map(|x| dissector::PacketField {
@@ -549,22 +554,15 @@ fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
         .info
         .start;
 
-    let ledstate_fields = wire::SetLedState::fields();
-    field_recurser(
-        &ledstate_fields,
-        &flags,
-        prefix_start(),
-        payload_offset,
-        &mut all_leaf_fields,
-    );
-    let brightness_fields = wire::SetBrightness::fields();
-    field_recurser(
-        &brightness_fields,
-        &flags,
-        prefix_start(),
-        payload_offset,
-        &mut all_leaf_fields,
-    );
+    for (_cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+        field_recurser(
+            &field_fun(),
+            &flags,
+            prefix_start(),
+            payload_offset,
+            &mut all_leaf_fields,
+        );
+    }
 
     (all_fields, folds)
 }
