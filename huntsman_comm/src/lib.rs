@@ -1,6 +1,9 @@
+//! This crate holds the communication details and provides the available commands.
+
 use struct_helper::StructHelper;
+/// This module holds the structs as they actually go over the USB bus.
 pub mod wire;
-pub use wire::RGB;
+use wire::RGB;
 
 /*
 keyboard_sniffs$ ./dump.sh 2021 | sort | uniq > /tmp/sorted_all.txt
@@ -18,10 +21,12 @@ Shows; 1f is not always 1f, sometimes it's 08
     ^^ --- group?
       ^^ -- register?
       8   = 1 << 7, msb write / read flag?
-        ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely.
+        ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely. <-0 this is '_first' in most commands.
 */
 
+/// Represents a command that can be sent over USB.
 pub trait Command: std::fmt::Debug {
+    /// Should provider the raw bytes that are to be sent to the device over usb.
     fn serialize(&self) -> Vec<u8> {
         // Now follows the command.
         let cmd = self.register();
@@ -42,31 +47,39 @@ pub trait Command: std::fmt::Debug {
         return v;
     }
 
+    /// Provides the two register addressses that are to be sent in the header.
     fn register(&self) -> (u8, u8);
+
+    /// Provides the payload definition that comes after the header.
     fn payload(&self) -> Vec<u8>;
 }
 
 #[derive(Default, Copy, Clone, Debug)]
+/// Sets the LED State, providing a direct RGB value for each individual led.
+/// Seems to be row.
+///                     
+/// |  key row             | 0| 1| 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9|10|11|12|13|14|15|16|17|18|19|20|21|22|
+/// |----------------------|--|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+/// |  0          |  |esc  |   | f1  | f2  | f3  | f4  |f5   | f6  | f7 | f8 | f9  |  f10 | f11  | f12 | prt | scrl | pause | prev  | play | next | volume  |  |
+/// |  1          |  | ` |  1 | 2  |  3 | 4 | 5  | 6  | 7  | 8 | 9  | 0  | -  | =  | bksp | ins | home | pup | nmlk | / | * | - |  |
+/// |  2          |  | tab  | q  | w  | e  |  r | t  | y  | u  | i | o | p | [ | ] | \ | del | end  | pwnd | 7 | 8 | 9 | + |  |
+/// |  3          |  | caps | a  | s  | d  |  f | g  | h  | j  | k | l | ; | ' |  | enter |  |  |  | 4 | 5 | 6 |  |  |
+/// |  4          |  | shift  | z  | x  | c  | v  | b  | n  | m  | , | . | / |  | shift |  |  | up |  | 1 | 2 | 3 | enter |  |
+/// |  5          |  | ctrl | win  | alt  |   |   |   | space  |   |  |  | alt | fn | context | ctrl | left | down | right | 0 |  | del |  |  |
+/// |  6*          | ` | f3 |  f4 | f5  |  f7 | f8  | f9  | f10  | f11  | f12 | prt | scrl | pause | play | vol | - | + | enter | del |  |  |  |  |
+/// |  7*          | `? | tab  | caps | shift  | ctrl  |  win | alt  | llspace  | lspace  | rspace | rrspace | alt | fn | context | ctrl | left | down | right | 0 |  |  |  |  |
+/// |  8$          | 0| farleft | midleft  | frontleft  | alt  |  f | b  |  n | k | alt | fn | shift | ctrl | left | right | 0 | 5 | farright | midright | frontright |  |  |  |
+///
+///  \[*\] This is the edge lighting, not the keys.
+///  \[$\] Armrest
 pub struct SetLedState {
-    /// Seems to be row.
-    ///                     
-    /// |  key row             | 0| 1| 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9|10|11|12|13|14|15|16|17|18|19|20|21|22|
-    /// |----------------------|--|  |   |   |   |   |   |   |   |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-    /// |  0          |  |esc  |   | f1  | f2  | f3  | f4  |f5   | f6  | f7 | f8 | f9  |  f10 | f11  | f12 | prt | scrl | pause | prev  | play | next | volume  |  |
-    /// |  1          |  | ` |  1 | 2  |  3 | 4 | 5  | 6  | 7  | 8 | 9  | 0  | -  | =  | bksp | ins | home | pup | nmlk | / | * | - |  |
-    /// |  2          |  | tab  | q  | w  | e  |  r | t  | y  | u  | i | o | p | [ | ] | \ | del | end  | pwnd | 7 | 8 | 9 | + |  |
-    /// |  3          |  | caps | a  | s  | d  |  f | g  | h  | j  | k | l | ; | ' |  | enter |  |  |  | 4 | 5 | 6 |  |  |
-    /// |  4          |  | shift  | z  | x  | c  | v  | b  | n  | m  | , | . | / |  | shift |  |  | up |  | 1 | 2 | 3 | enter |  |
-    /// |  5          |  | ctrl | win  | alt  |   |   |   | space  |   |  |  | alt | fn | context | ctrl | left | down | right | 0 |  | del |  |  |
-    /// |  6*          | ` | f3 |  f4 | f5  |  f7 | f8  | f9  | f10  | f11  | f12 | prt | scrl | pause | play | vol | - | + | enter | del |  |  |  |  |
-    /// |  7*          | `? | tab  | caps | shift  | ctrl  |  win | alt  | llspace  | lspace  | rspace | rrspace | alt | fn | context | ctrl | left | down | right | 0 |  |  |  |  |
-    /// |  8$          | 0| farleft | midleft  | frontleft  | alt  |  f | b  |  n | k | alt | fn | shift | ctrl | left | right | 0 | 5 | farright | midright | frontright |  |  |  |
-    ///
-    ///  \[*\] This is the edge lighting, not the keys.
-    ///  \[$\] Armrest
+    /// Id seems to denote the group id of leds, either row or location on the border.
     pub id: u8,
+
     /// Seems to be specifying up to which column?
     pub count: u8,
+
+    /// The actual values of the leds here.
     pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
 impl SetLedState {
@@ -94,7 +107,9 @@ impl Command for SetLedState {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
+/// Sets the brightness value for all leds.
 pub struct SetBrightness {
+    /// The brightness to set, should be [0, 1].
     pub value: f32,
 }
 impl SetBrightness {
@@ -120,6 +135,7 @@ impl Command for SetBrightness {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
+/// Toggles game mode on or off.
 pub struct SetGameMode {
     pub value: bool,
 }
@@ -141,6 +157,7 @@ impl Command for SetGameMode {
 }
 
 #[derive(Default, Clone, Debug)]
+/// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
     pub register: (u8, u8),
     pub payload: Vec<u8>,

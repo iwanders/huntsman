@@ -1,3 +1,7 @@
+//! Not much in the sense of external documentation here. This combined the [`wireshark_dissector_rs`]
+//! , [`struct_helper`] and [`huntsman_comm`] together to automatically dissect the structures that
+//! go over the USB bus.
+
 extern crate wireshark_dissector_rs;
 
 use wireshark_dissector_rs::{dissector, dissector::PacketField, epan};

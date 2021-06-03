@@ -1,3 +1,6 @@
+//! This crate provides an object to interface with the keyboard, it also provides a command line
+//! utility that makes use of this object.
+
 use std::{thread, time};
 mod hid_hal;
 

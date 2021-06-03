@@ -1,4 +1,4 @@
-/// Encapsulate the hardware interaction in the HidApiHal object.
+///! Encapsulate the hardware interaction in the HidApiHal object.
 extern crate hidapi;
 
 /// Struct to provide hardware / crate abstraction layer.

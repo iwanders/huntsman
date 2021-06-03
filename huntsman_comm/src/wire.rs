@@ -1,15 +1,19 @@
-// the nitty gritty that goes over the usb bus.
 use struct_helper::*;
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
+/// Denotes a Red, Green and Blue color value.
 pub struct RGB {
+    /// Value of the red channel [0, 255]
     pub r: u8,
+    /// Value of the green channel [0, 255]
     pub g: u8,
+    /// Value of the blue channel [0, 255]
     pub b: u8,
 }
 
 #[derive(StructHelper, Copy, Clone, Debug)]
 #[repr(C)]
+/// The command header.
 pub struct Command {
     pub status: u8, // status, direction? Only really seen 0, 2 and I think 5 when I was throwing random data it it all.
     pub the_1f: u8, // Almost always 1f.
@@ -54,6 +58,7 @@ impl Default for Command {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
+/// Payload for the SetLedState command
 pub struct SetLedState {
     pub first: u8,
     pub _p0: u8, // padding
@@ -66,6 +71,7 @@ pub struct SetLedState {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
+/// Payload for the SetBrightness command.
 pub struct SetBrightness {
     pub first: u8,
     pub _p0: u8, // padding
