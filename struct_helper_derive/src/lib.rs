@@ -1,6 +1,7 @@
+///! This actually implements the derive macro for the struct_helper.
+
 // Sort of similar:
 // https://github.com/dtolnay/syn/tree/master/examples/heapsize
-
 extern crate proc_macro;
 use quote::quote;
 extern crate proc_macro2;
@@ -12,7 +13,8 @@ use syn;
 // perhaps with a 'denoted by' field specifying which of the enums is active?
 // https://rust-lang.github.io/unsafe-code-guidelines/layout/enums.html
 
-// Outputs a tokenstream in the shape of [(&'static str, &'static str)]
+// Outputs a tokenstream in the shape of [(&'static str, &'static str)], as well as the hashmap for
+// the tokens.
 fn process_str_attributes(
     list: &Vec<syn::Attribute>,
 ) -> (
@@ -67,6 +69,8 @@ fn process_str_attributes(
     (res, map)
 }
 
+
+/// The function that actually generates the code for this derived type.
 fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;

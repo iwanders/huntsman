@@ -10,3 +10,6 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 struct_helper_derive = { path = "../struct_helper_derive" }
 memoffset = "0.6.3"
+
+[[example]]
+name = "showcase"

@@ -1,25 +1,28 @@
+//! This crate allows struct conversion from and to bytes, without using a transmute or pointer
+//! cast. It also makes the struct's fields and any subfields inspectable and allows iteration over
+//! the fields.
+//!
+//! At the time of writing, there's no safe way to get a field offset in Rust, to perform this step
+//! the [`memoffset`] crate is used.
+
 extern crate struct_helper_derive;
 
 pub use memoffset::*;
+/// fooo
 pub use struct_helper_derive::*;
 
-// #[macro_use]
-// extern crate memoffset;
 /*
-This architecture can only deal with primitives, if someone puts something in their struct and wants to implement
-their own Inspectable, or to_le_bytes function on that, that doesn't work because it can't be captured in the (Mut)Ref
+This architecture can only deal with leafs of primitives, if someone puts something in their struct and wants to implement
+their own StructHelper, or to_le_bytes function for that type, that doesn't work because it can't be captured in the (Mut)Ref
 that's defined in this crate.
 
 The whole reference situation is ugly atm, but it's useful as it allows building the struct by reading the primitives
 from bytes, or writing bytes from the primitives.
 */
 
-// Don't really know how to forward these to dependants...
-// #[macro_use]
-// extern crate memoffset;
-
 // Enum to hold the mutable scalar types in Rust; https://doc.rust-lang.org/rust-by-example/primitives.html#scalar-types
 #[derive(Debug)]
+/// Enum to hold mutable scalar value types.
 pub enum MutRef<'a> {
     I8(&'a mut i8),
     I16(&'a mut i16),
@@ -41,8 +44,8 @@ pub enum MutRef<'a> {
     None,
 }
 
-// There's probably some elegant way to collapse this.
 #[derive(Debug)]
+/// Enum to hold immutable scalar value types.
 pub enum Ref<'a> {
     I8(&'a i8),
     I16(&'a i16),
@@ -64,6 +67,7 @@ pub enum Ref<'a> {
     None,
 }
 
+/// Helper macro to expand types into a match case.
 macro_rules! expand_cases_to_le_bytes {
     ($input:ident, $dest:ident, $( $y:path ),*) => (
         match ($input) {
@@ -83,6 +87,7 @@ macro_rules! expand_cases_to_le_bytes {
     )
 }
 
+/// Worker function to convert a [`Ref`] to bytes.
 fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
     // This is very ugly :(
     expand_cases_to_le_bytes!(
@@ -99,11 +104,13 @@ fn ref_to_le_bytes(value: &Ref, dest: &mut [u8]) -> Result<(), String> {
         Ref::U64,
         Ref::U128,
         Ref::F32,
-        Ref::F64 // Ref::Bool  // doesn't have to_le_bytes :/
+        Ref::F64
     );
+    // Ref::Bool is missing here as it doesn't have to_le_bytes :/
     Ok(())
 }
 
+/// Helper macro to expand types into a match case.
 macro_rules! expand_cases_from_le_bytes {
     ($value:ident, $src:ident, $( ($y:path, $e:ty) ),*) => (
         match ($value) {
@@ -127,6 +134,8 @@ macro_rules! expand_cases_from_le_bytes {
         }
     )
 }
+
+/// Worker function to read into a [`MutRef`] from bytes.
 fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String> {
     expand_cases_from_le_bytes!(
         value,
@@ -142,36 +151,59 @@ fn mut_from_le_bytes(value: &mut MutRef, src: &[u8]) -> Result<(), String> {
         (MutRef::U64, u64),
         (MutRef::U128, u128),
         (MutRef::F32, f32),
-        (MutRef::F64, f64) // Ref::Bool  // doesn't have to_le_bytes :/
+        (MutRef::F64, f64)
     );
+    // Ref::Bool is missing here as it doesn't have from_le_bytes :/
     Ok(())
 }
 
 // use std::collections::HashMap;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
+/// Enum to denote the element type for this field.
 pub enum ElementType {
+    /// It's a path, this can be a primitive type, or any other named type.
     Path,
+
+    /// It's an array,
     Array,
+
+    /// It's a scalar, a primitive type
     Scalar,
+
+    /// It's something else, root of an derived struct for example.
     Other,
 }
 
 #[derive(Debug, Clone)]
+/// Info struct to hold common information for fields.
 pub struct Info {
+    /// The start location of this field from its parent.
     pub start: usize,
+
+    /// The length of this field.
     pub length: usize,
+
+    /// A string representation of the type this field is.
     pub type_name: &'static str,
+
+    /// A [`std::any::TypeId`] instance for the type of this field.
     pub type_id: std::any::TypeId,
+
+    /// If this field has a name, the name of the field, otherwise `None`.
     pub name: Option<&'static str>,
+
+    /// The type of field this element is.
     pub element_type: ElementType,
+
+    /// A hashmap that can contain arbitrary annotations to fields.
     // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
     // annotations to be completely specified by the user.
     pub attrs: std::collections::HashMap<&'static str, &'static str>,
 }
 
-// Struct to represent a field in a struct.
 #[derive(Debug)]
+/// Struct to provide information and a reference to a mutable field.
 pub struct FieldMut<'a> {
     pub info: Info,
     pub value: MutRef<'a>,
@@ -179,6 +211,7 @@ pub struct FieldMut<'a> {
 }
 
 #[derive(Debug)]
+/// Struct to provide information and a reference to a field.
 pub struct FieldRef<'a> {
     pub info: Info,
     pub value: Ref<'a>,
@@ -186,6 +219,8 @@ pub struct FieldRef<'a> {
 }
 
 impl FieldRef<'_> {
+    /// Converts whatever the field holds to bytes, if this fails because the buffer isn't large
+    /// enough it provides a string error message.
     pub fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String>
     where
         Self: Sized,
@@ -195,12 +230,14 @@ impl FieldRef<'_> {
 }
 
 #[derive(Debug, Clone)]
+/// Struct to provide information about a field, without any reference to it.
 pub struct Field {
     pub info: Info,
     pub children: Vec<Field>,
 }
 
 impl Field {
+    /// Retrieve a particular field by name.
     pub fn find(&self, name: &str) -> Option<Field> {
         for i in 0..self.children.len() {
             match self.children[i].info.name {
@@ -216,10 +253,11 @@ impl Field {
     }
 }
 
-// Actual working recursion function.
+/// Function that recurses from the provided field down, trying to convert each field to bytes in
+/// the buffer.
 fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
-    // Here we go... We inspect v, and then we do the magic thing and recurse., and out should come a perfect
-    // struct :o
+    // Here we go... We inspect v, and then we do the magic thing and recurse, and out should come a
+    // perfect struct :o
     if !v.children.is_empty() {
         for c in v.children.iter() {
             // recurse...
@@ -241,6 +279,8 @@ fn impl_to_le_bytes(v: &FieldRef, dest: &mut [u8]) -> Result<(), String> {
     Ok(())
 }
 
+/// Function that recurses from the provided mutable field down, trying to conver bytes from the
+/// buffer into the references of the mutable fields.
 fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String> {
     if !v.children.is_empty() {
         for i in 0..v.children.len() {
@@ -265,14 +305,21 @@ fn impl_from_le_bytes(v: &mut FieldMut, src: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
+/// Main trait that provides inspection functions to objects that implement this trait, or as a
+/// static method to the type itself.
 pub trait StructHelper {
+    /// Retrieve the fields with mutable references.
     fn fields_as_mut<'a>(&'a mut self) -> FieldMut<'a>;
+
+    /// Retrieve the fields with references.
     fn fields_as_ref<'a>(&'a self) -> FieldRef<'a>;
 
+    /// Retrieve the fields without references.
     fn fields() -> Field
     where
         Self: Sized; // We need to be sized anyway for all this struct stuff.
 
+    /// Convert this object into bytes at the destination buffer.
     fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String>
     where
         Self: Sized,
@@ -283,6 +330,7 @@ pub trait StructHelper {
     // from_le_bytes(src: &[u8]) -> Result<Self, String> is a bit more involved if we don't want to assume default
     // constructability... Need to tackle it on the derive side mostly... if we assume default constructability, it
     // becomes a lot easier and we can just grab the mutable field tree and recurse.
+    /// Create an object from a byte buffer, this requires the type to be default constructible.
     fn from_le_bytes(src: &[u8]) -> Result<Self, String>
     where
         Self: Sized + Default,
@@ -296,6 +344,8 @@ pub trait StructHelper {
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
 
 //https://doc.rust-lang.org/rust-by-example/macros/designators.html
+
+/// Helper macro to create the implementations for the primitive scalar types.
 macro_rules! make_inspectable {
     ($a:ty, $as_mut: path, $as_ref: path) => {
         impl StructHelper for $a {
