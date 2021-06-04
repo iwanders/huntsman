@@ -148,11 +148,15 @@ impl Command for SetGameMode {
         return SetGameMode::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::new();
-        v.push(0); // the first byte is zero.
-        v.push(8); // No idea what this 8 means... :/
-        v.push(self.value as u8);
-        return v;
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetGameMode>()];
+        let wire_cmd = wire::SetGameMode {
+            game_mode_enabled: self.value as u8,
+            ..Default::default()
+        };
+        wire_cmd
+            .to_le_bytes(&mut v[..])
+            .expect("Should succeed");
+        v
     }
 }
 
@@ -177,6 +181,7 @@ pub fn get_command_fields() -> Vec<((u8, u8), Box<dyn Fn() -> struct_helper::Fie
     vec![
         (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
         (SetBrightness::CMD, Box::new(wire::SetBrightness::fields)),
+        (SetGameMode::CMD, Box::new(wire::SetGameMode::fields)),
     ]
 }
 

@@ -77,3 +77,22 @@ pub struct SetBrightness {
     pub _p0: u8, // padding
     pub value: u8,
 }
+
+#[derive(StructHelper, Copy, Clone, Debug)]
+#[repr(C)]
+/// Payload for the SetBrightness command.
+pub struct SetGameMode {
+    pub first: u8,
+    pub something: u8, // no idea
+    pub game_mode_enabled: u8,
+}
+impl Default for SetGameMode {
+    fn default() -> SetGameMode {
+        SetGameMode {
+            first: 0,
+            something: 8,
+            game_mode_enabled: 0,
+        }
+    }
+}
+
