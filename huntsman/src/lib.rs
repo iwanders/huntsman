@@ -144,7 +144,7 @@ impl Huntsman {
         let cmd = huntsman_comm::ArbitraryCommand {
             // 0x06 is len, but as we've seen here, it seems pretty much ignored.
 
-            register: (0x0f, 0x02),
+            register: huntsman_comm::Cmd{major: 0x0f, minor: 0x02},
             //  cmd: 0x450f8200,
             // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
             //  payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB], // static, 0xAA = R, 0x44 = G, 0xBB = B

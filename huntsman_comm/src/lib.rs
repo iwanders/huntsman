@@ -3,6 +3,7 @@
 use struct_helper::StructHelper;
 /// This module holds the structs as they actually go over the USB bus.
 pub mod wire;
+pub use wire::Cmd;
 use wire::RGB;
 
 /*
@@ -34,8 +35,7 @@ pub trait Command: std::fmt::Debug {
 
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::Command>()];
         let mut wire: wire::Command = Default::default();
-        wire.cmd_major = cmd.0;
-        wire.cmd_minor = cmd.1;
+        wire.cmd = cmd;
         wire.len = payload.len() as u8;
 
         // copy the payload.
@@ -48,7 +48,7 @@ pub trait Command: std::fmt::Debug {
     }
 
     /// Provides the two register addressses that are to be sent in the header.
-    fn register(&self) -> (u8, u8);
+    fn register(&self) -> Cmd;
 
     /// Provides the payload definition that comes after the header.
     fn payload(&self) -> Vec<u8>;
@@ -83,11 +83,14 @@ pub struct SetLedState {
     pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
 impl SetLedState {
-    pub const CMD: (u8, u8) = (0x0f, 0x03);
+    pub const CMD: Cmd = Cmd {
+        major: 0x0f,
+        minor: 0x03,
+    };
 }
 
 impl Command for SetLedState {
-    fn register(&self) -> (u8, u8) {
+    fn register(&self) -> Cmd {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
@@ -113,11 +116,14 @@ pub struct SetBrightness {
     pub value: f32,
 }
 impl SetBrightness {
-    pub const CMD: (u8, u8) = (0x0f, 0x04);
+    pub const CMD: Cmd = Cmd {
+        major: 0x0f,
+        minor: 0x04,
+    };
 }
 
 impl Command for SetBrightness {
-    fn register(&self) -> (u8, u8) {
+    fn register(&self) -> Cmd {
         return SetBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
@@ -140,11 +146,14 @@ pub struct SetGameMode {
     pub value: bool,
 }
 impl SetGameMode {
-    pub const CMD: (u8, u8) = (0x03, 0x00);
+    pub const CMD: Cmd = Cmd {
+        major: 0x03,
+        minor: 0x00,
+    };
 }
 
 impl Command for SetGameMode {
-    fn register(&self) -> (u8, u8) {
+    fn register(&self) -> Cmd {
         return SetGameMode::CMD;
     }
     fn payload(&self) -> Vec<u8> {
@@ -153,9 +162,7 @@ impl Command for SetGameMode {
             game_mode_enabled: self.value as u8,
             ..Default::default()
         };
-        wire_cmd
-            .to_le_bytes(&mut v[..])
-            .expect("Should succeed");
+        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
 }
@@ -163,12 +170,12 @@ impl Command for SetGameMode {
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
-    pub register: (u8, u8),
+    pub register: Cmd,
     pub payload: Vec<u8>,
 }
 
 impl Command for ArbitraryCommand {
-    fn register(&self) -> (u8, u8) {
+    fn register(&self) -> Cmd {
         return self.register;
     }
     fn payload(&self) -> Vec<u8> {
@@ -177,7 +184,7 @@ impl Command for ArbitraryCommand {
 }
 
 /// Helper function for the dissector that provides the fields for the provided commands.
-pub fn get_command_fields() -> Vec<((u8, u8), Box<dyn Fn() -> struct_helper::Field>)> {
+pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)> {
     vec![
         (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
         (SetBrightness::CMD, Box::new(wire::SetBrightness::fields)),

@@ -197,7 +197,10 @@ impl HuntsmanDissector {
             .info
             .start;
 
-        let cmd_id = (command.cmd_major, command.cmd_minor);
+        let cmd_id = huntsman_comm::Cmd {
+            major: command.cmd.major,
+            minor: command.cmd.minor,
+        };
         let mut fields: Option<struct_helper::Field> = None;
 
         // Iterate over all known commands from the comms side, and dissect their wire definitions

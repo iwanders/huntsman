@@ -15,6 +15,7 @@ type FieldDisplay = dissector::FieldDisplay;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct FieldFlags {
     pub hidden: bool,
+    pub dissect_additional_type: &'static str,
 }
 
 /// Internal data structur we use to represent a dissection field.
@@ -66,6 +67,22 @@ pub fn field_recurser(
     match field.info.attrs.get("dissection_hide") {
         Some(v) => updated_flags.hidden = *v == "true",
         None => {}
+    }
+
+    if let Some(z) = field.info.attrs.get("dissect_additional_type") {
+        let mut local_updated_flags = flags.clone();
+        local_updated_flags.dissect_additional_type = z;
+        let mut additional_prefix = updated_prefix.clone();
+        let current_name = additional_prefix.last().unwrap().clone();
+        additional_prefix.push(Prefix::Label(z.to_string()));
+        additional_prefix.push(current_name);
+        visitor(
+            Location::Leaf,
+            &field,
+            &additional_prefix,
+            &local_updated_flags,
+            field.info.start + 1, // !? + 1 from direction from endianness or something?
+        );
     }
 
     if field.children.len() > 1 {
@@ -189,13 +206,23 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
             abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(&x.abbrev))),
             field_type: match x.type_name {
                 "label" => FieldType::NONE,
+                "" => FieldType::NONE,
                 "u8" => FieldType::UINT8,
-                _ => panic!("Unsupport type name found, add it in the dissector."),
+                "u16" => FieldType::UINT16,
+                _ => panic!(
+                    "Unsupport type name \"{}\", add it in the dissector.",
+                    x.type_name
+                ),
             },
             display: match x.type_name {
                 "label" => FieldDisplay::BASE_NONE,
+                "" => FieldDisplay::BASE_NONE,
                 "u8" => FieldDisplay::BASE_HEX,
-                _ => panic!("Unsupport type name found, add it in the dissector."),
+                "u16" => FieldDisplay::BASE_HEX,
+                _ => panic!(
+                    "Unsupport type name \"{}\", add it in the dissector.",
+                    x.type_name
+                ),
             },
         })
         .collect()
@@ -226,7 +253,11 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                         abbrev: prefix.clone(),
                         start: offset,
                         length: field.info.length,
-                        type_name: field.info.type_name,
+                        type_name: if flags.dissect_additional_type != "" {
+                            flags.dissect_additional_type
+                        } else {
+                            field.info.type_name
+                        },
                     });
                 }
                 Location::MultipleChildrenStart => {
@@ -279,8 +310,11 @@ mod tests {
 
     #[test]
     fn wrangle_commands_into_fields() {
-        let command_fields = make_all_fields();
-        println!("{:#?}", command_fields.0);
-        println!("{:#?}", command_fields.1);
+        let all_fields = make_all_fields();
+        println!("{:#?}", all_fields.0);
+        println!("{:#?}", all_fields.1);
+
+        let command_fields = wire::Command::fields();
+        println!("{:#?}", command_fields);
     }
 }

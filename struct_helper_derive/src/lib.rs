@@ -1,5 +1,4 @@
 ///! This actually implements the derive macro for the struct_helper.
-
 // Sort of similar:
 // https://github.com/dtolnay/syn/tree/master/examples/heapsize
 extern crate proc_macro;
@@ -68,7 +67,6 @@ fn process_str_attributes(
     let res = quote!(#(#attribute_str_pairs),*);
     (res, map)
 }
-
 
 /// The function that actually generates the code for this derived type.
 fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -275,7 +273,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     gen.into()
 }
 
-#[doc="This implements the derive macro for the struct helper.
+#[doc = "This implements the derive macro for the struct helper.
 
 Any fields that start with an undercore (`_`) are ignored and not traversed into.
 
