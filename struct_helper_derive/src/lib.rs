@@ -275,6 +275,21 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     gen.into()
 }
 
+#[doc="This implements the derive macro for the struct helper.
+
+Any fields that start with an undercore (`_`) are ignored and not traversed into.
+
+Attributes can be added with `#[struct_helper(my_key = \"Pi!\")]`, the keys (like `my_key`) can be
+anything, the value must always be string at the moment.
+
+The following pre-defined keys exist:
+
+- `ignore`, if the value for this is `\"true\"`, this field is ignored as if it started with an
+underscore.
+
+So `#[struct_helper(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs` HashMap of 
+`{\"foo\": \"alpha\", \"bar\": \"bravo\"}`.
+"]
 #[proc_macro_derive(StructHelper, attributes(struct_helper))]
 pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_struct_helper_macro(input)
