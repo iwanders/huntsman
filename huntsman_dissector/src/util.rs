@@ -88,7 +88,7 @@ pub fn field_recurser(
             &c,
             &updated_flags,
             child_prefix,
-            field.info.start + offset,
+            c.info.start + offset,
             visitor,
         );
     }
