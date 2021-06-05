@@ -100,3 +100,20 @@ impl Default for SetGameMode {
         }
     }
 }
+
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct SetKeyOverride {
+    pub first: u8,
+    pub key_code: u8,
+    pub mod_or_hypershift: u8,
+}
+
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct SetLedEffect {
+    pub first: u8,
+    pub second: u8,
+    pub effect: u8,
+}
+

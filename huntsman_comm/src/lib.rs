@@ -54,6 +54,19 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 }
 
+
+
+#[derive(Default, Copy, Clone, Debug)]
+pub struct SetLedEffect {
+}
+impl SetLedEffect {
+    pub const CMD: Cmd = Cmd {
+        major: 0x0f,
+        minor: 0x02,
+    };
+}
+
+
 #[derive(Default, Copy, Clone, Debug)]
 /// Sets the LED State, providing a direct RGB value for each individual led.
 /// Seems to be row.
@@ -167,6 +180,31 @@ impl Command for SetGameMode {
     }
 }
 
+#[derive(Default, Copy, Clone, Debug)]
+pub struct SetKeyOverride {
+}
+impl SetKeyOverride {
+    pub const CMD: Cmd = Cmd {
+        major: 0x02,
+        minor: 0x0D,
+    };
+}
+
+impl Command for SetKeyOverride {
+    fn register(&self) -> Cmd {
+        return SetKeyOverride::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetKeyOverride>()];
+        let wire_cmd = wire::SetKeyOverride {
+            ..Default::default()
+        };
+        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
+        v
+    }
+}
+
+
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
@@ -189,6 +227,8 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)>
         (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
         (SetBrightness::CMD, Box::new(wire::SetBrightness::fields)),
         (SetGameMode::CMD, Box::new(wire::SetGameMode::fields)),
+        (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::fields)),
+        (SetLedEffect::CMD, Box::new(wire::SetLedEffect::fields)),
     ]
 }
 
@@ -268,9 +308,16 @@ mod tests {
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00...
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:39:00:02:02:00:e5:00...
 
+        // Unbind hypershift minus (on numpad)
+        //                              00:1f:00:00:00:0a:02:0d:01:69:01:02:02:00:56:00...
+
+
         // Right control to mouse rightclick.
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00...
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:40:00:01:01:02:00:00...
+        // Hypershift 3 as rightclick:
+        //                              00:1f:00:00:00:0a:02:0d:01:04:01:01:01:02:00:00...
+        //                                                            ^^   is hypershift / modifier?
 
         // Right control to mouse leftclick.
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:40:00:01:01:01:00:00...
@@ -280,6 +327,18 @@ mod tests {
         //                                              device?          ^^
         //                                                               ^^ ^^ ^^ ^^ ???   
 
+
+        // This looks more like a disable... 
+        // Bind hypershift plus to brightness up:
+        //                              00:1f:00:00:00:0a:02:0d:01:6a:01:00:00:00:00:00....
+        // Bind hypershift minus to brightness down:
+        //                              00:1f:00:00:00:0a:02:0d:01:69:01:00:00:00:00:00...
+
+        // Switch profile with right alt;
+        //                              00:1f:00:00:00:0a:02:0d:01:40:00:01:01:01:00:00:00:00
+        //                              00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00:00:00:00:00
+        //                              00:1f:00:00:00:0a:02:0d:01:02:01:00:00:00:00:00:00:00
+        //                              00:1f:00:00:00:0a:02:0d:01:03:01:01:01:01:00:00:00:00
 
         // Key locations match;
         // Microsoft Keyboard Scan Code Specification (Appendix C, "USB Keyboard/Keypad Page (0x07)"),
