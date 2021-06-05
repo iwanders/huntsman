@@ -250,5 +250,42 @@ mod tests {
         let disable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:08:00");
         game_mode.value = false;
         assert_eq!(game_mode.serialize(), disable);
+
+        // 00:1f:00:00:00:03:03:00:00:08:00:00:00...
+        // 00:1f:00:00:00:03:03:00:00:08:01:00:00...
+        // 00:1f:00:00:00:03:03:00:00:18:00:00:00...
+        // What does this 18 mean!? Seems to toggle the volume led!? O_o
+        // It did disable my override on right control, which is sketchy...
+
+    }
+
+    #[test]
+    fn overrides_for_keys() {
+        // Right shift to k, top two entries seem toj be THE thing.
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:0e:00...
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:39:00:02:02:00:0e:00...
+        // Right shift to default:
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00...
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:39:00:02:02:00:e5:00...
+
+        // Right control to mouse rightclick.
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00...
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:40:00:01:01:02:00:00...
+
+        // Right control to mouse leftclick.
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:40:00:01:01:01:00:00...
+        // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:40:00:01:01:01:00:00...
+        //                                profile or activation?^^
+        //                                                    key  ^^                      :check:
+        //                                              device?          ^^
+        //                                                               ^^ ^^ ^^ ^^ ???   
+
+
+        // Key locations match;
+        // Microsoft Keyboard Scan Code Specification (Appendix C, "USB Keyboard/Keypad Page (0x07)"),
+        // https://en.wikipedia.org/wiki/Scancode#USB
+        // Most certainly, Key location microsofts keyboard scan code lists matches.
+        // key 0x39 is 57, which is R SHIFT, p18
+        // key 0x40 is 64, which is R CTRL, p18
     }
 }

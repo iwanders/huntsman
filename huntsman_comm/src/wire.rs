@@ -88,14 +88,14 @@ pub struct SetBrightness {
 /// Payload for the SetBrightness command.
 pub struct SetGameMode {
     pub first: u8,
-    pub something: u8, // no idea
+    pub something: u8, // no idea, either 0x18, or 0x08, 18 is the volume led?!
     pub game_mode_enabled: u8,
 }
 impl Default for SetGameMode {
     fn default() -> SetGameMode {
         SetGameMode {
             first: 0,
-            something: 8,
+            something: 0x8,
             game_mode_enabled: 0,
         }
     }
