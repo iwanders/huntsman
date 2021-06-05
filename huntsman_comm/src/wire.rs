@@ -86,10 +86,11 @@ pub struct SetBrightness {
 
 #[derive(StructHelper, Copy, Clone, Debug)]
 #[repr(C)]
-/// Payload for the SetBrightness command.
 pub struct SetGameMode {
     pub first: u8,
-    pub something: u8, // no idea, either 0x18, or 0x08, 18 is the volume led?!
+    // No idea, either 0x18, or 0x08, 18 is the volume led... Maybe its just SetLedFlag?
+    // 0x18 seems to be sent as cancelOTF?
+    pub something: u8,
     pub game_mode_enabled: u8,
 }
 impl Default for SetGameMode {

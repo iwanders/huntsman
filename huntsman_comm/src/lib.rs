@@ -301,12 +301,22 @@ mod tests {
 
     #[test]
     fn overrides_for_keys() {
-        // Right shift to k, top two entries seem toj be THE thing.
+        // Readable version of the usb HID id's
+        // https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/translate.pdf
+
+        // Readable key id lookup
+        // https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/scancode.doc
+
+        // Right shift to k, top two entries seem to be THE thing.
+        // TSetMapping MOD: 0x00000000	MAP: MAPPING_SINGLEKEY Key: MC=0x25, EX=0x00, Mods=0x00000000
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:0e:00...
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:39:00:02:02:00:0e:00...
+        //                                                                        ^^  hid id for 'k'
+
         // Right shift to default:
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00...
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:39:00:02:02:00:e5:00...
+        //                                                                        ^^  hid id for Right shift.
 
         // Unbind hypershift minus (on numpad)
         //                              00:1f:00:00:00:0a:02:0d:01:69:01:02:02:00:56:00...
@@ -324,8 +334,10 @@ mod tests {
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:40:00:01:01:01:00:00...
         //                                profile or activation?^^
         //                                                    key  ^^                      :check:
-        //                                              device?          ^^
-        //                                                               ^^ ^^ ^^ ^^ ???   
+        //                                                                        ^^  hid id key if keyboard
+        //                                                                     ^^  Mouse buttion / action?
+        //                                              kbd or mouse?    ^^  01 is mouse, 02 is kbd?
+        //                                                                  ^^ ^^    ???   
 
 
         // This looks more like a disable... 
@@ -348,3 +360,11 @@ mod tests {
         // key 0x40 is 64, which is R CTRL, p18
     }
 }
+
+/*
+// last command on exit, log reports setting to firmware mode.
+let cmd = huntsman_comm::ArbitraryCommand {
+            // register: huntsman_comm::Cmd{major: 0x00, minor: 0x04},
+            // payload: vec![0x00, 0x00], //
+}
+*/
