@@ -12,6 +12,7 @@ pub struct RGB {
 }
 
 #[derive(StructHelper, Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[repr(C)]
 pub struct Cmd {
     pub major: u8,
     pub minor: u8,

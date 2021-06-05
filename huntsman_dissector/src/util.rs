@@ -81,7 +81,7 @@ pub fn field_recurser(
             &field,
             &additional_prefix,
             &local_updated_flags,
-            field.info.start + 1, // !? + 1 from direction from endianness or something?
+            offset,
         );
     }
 

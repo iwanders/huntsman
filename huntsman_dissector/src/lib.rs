@@ -139,7 +139,7 @@ impl HuntsmanDissector {
                   field: &struct_helper::Field,
                   prefix: &Vec<Prefix>,
                   flags: &FieldFlags,
-                  offset: usize| {
+                  visit_offset: usize| {
                 if flags.hidden {
                     return; // skip over it, like the individual bytes in the payload.
                 }
@@ -152,7 +152,7 @@ impl HuntsmanDissector {
                         proto_stack.last_mut().as_mut().unwrap().add_item(
                             hfid,
                             tvb,
-                            offset + field.info.start,
+                            visit_offset,
                             field.info.length,
                             Encoding::BIG_ENDIAN,
                         );
@@ -165,7 +165,7 @@ impl HuntsmanDissector {
                         let mut root_item = proto_stack.last_mut().as_mut().unwrap().add_item(
                             hfid,
                             tvb,
-                            offset,
+                            visit_offset,
                             field.info.length,
                             Encoding::BIG_ENDIAN,
                         );
