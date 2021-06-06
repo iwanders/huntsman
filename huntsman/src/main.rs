@@ -237,9 +237,11 @@ pub fn main() -> Result<(), String> {
                         .default_value("100").help("Delay in ms between update cycles"),
                 )
             ).subcommand(
-                add_colors!(add_duration!(SubCommand::with_name("reactive").about("Colors keys hit, no color is random")))
+                add_colors!(add_duration!(SubCommand::with_name("reactive").about("Colors keystrokes, no color is random")))
             ).subcommand(
                 add_colors!(SubCommand::with_name("ripple").about("Colors keys hit, no color is random"))
+            ).subcommand(
+                add_colors!(add_duration!(SubCommand::with_name("starlight").about("Colors random keys, no color is random")))
             )
         );
 
@@ -339,6 +341,12 @@ pub fn main() -> Result<(), String> {
                 let subargs = matches.subcommand_matches("ripple").unwrap();
                 let colors = get_colors(subargs);
                 h.effect_ripple(&colors)?;
+            },
+            Some("starlight") => {
+                let subargs = matches.subcommand_matches("starlight").unwrap();
+                let colors = get_colors(subargs);
+                let duration = get_duration(subargs)?;
+                h.effect_starlight(duration, &colors)?;
             },
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

@@ -205,4 +205,10 @@ impl Huntsman {
         return self.set_command(&cmd);
     }
 
+    /// Only takes up to two colors.
+    pub fn effect_starlight(&mut self, duration: huntsman_comm::Duration, colors: &Vec<RGB>) -> Result<(), String>
+    {
+        let cmd = huntsman_comm::SetLedEffect::starlight(duration, colors);
+        return self.set_command(&cmd);
+    }
 }
