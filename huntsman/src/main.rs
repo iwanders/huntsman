@@ -3,6 +3,9 @@ extern crate huntsman_comm;
 
 use huntsman;
 
+mod colors;
+use colors::str_to_color;
+
 //~ use clap::{Arg, App};
 extern crate clap;
 use clap::{App, Arg, SubCommand};
@@ -69,12 +72,33 @@ fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB>
     let mut res: Vec<huntsman_comm::RGB> = Vec::new();
     if let Some(z) = matches.values_of("colors")
     {
-        println!("Color matches: {:#?}", z);
         // And now... we build whatever color parsing we need...
-        let mut color: huntsman_comm::RGB  = Default::default();
         for v in z
         {
-            println!("v: {:#?}", v);
+            if let Some(c) = str_to_color(v)
+            {
+                res.push(c);
+                continue;  // Cool, we got ourselves a color.
+            }
+            let v = v.replace("0x", "");
+            if v.len() == 6
+            {
+                // Must be a hexadecimal color. Convert the thing.
+                if let Ok(z) = u32::from_str_radix(&v, 16)
+                {
+                    let r = (z.checked_shr(16).expect("Cant fail?") & 0xFF) as u8;
+                    let g = (z.checked_shr(8).expect("Cant fail?") & 0xFF) as u8;
+                    let b = (z & 0xFF) as u8;
+                    res.push(huntsman_comm::RGB{r, g, b});
+                    continue;
+                }
+                else
+                {
+                    println!("Couldn't parse hex {} to u32", v);
+                }
+            }
+            // Could add float notation here 0.5,1.0,0.25
+            println!("No idea what to do with: {:#?}, use (0x)RRGGBB as hex, or color names.", v);
         }
     }
     res
@@ -233,7 +257,7 @@ pub fn main() -> Result<(), String> {
             Some("breathing") => {
                 let subargs = matches.subcommand_matches("breathing").unwrap();
                 let colors = get_colors(subargs);
-                h.effect_breathing(3, &colors)?;
+                h.effect_breathing(&colors)?;
             },
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

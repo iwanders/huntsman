@@ -117,7 +117,7 @@ pub struct SetLedEffect {
     pub first: u8,
     pub second: u8,
     pub effect: u8,
-    pub direction: u8,  // 0x01, 0x02
+    pub direction: u8,  // 0x01, 0x02?
     pub speed: u8,
     pub color_count: u8,
     pub colors: [RGB; 10], // not sure how long this one is.

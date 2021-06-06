@@ -84,7 +84,7 @@ impl SetLedEffect {
         msg
     }
 
-    pub fn breathing(direction: bool, speed: u8, colors: &Vec<RGB>) -> SetLedEffect
+    pub fn breathing(colors: &Vec<RGB>) -> SetLedEffect
     {
         let mut msg = SetLedEffect{
             payload:wire::SetLedEffect{
@@ -92,9 +92,10 @@ impl SetLedEffect {
                 ..Default::default()
             }, ..Default::default()
         };
+        // No colors results in random color.
         msg.payload.color_count = std::cmp::min(colors.len(), msg.payload.colors.len()) as u8;
-        msg.payload.direction = if direction { 0x01 } else { 0x02 };
-        msg.payload.speed = speed;
+        msg.payload.direction = 0x00;  // Doesn't seem to do anything at all.
+        msg.payload.speed = 0x00;// Timed it, 3 colors always takes ~ 50s, regardless of value.
         for i in 0..msg.payload.color_count as usize
         {
             msg.payload.colors[i] = colors[i];
