@@ -177,6 +177,21 @@ impl SetLedEffect {
         msg
     }
 
+    pub fn ripple(colors: &Vec<RGB>) -> SetLedEffect
+    {
+        // payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
+        //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
+        let mut msg = SetLedEffect{
+            payload:wire::SetLedEffect{
+                effect: 0x06,
+                ..Default::default()
+            }, ..Default::default()
+        };
+        // No colors results in random color.
+        msg.set_colors(&colors);
+        msg
+    }
+
 
     #[rustfmt::skip] // Really don't want this to get formatted...
     pub fn dev() -> Box<dyn Command>
@@ -187,9 +202,6 @@ impl SetLedEffect {
             register: Cmd{major: 0x0f, minor: 0x02},
             //  cmd: 0x450f8200,
 
-
-            // payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
-            //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
 
 
              // payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.

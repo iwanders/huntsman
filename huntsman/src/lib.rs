@@ -165,7 +165,6 @@ impl Huntsman {
     {
         let cmd = huntsman_comm::SetLedEffect::off();
         return self.set_command(&cmd);
-        
     }
 
     pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String>
@@ -192,9 +191,18 @@ impl Huntsman {
         return self.set_command(&cmd);
     }
 
+    /// Only takes a single color
     pub fn effect_reactive(&mut self, duration: huntsman_comm::Duration, colors: &Vec<RGB>) -> Result<(), String>
     {
         let cmd = huntsman_comm::SetLedEffect::reactive(duration, colors);
         return self.set_command(&cmd);
     }
+
+    /// Only takes a single color
+    pub fn effect_ripple(&mut self, colors: &Vec<RGB>) -> Result<(), String>
+    {
+        let cmd = huntsman_comm::SetLedEffect::ripple(&colors);
+        return self.set_command(&cmd);
+    }
+
 }

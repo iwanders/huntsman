@@ -238,6 +238,8 @@ pub fn main() -> Result<(), String> {
                 )
             ).subcommand(
                 add_colors!(add_duration!(SubCommand::with_name("reactive").about("Colors keys hit, no color is random")))
+            ).subcommand(
+                add_colors!(SubCommand::with_name("ripple").about("Colors keys hit, no color is random"))
             )
         );
 
@@ -318,7 +320,6 @@ pub fn main() -> Result<(), String> {
                 h.effect_breathing(&colors)?;
             },
             Some("spectrum") => {
-                let subargs = matches.subcommand_matches("spectrum").unwrap();
                 h.effect_spectrum()?;
             },
             Some("wave") => {
@@ -333,6 +334,11 @@ pub fn main() -> Result<(), String> {
                 let colors = get_colors(subargs);
                 let duration = get_duration(subargs)?;
                 h.effect_reactive(duration, &colors)?;
+            },
+            Some("ripple") => {
+                let subargs = matches.subcommand_matches("ripple").unwrap();
+                let colors = get_colors(subargs);
+                h.effect_ripple(&colors)?;
             },
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),
