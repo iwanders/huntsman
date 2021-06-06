@@ -51,7 +51,10 @@ impl Huntsman {
         return r;
     }
 
-    fn set_command_box(&mut self, boxed_command: &Box<dyn huntsman_comm::Command>) -> Result<(), String> {
+    fn set_command_box(
+        &mut self,
+        boxed_command: &Box<dyn huntsman_comm::Command>,
+    ) -> Result<(), String> {
         let v = boxed_command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", boxed_command, v);
@@ -154,60 +157,60 @@ impl Huntsman {
         //              00:1f:00:00:00:06:0f:02:02:00:03:00:00:00:00:00:00:00:00
 
         // let cmd = huntsman_comm::ArbitraryCommand {
-            // register: huntsman_comm::Cmd{major: 0x0f, minor: 0x02},
-            // payload: vec!(),
+        // register: huntsman_comm::Cmd{major: 0x0f, minor: 0x02},
+        // payload: vec!(),
         // };
         let cmd = huntsman_comm::SetLedEffect::dev();
         return self.set_command_box(&cmd);
     }
 
-    pub fn effect_off(&mut self) -> Result<(), String>
-    {
+    pub fn effect_off(&mut self) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::off();
         return self.set_command(&cmd);
     }
 
-    pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String>
-    {
+    pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::fixed(&color);
         return self.set_command(&cmd);
     }
 
-    pub fn effect_breathing(&mut self, colors: &Vec<RGB>) -> Result<(), String>
-    {
+    pub fn effect_breathing(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::breathing(&colors);
         return self.set_command(&cmd);
     }
 
-    pub fn effect_spectrum(&mut self) -> Result<(), String>
-    {
+    pub fn effect_spectrum(&mut self) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::spectrum();
         return self.set_command(&cmd);
     }
 
-    pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String>
-    {
+    pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::wave(direction, delay);
         return self.set_command(&cmd);
     }
 
     /// Only takes a single color
-    pub fn effect_reactive(&mut self, duration: huntsman_comm::Duration, colors: &Vec<RGB>) -> Result<(), String>
-    {
+    pub fn effect_reactive(
+        &mut self,
+        duration: huntsman_comm::Duration,
+        colors: &Vec<RGB>,
+    ) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::reactive(duration, colors);
         return self.set_command(&cmd);
     }
 
     /// Only takes a single color
-    pub fn effect_ripple(&mut self, colors: &Vec<RGB>) -> Result<(), String>
-    {
+    pub fn effect_ripple(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::ripple(&colors);
         return self.set_command(&cmd);
     }
 
     /// Only takes up to two colors.
-    pub fn effect_starlight(&mut self, duration: huntsman_comm::Duration, colors: &Vec<RGB>) -> Result<(), String>
-    {
+    pub fn effect_starlight(
+        &mut self,
+        duration: huntsman_comm::Duration,
+        colors: &Vec<RGB>,
+    ) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::starlight(duration, colors);
         return self.set_command(&cmd);
     }

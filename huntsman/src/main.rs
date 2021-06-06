@@ -13,7 +13,8 @@ use clap::{App, Arg, SubCommand};
 // There's probably a more proper way of doing this...
 macro_rules! add_color_arg {
     ($thing: expr) => {
-        $thing.arg(
+        $thing
+            .arg(
                 Arg::with_name("red")
                     .short("r")
                     .takes_value(true)
@@ -31,11 +32,10 @@ macro_rules! add_color_arg {
                     .takes_value(true)
                     .default_value("0"),
             )
-    }
+    };
 }
 
-fn get_rgb(matches: &clap::ArgMatches) -> huntsman_comm::RGB
-{
+fn get_rgb(matches: &clap::ArgMatches) -> huntsman_comm::RGB {
     let r_in = matches.value_of("red").expect("red be set");
     let r = r_in
         .to_string()
@@ -51,79 +51,69 @@ fn get_rgb(matches: &clap::ArgMatches) -> huntsman_comm::RGB
         .to_string()
         .parse::<u8>()
         .expect("Parsing b as a number didn't work");
-    
-    huntsman_comm::RGB{r, g, b}
-}
 
+    huntsman_comm::RGB { r, g, b }
+}
 
 macro_rules! add_colors {
     ($thing: expr) => {
         $thing.arg(
             Arg::with_name("colors")
-                    .multiple(true)
-                    .takes_value(true)
-                    .help("colors...")
-            )
-    }
+                .multiple(true)
+                .takes_value(true)
+                .help("colors..."),
+        )
+    };
 }
 
-fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB>
-{
+fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB> {
     let mut res: Vec<huntsman_comm::RGB> = Vec::new();
-    if let Some(z) = matches.values_of("colors")
-    {
+    if let Some(z) = matches.values_of("colors") {
         // And now... we build whatever color parsing we need...
-        for v in z
-        {
-            if let Some(c) = str_to_color(v)
-            {
+        for v in z {
+            if let Some(c) = str_to_color(v) {
                 res.push(c);
-                continue;  // Cool, we got ourselves a color.
+                continue; // Cool, we got ourselves a color.
             }
             let v = v.replace("0x", "");
-            if v.len() == 6
-            {
+            if v.len() == 6 {
                 // Must be a hexadecimal color. Convert the thing.
-                if let Ok(z) = u32::from_str_radix(&v, 16)
-                {
+                if let Ok(z) = u32::from_str_radix(&v, 16) {
                     let r = (z.checked_shr(16).expect("Cant fail?") & 0xFF) as u8;
                     let g = (z.checked_shr(8).expect("Cant fail?") & 0xFF) as u8;
                     let b = (z & 0xFF) as u8;
-                    res.push(huntsman_comm::RGB{r, g, b});
+                    res.push(huntsman_comm::RGB { r, g, b });
                     continue;
-                }
-                else
-                {
+                } else {
                     println!("Couldn't parse hex {} to u32", v);
                 }
             }
             // Could add float notation here 0.5,1.0,0.25
-            println!("No idea what to do with: {:#?}, use (0x)RRGGBB as hex, or color names.", v);
+            println!(
+                "No idea what to do with: {:#?}, use (0x)RRGGBB as hex, or color names.",
+                v
+            );
         }
     }
     res
 }
 
-
 macro_rules! add_duration {
     ($thing: expr) => {
         $thing.arg(
             Arg::with_name("duration")
-                    .short("d")
-                    .takes_value(true)
-                    .default_value("medium")
-                    .possible_values(&["short", "medium", "long"])
-                    .help("The duration, either short, medium or long")
-            )
-    }
+                .short("d")
+                .takes_value(true)
+                .default_value("medium")
+                .possible_values(&["short", "medium", "long"])
+                .help("The duration, either short, medium or long"),
+        )
+    };
 }
 
-fn get_duration(matches: &clap::ArgMatches) -> Result<huntsman_comm::Duration, String>
-{
-    if let Some(v_in) = matches.value_of("duration")
-    {
-        return match v_in
-        {
+fn get_duration(matches: &clap::ArgMatches) -> Result<huntsman_comm::Duration, String> {
+    if let Some(v_in) = matches.value_of("duration") {
+        return match v_in {
             "short" => Ok(huntsman_comm::Duration::Short),
             "medium" => Ok(huntsman_comm::Duration::Medium),
             "long" => Ok(huntsman_comm::Duration::Long),
@@ -133,19 +123,15 @@ fn get_duration(matches: &clap::ArgMatches) -> Result<huntsman_comm::Duration, S
     Err("Couldn't find argument".to_string())
 }
 
-fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> Result<T, String>
-{
-    if let Some(v_in) = matches.value_of(name)
-    {
-        if let Ok(v) = v_in.to_string().parse::<T>()
-        {
+fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> Result<T, String> {
+    if let Some(v_in) = matches.value_of(name) {
+        if let Ok(v) = v_in.to_string().parse::<T>() {
             return Ok(v);
         }
     }
-    
+
     Err(format!("Couldn't parse argument {}.", name))
 }
-
 
 pub fn main() -> Result<(), String> {
     let mut app = App::new("Huntsman Thing")
@@ -217,34 +203,44 @@ pub fn main() -> Result<(), String> {
                 .arg(Arg::with_name("index").short("i").takes_value(true)),
         )
         .subcommand(
-            SubCommand::with_name("effect").about("Sets an LED effect").subcommand(
-                SubCommand::with_name("off").about("Disables current effect")
-            ).subcommand(
-                add_color_arg!(SubCommand::with_name("fixed").about("Sets a fixed color."))
-            ).subcommand(
-                add_colors!(SubCommand::with_name("breathing").about("Breathes colors, no color is random."))
-            ).subcommand(
-                SubCommand::with_name("spectrum").about("Spectrum cycle.")
-            ).subcommand(
-                SubCommand::with_name("wave").about("Hue wave through the leds.").arg(
-                    Arg::with_name("reverse")
-                        .short("r")
-                        .takes_value(false).help("Set to reverse the motion")
-                ).arg(
-                    Arg::with_name("delay")
-                        .short("d")
-                        .takes_value(true)
-                        .default_value("100").help("Delay in ms between update cycles"),
+            SubCommand::with_name("effect")
+                .about("Sets an LED effect")
+                .subcommand(SubCommand::with_name("off").about("Disables current effect"))
+                .subcommand(add_color_arg!(
+                    SubCommand::with_name("fixed").about("Sets a fixed color.")
+                ))
+                .subcommand(add_colors!(SubCommand::with_name("breathing")
+                    .about("Breathes colors, no color is random.")))
+                .subcommand(SubCommand::with_name("spectrum").about("Spectrum cycle."))
+                .subcommand(
+                    SubCommand::with_name("wave")
+                        .about("Hue wave through the leds.")
+                        .arg(
+                            Arg::with_name("reverse")
+                                .short("r")
+                                .takes_value(false)
+                                .help("Set to reverse the motion"),
+                        )
+                        .arg(
+                            Arg::with_name("delay")
+                                .short("d")
+                                .takes_value(true)
+                                .default_value("100")
+                                .help("Delay in ms between update cycles"),
+                        ),
                 )
-            ).subcommand(
-                add_colors!(add_duration!(SubCommand::with_name("reactive").about("Colors keystrokes, no color is random")))
-            ).subcommand(
-                add_colors!(SubCommand::with_name("ripple").about("Colors keys hit, no color is random"))
-            ).subcommand(
-                add_colors!(add_duration!(SubCommand::with_name("starlight").about("Colors random keys, no color is random")))
-            )
+                .subcommand(add_colors!(add_duration!(SubCommand::with_name(
+                    "reactive"
+                )
+                .about("Colors keystrokes, no color is random"))))
+                .subcommand(add_colors!(
+                    SubCommand::with_name("ripple").about("Colors keys hit, no color is random")
+                ))
+                .subcommand(add_colors!(add_duration!(SubCommand::with_name(
+                    "starlight"
+                )
+                .about("Colors random keys, no color is random")))),
         );
-
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
 
@@ -308,46 +304,46 @@ pub fn main() -> Result<(), String> {
 
     if let Some(matches) = matches.subcommand_matches("effect") {
         println!("{:#?}", matches);
-            match matches.subcommand_name() {
+        match matches.subcommand_name() {
             Some("off") => {
                 h.effect_off()?;
-            },
+            }
             Some("fixed") => {
                 let subargs = matches.subcommand_matches("fixed").unwrap();
                 h.effect_fixed(&get_rgb(subargs))?;
-            },
+            }
             Some("breathing") => {
                 let subargs = matches.subcommand_matches("breathing").unwrap();
                 let colors = get_colors(subargs);
                 h.effect_breathing(&colors)?;
-            },
+            }
             Some("spectrum") => {
                 h.effect_spectrum()?;
-            },
+            }
             Some("wave") => {
                 let subargs = matches.subcommand_matches("wave").unwrap();
                 let delay = get_value::<u8>(subargs, "delay")?;
                 let reverse: bool = subargs.occurrences_of("reverse") == 0;
                 println!("Reverse: {}", reverse);
                 h.effect_wave(reverse, delay)?;
-            },
+            }
             Some("reactive") => {
                 let subargs = matches.subcommand_matches("reactive").unwrap();
                 let colors = get_colors(subargs);
                 let duration = get_duration(subargs)?;
                 h.effect_reactive(duration, &colors)?;
-            },
+            }
             Some("ripple") => {
                 let subargs = matches.subcommand_matches("ripple").unwrap();
                 let colors = get_colors(subargs);
                 h.effect_ripple(&colors)?;
-            },
+            }
             Some("starlight") => {
                 let subargs = matches.subcommand_matches("starlight").unwrap();
                 let colors = get_colors(subargs);
                 let duration = get_duration(subargs)?;
                 h.effect_starlight(duration, &colors)?;
-            },
+            }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),
         }

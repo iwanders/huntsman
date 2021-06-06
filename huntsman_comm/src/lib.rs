@@ -54,15 +54,13 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 }
 
-
 // 1, short, 2 medium, 3 long, 3 values matches slider in ui.
 #[repr(u8)]
 /// Duration, short, medium or long, like the slider in the ui.
-pub enum Duration
-{
+pub enum Duration {
     Short = 0x01,
-    Medium = 0x02, 
-    Long = 0x03
+    Medium = 0x02,
+    Long = 0x03,
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -75,137 +73,133 @@ impl SetLedEffect {
         minor: 0x02,
     };
 
-    pub fn off() -> SetLedEffect
-    {
+    pub fn off() -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
         Default::default()
     }
 
-    pub fn fixed(color: &RGB) -> SetLedEffect
-    {
+    pub fn fixed(color: &RGB) -> SetLedEffect {
         // static, 0xAA = R, 0x44 = G, 0xBB = B
-        // payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB], 
+        // payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],
         //                                               ^ must be non zero...
 
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x01,
                 color_count: 1,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         msg.payload.colors[0] = *color;
         msg
     }
 
-    fn set_colors(&mut self, colors: &Vec<RGB>)
-    {
+    fn set_colors(&mut self, colors: &Vec<RGB>) {
         self.payload.color_count = std::cmp::min(colors.len(), self.payload.colors.len()) as u8;
-        for i in 0..self.payload.color_count as usize
-        {
+        for i in 0..self.payload.color_count as usize {
             self.payload.colors[i] = colors[i];
         }
     }
 
-    pub fn breathing(colors: &Vec<RGB>) -> SetLedEffect
-    {
+    pub fn breathing(colors: &Vec<RGB>) -> SetLedEffect {
         // Fades spectrum in and out; 'breathing'?
-        //  payload: vec![0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00], 
+        //  payload: vec![0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00],
         //  payload: vec![0x00, 0x00, 0x02, 0x02, 0x01, 0x03, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xff, 0x00],  // breathing 3 colors.
 
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x02,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         // No colors results in random color.
-        msg.payload.direction = 0x00;  // Doesn't seem to do anything at all.
-        msg.payload.speed = 0x00;// Timed it, 3 colors always takes ~ 50s, regardless of value.
+        msg.payload.direction = 0x00; // Doesn't seem to do anything at all.
+        msg.payload.speed = 0x00; // Timed it, 3 colors always takes ~ 50s, regardless of value.
         msg.set_colors(&colors);
         msg
     }
 
-    pub fn spectrum() -> SetLedEffect
-    {
+    pub fn spectrum() -> SetLedEffect {
         // Length is actually 6 for this instruction, but firmware doesn't care.
         //  payload: vec![0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00], // Cycles spectrum
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x03,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         // Speed doesn't seem to do anything.
         msg
     }
 
-    pub fn wave(reverse: bool, delay: u8) -> SetLedEffect
-    {
-        // payload: vec![0x00, 0x00, 0x04, 0x01, 0xFF], 
+    pub fn wave(reverse: bool, delay: u8) -> SetLedEffect {
+        // payload: vec![0x00, 0x00, 0x04, 0x01, 0xFF],
         //                                    ^ 1 or 2, direction.
         //                                         ^ Speed, lower is faster, probably delay in msec.
         // Doesn't seem to have a field for the 'step', which is what would make sense...
         // changing direction to anything else doesn't seem to work... odd, I would implement step as well.
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x04,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         msg.payload.direction = if reverse { 0x01 } else { 0x02 }; // 0x01 or 0x02, 0x00 makes it a nop
         msg.payload.speed = delay; // probably delay in ms?
         msg
     }
 
-    pub fn reactive(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect
-    {
+    pub fn reactive(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00],  // Should be reactive, also 0x02, 0x01, 0x00, 0x00 passed <- So cool, spectrum reactive
         // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color reactive.
         //  //                                           ^ Specifies color or not.
 
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x05,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         // No colors results in random color.
-        msg.payload.direction = 0x00;  //
+        msg.payload.direction = 0x00; //
         msg.payload.speed = duration as u8;
         msg.set_colors(&colors);
         msg
     }
 
-    pub fn ripple(colors: &Vec<RGB>) -> SetLedEffect
-    {
+    pub fn ripple(colors: &Vec<RGB>) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
         //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x06,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         // No colors results in random color.
         msg.set_colors(&colors);
         msg
     }
 
-    pub fn starlight(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect
-    {
-
-         // payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.
+    pub fn starlight(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect {
+        // payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.
         //  payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color randomly lighting keys, same pattern as reactive.
-            // payload: vec![0x00, 0x00, 0x07, 0x01, 0x05, 0x02, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],  // Starlight two colors.
-        let mut msg = SetLedEffect{
-            payload:wire::SetLedEffect{
+        // payload: vec![0x00, 0x00, 0x07, 0x01, 0x05, 0x02, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],  // Starlight two colors.
+        let mut msg = SetLedEffect {
+            payload: wire::SetLedEffect {
                 effect: 0x07,
                 ..Default::default()
-            }, ..Default::default()
+            },
+            ..Default::default()
         };
         // No colors results in random color.
-        msg.payload.direction = 0x01;  // ??
+        msg.payload.direction = 0x01; // ??
         msg.payload.speed = duration as u8;
         msg.set_colors(&colors);
         msg
@@ -253,13 +247,12 @@ impl Command for SetLedEffect {
     }
     fn payload(&self) -> Vec<u8> {
         let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedEffect>()];
-        self.payload.to_le_bytes(&mut v[..]).expect("Should succeed");
+        self.payload
+            .to_le_bytes(&mut v[..])
+            .expect("Should succeed");
         v
     }
 }
-
-
-
 
 #[derive(Default, Copy, Clone, Debug)]
 /// Sets the LED State, providing a direct RGB value for each individual led.
@@ -375,8 +368,7 @@ impl Command for SetGameMode {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct SetKeyOverride {
-}
+pub struct SetKeyOverride {}
 impl SetKeyOverride {
     pub const CMD: Cmd = Cmd {
         major: 0x02,
@@ -397,7 +389,6 @@ impl Command for SetKeyOverride {
         v
     }
 }
-
 
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
@@ -490,12 +481,10 @@ mod tests {
         // 00:1f:00:00:00:03:03:00:00:18:00:00:00...
         // What does this 18 mean!? Seems to toggle the volume led!? O_o
         // It did disable my override on right control, which is sketchy...
-
     }
 
     #[test]
-    fn test_effects()
-    {
+    fn test_effects() {
         // Failing the length here, lets not worry about that as it doesn't seem checked in the firmware
         // and it makes our handling much easier if we can use the same payload struct for one entity.
 
@@ -533,7 +522,6 @@ mod tests {
         // Unbind hypershift minus (on numpad)
         //                              00:1f:00:00:00:0a:02:0d:01:69:01:02:02:00:56:00...
 
-
         // Right control to mouse rightclick.
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00...
         // 0x0000000a	0x0000020d	00:1f:00:00:00:0a:02:0d:02:40:00:01:01:02:00:00...
@@ -549,10 +537,9 @@ mod tests {
         //                                                                        ^^  hid id key if keyboard
         //                                                                     ^^  Mouse buttion / action?
         //                                              kbd or mouse?    ^^  01 is mouse, 02 is kbd?
-        //                                                                  ^^ ^^    ???   
+        //                                                                  ^^ ^^    ???
 
-
-        // This looks more like a disable... 
+        // This looks more like a disable...
         // Bind hypershift plus to brightness up:
         //                              00:1f:00:00:00:0a:02:0d:01:6a:01:00:00:00:00:00....
         // Bind hypershift minus to brightness down:
