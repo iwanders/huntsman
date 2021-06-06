@@ -1,7 +1,7 @@
 //! This crate holds the communication details and provides the available commands.
 
 use struct_helper::StructHelper;
-/// This module holds the structs as they actually go over the USB bus.
+/// The wire module holds the structs as they actually go over the USB bus.
 pub mod wire;
 pub use wire::Cmd;
 pub use wire::RGB;

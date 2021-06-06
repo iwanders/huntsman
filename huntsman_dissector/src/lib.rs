@@ -1,4 +1,4 @@
-//! Not much in the sense of external documentation here. This combined the [`wireshark_dissector_rs`]
+//! Not much in the sense of external documentation here. This combines the [`wireshark_dissector_rs`]
 //! , [`struct_helper`] and [`huntsman_comm`] together to automatically dissect the structures that
 //! go over the USB bus.
 
