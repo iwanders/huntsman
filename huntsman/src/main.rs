@@ -6,54 +6,8 @@ use huntsman;
 mod colors;
 use colors::str_to_color;
 
-//~ use clap::{Arg, App};
 extern crate clap;
 use clap::{App, Arg, SubCommand};
-
-// There's probably a more proper way of doing this...
-macro_rules! add_color_arg {
-    ($thing: expr) => {
-        $thing
-            .arg(
-                Arg::with_name("red")
-                    .short("r")
-                    .takes_value(true)
-                    .default_value("0"),
-            )
-            .arg(
-                Arg::with_name("green")
-                    .short("g")
-                    .takes_value(true)
-                    .default_value("0"),
-            )
-            .arg(
-                Arg::with_name("blue")
-                    .short("b")
-                    .takes_value(true)
-                    .default_value("0"),
-            )
-    };
-}
-
-fn get_rgb(matches: &clap::ArgMatches) -> huntsman_comm::RGB {
-    let r_in = matches.value_of("red").expect("red be set");
-    let r = r_in
-        .to_string()
-        .parse::<u8>()
-        .expect("Parsing r as a number didn't work");
-    let g_in = matches.value_of("green").expect("green be set");
-    let g = g_in
-        .to_string()
-        .parse::<u8>()
-        .expect("Parsing g as a number didn't work");
-    let b_in = matches.value_of("blue").expect("blue be set");
-    let b = b_in
-        .to_string()
-        .parse::<u8>()
-        .expect("Parsing b as a number didn't work");
-
-    huntsman_comm::RGB { r, g, b }
-}
 
 macro_rules! add_colors {
     ($thing: expr) => {
@@ -134,8 +88,8 @@ fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> R
 }
 
 pub fn main() -> Result<(), String> {
-    let mut app = App::new("Huntsman Thing")
-        .about("Does awesome things")
+    let mut app = App::new("Huntsman toolie")
+        .about("Allows configuring the keyboard in various ways.")
         .arg(
             Arg::with_name("c")
                 .short("c")
@@ -151,7 +105,6 @@ pub fn main() -> Result<(), String> {
                 .about("Sets the brightness")
                 .arg(
                     Arg::with_name("value")
-                        //~ .short("d")
                         .takes_value(true)
                         .required(true)
                         .help("The brightness to set as a float [0, 1.0] inclusive."),
@@ -169,44 +122,28 @@ pub fn main() -> Result<(), String> {
         )
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
         .subcommand(
-            SubCommand::with_name("set_color")
-                .arg(
-                    Arg::with_name("red")
-                        .short("r")
-                        .takes_value(true)
-                        .default_value("0"),
-                )
-                .arg(
-                    Arg::with_name("green")
-                        .short("g")
-                        .takes_value(true)
-                        .default_value("0"),
-                )
-                .arg(
-                    Arg::with_name("blue")
-                        .short("b")
-                        .takes_value(true)
-                        .default_value("0"),
-                )
-                .arg(
-                    Arg::with_name("count")
-                        .short("c")
-                        .takes_value(true)
-                        .default_value("22"),
-                )
-                .arg(
-                    Arg::with_name("start")
-                        .short("s")
-                        .takes_value(true)
-                        .default_value("0"),
-                )
-                .arg(Arg::with_name("index").short("i").takes_value(true)),
+            add_colors!(
+                SubCommand::with_name("set_color").about("Sets colors in the custom frame.")
+                    .arg(
+                        Arg::with_name("count")
+                            .short("c")
+                            .takes_value(true)
+                            .default_value("22"),
+                    )
+                    .arg(
+                        Arg::with_name("start")
+                            .short("s")
+                            .takes_value(true)
+                            .default_value("0"),
+                    )
+                    .arg(Arg::with_name("index").short("i").takes_value(true))
+            )
         )
         .subcommand(
             SubCommand::with_name("effect")
                 .about("Sets an LED effect")
                 .subcommand(SubCommand::with_name("off").about("Disables current effect"))
-                .subcommand(add_color_arg!(
+                .subcommand(add_colors!(
                     SubCommand::with_name("fixed").about("Sets a fixed color.")
                 ))
                 .subcommand(add_colors!(SubCommand::with_name("breathing")
@@ -238,8 +175,8 @@ pub fn main() -> Result<(), String> {
                 ))
                 .subcommand(add_colors!(add_duration!(SubCommand::with_name(
                     "starlight"
-                )
-                .about("Colors random keys, no color is random")))),
+                ).about("Colors random keys, no color is random"))))
+                .subcommand(SubCommand::with_name("custom").about("No effect, use frame from SetLedState")),
         );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
@@ -258,59 +195,34 @@ pub fn main() -> Result<(), String> {
     let mut h = huntsman::Huntsman::new()?;
 
     // Set the print communication flag.
-    match matches.occurrences_of("c") {
-        1 => {
-            h.set_print_comm(true);
-        }
-        _ => {}
-    }
-    match matches.occurrences_of("r") {
-        1 => {
-            h.set_print_retrieve(true);
-        }
-        _ => {}
-    }
+    h.set_print_comm(matches.occurrences_of("c") == 1);
+    h.set_print_retrieve(matches.occurrences_of("r") == 1);
 
-    if let Some(matches) = matches.subcommand_matches("flashy_thing") {
-        let delay_in = matches.value_of("delay").expect("Delay be set");
-        let delay = delay_in
-            .to_string()
-            .parse::<u64>()
-            .expect("Parsing delay as a number didn't work");
-        h.do_flashy_things(delay)?;
-    }
+    // Next, follows the invidual subcommand handling.
 
     if let Some(_matches) = matches.subcommand_matches("dev_run") {
         h.dev_run()?;
     }
 
     if let Some(matches) = matches.subcommand_matches("brightness") {
-        let value_in = matches.value_of("value").expect("Value to be set");
-        let value = value_in
-            .to_string()
-            .parse::<f32>()
-            .expect("Parsing value as a float didn't work");
+        let value = get_value::<f32>(matches, "value")?;
         h.set_brightness(value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("game_mode") {
-        let value_in = matches.value_of("value").expect("Value to be set");
-        let value = value_in
-            .to_string()
-            .parse::<bool>()
-            .expect("Parsing value as a bool didn't work");
+        let value = get_value::<bool>(matches, "value")?;
         h.set_game_mode(value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("effect") {
-        println!("{:#?}", matches);
         match matches.subcommand_name() {
             Some("off") => {
                 h.effect_off()?;
             }
             Some("fixed") => {
                 let subargs = matches.subcommand_matches("fixed").unwrap();
-                h.effect_fixed(&get_rgb(subargs))?;
+                let colors = get_colors(subargs);
+                h.effect_fixed(&colors[0])?;
             }
             Some("breathing") => {
                 let subargs = matches.subcommand_matches("breathing").unwrap();
@@ -344,50 +256,21 @@ pub fn main() -> Result<(), String> {
                 let duration = get_duration(subargs)?;
                 h.effect_starlight(duration, &colors)?;
             }
+            Some("custom") => {
+                h.effect_custom()?;
+            }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),
         }
     }
 
     if let Some(matches) = matches.subcommand_matches("set_color") {
-        let r_in = matches.value_of("red").expect("red be set");
-        let r = r_in
-            .to_string()
-            .parse::<u8>()
-            .expect("Parsing r as a number didn't work");
-        let g_in = matches.value_of("green").expect("green be set");
-        let g = g_in
-            .to_string()
-            .parse::<u8>()
-            .expect("Parsing g as a number didn't work");
-        let b_in = matches.value_of("blue").expect("blue be set");
-        let b = b_in
-            .to_string()
-            .parse::<u8>()
-            .expect("Parsing b as a number didn't work");
-
-        match matches.value_of("index") {
-            Some(v) => {
-                let index = v
-                    .to_string()
-                    .parse::<u8>()
-                    .expect("Failed to parse index as number");
-                let count_in = matches.value_of("count").expect("count be set");
-                let count = count_in
-                    .to_string()
-                    .parse::<u8>()
-                    .expect("Parsing count as a number didn't work");
-                let start_in = matches.value_of("start").expect("start be set");
-                let start = start_in
-                    .to_string()
-                    .parse::<u8>()
-                    .expect("Parsing start as a number didn't work");
-                return h.set_color_single(r, g, b, count, index, start);
-            }
-            None => {
-                return h.set_color(r, g, b);
-            }
-        }
+        let colors = get_colors(matches);
+        let color = colors[0];
+        let index = get_value::<u8>(matches, "index")?;
+        let count = get_value::<u8>(matches, "count")?;
+        let start = get_value::<u8>(matches, "start")?;
+        h.set_color_single(&color, count, index, start)?
     }
 
     return Ok(());

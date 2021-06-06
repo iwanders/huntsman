@@ -13,8 +13,11 @@ pub struct RGB {
 
 #[derive(StructHelper, Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[repr(C)]
+/// Struct to denote a command registers.
 pub struct Cmd {
+    /// Major seems to group them `0x0f` is led-related, `0x02` is key bindings.
     pub major: u8,
+    /// Minor is the subregister inside that group.
     pub minor: u8,
 }
 
@@ -77,8 +80,8 @@ pub struct SetLedState {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
-/// Payload for the SetBrightness command.
-pub struct SetBrightness {
+/// Payload for the SetLedBrightness command.
+pub struct SetLedBrightness {
     pub first: u8,
     pub _p0: u8, // padding
     pub value: u8,
@@ -86,6 +89,7 @@ pub struct SetBrightness {
 
 #[derive(StructHelper, Copy, Clone, Debug)]
 #[repr(C)]
+/// Payload to set the game mode.
 pub struct SetGameMode {
     pub first: u8,
     // No idea, either 0x18, or 0x08, 18 is the volume led... Maybe its just SetLedFlag?
@@ -105,6 +109,7 @@ impl Default for SetGameMode {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
+/// Payload to set the key override.
 pub struct SetKeyOverride {
     pub first: u8,
     pub key_code: u8,
@@ -113,11 +118,12 @@ pub struct SetKeyOverride {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C)]
+/// Payload to set an led effect.
 pub struct SetLedEffect {
     pub first: u8,
     pub second: u8,
     pub effect: u8,
-    pub direction: u8, // 0x01, 0x02?
+    pub direction: u8,
     pub speed: u8,
     pub color_count: u8,
     pub colors: [RGB; 10], // not sure how long this one is.

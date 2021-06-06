@@ -63,7 +63,9 @@ pub enum Duration {
     Long = 0x03,
 }
 
+
 #[derive(Default, Copy, Clone, Debug)]
+/// An instruction to set an LED effect on the keyboard.
 pub struct SetLedEffect {
     pub payload: wire::SetLedEffect,
 }
@@ -73,11 +75,21 @@ impl SetLedEffect {
         minor: 0x02,
     };
 
+    /// Helper function to populate the payload with zero or more colors.
+    fn set_colors(&mut self, colors: &Vec<RGB>) {
+        self.payload.color_count = std::cmp::min(colors.len(), self.payload.colors.len()) as u8;
+        for i in 0..self.payload.color_count as usize {
+            self.payload.colors[i] = colors[i];
+        }
+    }
+
+    /// Disables effects.
     pub fn off() -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
         Default::default()
     }
 
+    /// Sets a static color over the entire keyboard.
     pub fn fixed(color: &RGB) -> SetLedEffect {
         // static, 0xAA = R, 0x44 = G, 0xBB = B
         // payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],
@@ -95,13 +107,7 @@ impl SetLedEffect {
         msg
     }
 
-    fn set_colors(&mut self, colors: &Vec<RGB>) {
-        self.payload.color_count = std::cmp::min(colors.len(), self.payload.colors.len()) as u8;
-        for i in 0..self.payload.color_count as usize {
-            self.payload.colors[i] = colors[i];
-        }
-    }
-
+    /// Sets breathing; fades the provided colors in and out sequentially.
     pub fn breathing(colors: &Vec<RGB>) -> SetLedEffect {
         // Fades spectrum in and out; 'breathing'?
         //  payload: vec![0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00],
@@ -121,10 +127,11 @@ impl SetLedEffect {
         msg
     }
 
+    /// Sets a spectrum cycle.
     pub fn spectrum() -> SetLedEffect {
         // Length is actually 6 for this instruction, but firmware doesn't care.
         //  payload: vec![0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00], // Cycles spectrum
-        let mut msg = SetLedEffect {
+        let msg = SetLedEffect {
             payload: wire::SetLedEffect {
                 effect: 0x03,
                 ..Default::default()
@@ -135,6 +142,10 @@ impl SetLedEffect {
         msg
     }
 
+    /// Lets a wave in hue move over the keyboard.
+    /// Default is left to right, reverse is right to left. Delay seems to be delay in milliseconds
+    /// between updates, the actual update amount seems to be hardcoded, so if delay is too large
+    /// it will just look not smooth.
     pub fn wave(reverse: bool, delay: u8) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x04, 0x01, 0xFF],
         //                                    ^ 1 or 2, direction.
@@ -153,6 +164,8 @@ impl SetLedEffect {
         msg
     }
 
+    /// Sets reactive, touched keys glow for a duration in the provided or random color.
+    /// Does not take more than one color, zero or one color is used.
     pub fn reactive(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00],  // Should be reactive, also 0x02, 0x01, 0x00, 0x00 passed <- So cool, spectrum reactive
         // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color reactive.
@@ -172,6 +185,8 @@ impl SetLedEffect {
         msg
     }
 
+    /// Makes a ripple / circle propagate outwards from keys that are pressed.
+    /// Does not take more than one color, zero or one color is used.
     pub fn ripple(colors: &Vec<RGB>) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
         //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
@@ -187,6 +202,8 @@ impl SetLedEffect {
         msg
     }
 
+    /// Lights up keys in random patterns. If no colors provided, colors are random, accepts up to
+    /// two colors.
     pub fn starlight(duration: Duration, colors: &Vec<RGB>) -> SetLedEffect {
         // payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.
         //  payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color randomly lighting keys, same pattern as reactive.
@@ -205,6 +222,22 @@ impl SetLedEffect {
         msg
     }
 
+    /// Disables effects and sets a custom state we can provide through SetLedState.
+    pub fn custom() -> SetLedEffect {
+        // payload: vec![0x00, 0x00, 0x08, 0x05, 0x05, 0x05, 0xAA, 0x44, 0xBB],  // Good question... makes the keyboard green..?
+        // payload: vec![0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00],  // Good question... makes the keyboard green..?
+        // Only made it green because that's what I set it to with SetLedState, this disables the effects?
+        // or sets the effect to take the values from the SetLedState?
+        let msg = SetLedEffect {
+            payload: wire::SetLedEffect {
+                effect: 0x08,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        msg
+    }
+
 
     #[rustfmt::skip] // Really don't want this to get formatted...
     pub fn dev() -> Box<dyn Command>
@@ -215,10 +248,8 @@ impl SetLedEffect {
             register: Cmd{major: 0x0f, minor: 0x02},
             //  cmd: 0x450f8200,
 
-            // payload: vec![0x00, 0x00, 0x08, 0x05, 0x05, 0x05, 0xAA, 0x44, 0xBB],  // Good question... makes the keyboard green..?
-            payload: vec![0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00],  // Good question... makes the keyboard green..?
 
-            // payload: vec![0x00, 0x00, 0x09, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
+            payload: vec![0x00, 0x00, 0x09, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
             // payload: vec![0x00, 0x00, 0x09, 0x00, 0x01, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
 
 
@@ -280,7 +311,7 @@ pub struct SetLedState {
     pub count: u8,
 
     /// The actual values of the leds here.
-    pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
+    pub leds: [RGB; 23], // 22 is max seen used, but 23 matches size from length field.
 }
 impl SetLedState {
     pub const CMD: Cmd = Cmd {
@@ -310,26 +341,27 @@ impl Command for SetLedState {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-/// Sets the brightness value for all leds.
-pub struct SetBrightness {
+/// Sets the brightness for the entire keyboard.
+pub struct SetLedBrightness {
     /// The brightness to set, should be [0, 1].
     pub value: f32,
+    pub first: u8,
 }
-impl SetBrightness {
+impl SetLedBrightness {
     pub const CMD: Cmd = Cmd {
         major: 0x0f,
         minor: 0x04,
     };
 }
 
-impl Command for SetBrightness {
+impl Command for SetLedBrightness {
     fn register(&self) -> Cmd {
-        return SetBrightness::CMD;
+        return SetLedBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetBrightness>()];
-        let wire_setbrightness: wire::SetBrightness = wire::SetBrightness {
-            first: 0x01,
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedBrightness>()];
+        let wire_setbrightness: wire::SetLedBrightness = wire::SetLedBrightness {
+            first: self.first,  // 0x01 or 0x00, doesn't seem to matter much.
             value: (self.value * 255.0) as u8,
             ..Default::default()
         };
@@ -368,6 +400,7 @@ impl Command for SetGameMode {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
+/// Override a key with a new functionality. Still very much WIP, see tests.
 pub struct SetKeyOverride {}
 impl SetKeyOverride {
     pub const CMD: Cmd = Cmd {
@@ -409,11 +442,11 @@ impl Command for ArbitraryCommand {
 /// Helper function for the dissector that provides the fields for the provided commands.
 pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)> {
     vec![
-        (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
-        (SetBrightness::CMD, Box::new(wire::SetBrightness::fields)),
         (SetGameMode::CMD, Box::new(wire::SetGameMode::fields)),
         (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::fields)),
         (SetLedEffect::CMD, Box::new(wire::SetLedEffect::fields)),
+        (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
+        (SetLedBrightness::CMD, Box::new(wire::SetLedBrightness::fields)),
     ]
 }
 
@@ -453,7 +486,7 @@ mod tests {
     #[test]
     fn test_set_brightness() {
         let expected_50_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
-        let mut brightness: SetBrightness = Default::default();
+        let mut brightness: SetLedBrightness = SetLedBrightness{first: 0x01, ..Default::default()};
         brightness.value = 0.5;
         assert_eq!(brightness.serialize(), expected_50_pct);
 
@@ -491,9 +524,9 @@ mod tests {
         // the second byte in the payload seems to be some kind of response, it holds 5 in most cases.
 
         // Seen messages;
-        let spectrum_expect = parse_wireshark_value("00:1f:00:00:00:06:0f:02:01:00:03:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
-        let mut spectrum: SetLedEffect = SetLedEffect::spectrum();
-        spectrum.payload.first = 0x01;
+        // let spectrum_expect = parse_wireshark_value("00:1f:00:00:00:06:0f:02:01:00:03:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
+        // let mut spectrum: SetLedEffect = SetLedEffect::spectrum();
+        // spectrum.payload.first = 0x01;
         // assert_eq!(spectrum.serialize(), spectrum_expect);
 
         // We've seen this; but it doesn't seem to do anything atm?
