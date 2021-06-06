@@ -185,9 +185,16 @@ impl Huntsman {
         let cmd = huntsman_comm::SetLedEffect::spectrum();
         return self.set_command(&cmd);
     }
+
     pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String>
     {
         let cmd = huntsman_comm::SetLedEffect::wave(direction, delay);
+        return self.set_command(&cmd);
+    }
+
+    pub fn effect_reactive(&mut self, duration: huntsman_comm::Duration, colors: &Vec<RGB>) -> Result<(), String>
+    {
+        let cmd = huntsman_comm::SetLedEffect::reactive(duration, colors);
         return self.set_command(&cmd);
     }
 }
