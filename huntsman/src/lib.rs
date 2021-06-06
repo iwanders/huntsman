@@ -167,14 +167,27 @@ impl Huntsman {
         return self.set_command(&cmd);
         
     }
+
     pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String>
     {
         let cmd = huntsman_comm::SetLedEffect::fixed(&color);
         return self.set_command(&cmd);
     }
+
     pub fn effect_breathing(&mut self, colors: &Vec<RGB>) -> Result<(), String>
     {
         let cmd = huntsman_comm::SetLedEffect::breathing(&colors);
+        return self.set_command(&cmd);
+    }
+
+    pub fn effect_spectrum(&mut self) -> Result<(), String>
+    {
+        let cmd = huntsman_comm::SetLedEffect::spectrum();
+        return self.set_command(&cmd);
+    }
+    pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String>
+    {
+        let cmd = huntsman_comm::SetLedEffect::wave(direction, delay);
         return self.set_command(&cmd);
     }
 }

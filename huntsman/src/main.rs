@@ -67,6 +67,19 @@ macro_rules! add_colors {
     }
 }
 
+fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> Result<T, String>
+{
+    if let Some(v_in) = matches.value_of(name)
+    {
+        if let Ok(v) = v_in.to_string().parse::<T>()
+        {
+            return Ok(v);
+        }
+    }
+    
+    Err(format!("Couldn't parse argument {}.", name))
+}
+
 fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB>
 {
     let mut res: Vec<huntsman_comm::RGB> = Vec::new();
@@ -180,7 +193,20 @@ pub fn main() -> Result<(), String> {
             ).subcommand(
                 add_color_arg!(SubCommand::with_name("fixed").about("Sets a fixed color."))
             ).subcommand(
-                add_colors!(SubCommand::with_name("breathing").about("Breathes colors."))
+                add_colors!(SubCommand::with_name("breathing").about("Breathes colors, no color is random."))
+            ).subcommand(
+                SubCommand::with_name("spectrum").about("Spectrum cycle.")
+            ).subcommand(
+                SubCommand::with_name("wave").about("Hue wave through the leds.").arg(
+                    Arg::with_name("reverse")
+                        .short("r")
+                        .takes_value(false).help("Set to reverse the motion")
+                ).arg(
+                    Arg::with_name("delay")
+                        .short("d")
+                        .takes_value(true)
+                        .default_value("100").help("Delay in ms between update cycles"),
+                )
             )
         );
 
@@ -246,6 +272,7 @@ pub fn main() -> Result<(), String> {
     }
 
     if let Some(matches) = matches.subcommand_matches("effect") {
+        println!("{:#?}", matches);
             match matches.subcommand_name() {
             Some("off") => {
                 h.effect_off()?;
@@ -258,6 +285,17 @@ pub fn main() -> Result<(), String> {
                 let subargs = matches.subcommand_matches("breathing").unwrap();
                 let colors = get_colors(subargs);
                 h.effect_breathing(&colors)?;
+            },
+            Some("spectrum") => {
+                let subargs = matches.subcommand_matches("spectrum").unwrap();
+                h.effect_spectrum()?;
+            },
+            Some("wave") => {
+                let subargs = matches.subcommand_matches("wave").unwrap();
+                let delay = get_value::<u8>(subargs, "delay")?;
+                let reverse: bool = subargs.occurrences_of("reverse") == 0;
+                println!("Reverse: {}", reverse);
+                h.effect_wave(reverse, delay)?;
             },
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

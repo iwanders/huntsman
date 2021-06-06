@@ -103,6 +103,31 @@ impl SetLedEffect {
         msg
     }
 
+    pub fn spectrum() -> SetLedEffect
+    {
+        let mut msg = SetLedEffect{
+            payload:wire::SetLedEffect{
+                effect: 0x03,
+                ..Default::default()
+            }, ..Default::default()
+        };
+        // Speed doesn't seem to do anything.
+        msg
+    }
+
+    pub fn wave(direction: bool, delay: u8) -> SetLedEffect
+    {
+        let mut msg = SetLedEffect{
+            payload:wire::SetLedEffect{
+                effect: 0x04,
+                ..Default::default()
+            }, ..Default::default()
+        };
+        msg.payload.direction = if direction { 0x01 } else { 0x02 }; // 0x01 or 0x02, 0x00 makes it a nop
+        msg.payload.speed = delay; // probalby delay in ms?
+        msg
+    }
+
 
     #[rustfmt::skip] // Really don't want this to get formatted...
     pub fn dev() -> Box<dyn Command>
@@ -113,7 +138,7 @@ impl SetLedEffect {
             register: Cmd{major: 0x0f, minor: 0x02},
             //  cmd: 0x450f8200,
              // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
-             payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB], // static, 0xAA = R, 0x44 = G, 0xBB = B
+             // payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB], // static, 0xAA = R, 0x44 = G, 0xBB = B
             //  //                                           ^ must be non zero...
 
             //  payload: vec![0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00], // Fades spectrum in and out; 'breathing'?
@@ -142,8 +167,8 @@ impl SetLedEffect {
                 // payload: vec![0x00, 0x00, 0x07, 0x01, 0x05, 0x02, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],  // Starlight two colors.
                 
 
-            //  payload: vec![0x00, 0x00, 0x08, 0x05, 0x05, 0x05, 0xAA, 0x44, 0xBB],  // Good question... makes the keyboard green..?
-             // payload: vec![0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0xFF, 0x00, 0x00],  // Good question... makes the keyboard green..?
+             // payload: vec![0x00, 0x00, 0x08, 0x05, 0x05, 0x05, 0xAA, 0x44, 0xBB],  // Good question... makes the keyboard green..?
+             payload: vec![0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00],  // Good question... makes the keyboard green..?
 
              // payload: vec![0x00, 0x00, 0x09, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
              // payload: vec![0x00, 0x00, 0x09, 0x00, 0x01, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
@@ -412,6 +437,24 @@ mod tests {
         // What does this 18 mean!? Seems to toggle the volume led!? O_o
         // It did disable my override on right control, which is sketchy...
 
+    }
+
+    #[test]
+    fn test_effects()
+    {
+        // Failing the length here, lets not worry about that as it doesn't seem checked in the firmware
+        // and it makes our handling much easier if we can use the same payload struct for one entity.
+
+        // the second byte in the payload seems to be some kind of response, it holds 5 in most cases.
+
+        // Seen messages;
+        let spectrum_expect = parse_wireshark_value("00:1f:00:00:00:06:0f:02:01:00:03:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
+        let mut spectrum: SetLedEffect = SetLedEffect::spectrum();
+        spectrum.payload.first = 0x01;
+        // assert_eq!(spectrum.serialize(), spectrum_expect);
+
+        // We've seen this; but it doesn't seem to do anything atm?
+        // 00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:03:00
     }
 
     #[test]
