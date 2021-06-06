@@ -4,7 +4,7 @@ use struct_helper::StructHelper;
 /// This module holds the structs as they actually go over the USB bus.
 pub mod wire;
 pub use wire::Cmd;
-use wire::RGB;
+pub use wire::RGB;
 
 /*
 keyboard_sniffs$ ./dump.sh 2021 | sort | uniq > /tmp/sorted_all.txt
@@ -58,13 +58,127 @@ pub trait Command: std::fmt::Debug {
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct SetLedEffect {
+    pub payload: wire::SetLedEffect,
 }
 impl SetLedEffect {
     pub const CMD: Cmd = Cmd {
         major: 0x0f,
         minor: 0x02,
     };
+
+    pub fn off() -> SetLedEffect
+    {
+        Default::default()
+    }
+
+    pub fn fixed(color: &RGB) -> SetLedEffect
+    {
+        let mut msg = SetLedEffect{
+            payload:wire::SetLedEffect{
+                effect: 0x01,
+                color_count: 1,
+                ..Default::default()
+            }, ..Default::default()
+        };
+        msg.payload.colors[0] = *color;
+        msg
+    }
+
+    pub fn breathing(direction: bool, speed: u8, colors: &Vec<RGB>) -> SetLedEffect
+    {
+        let mut msg = SetLedEffect{
+            payload:wire::SetLedEffect{
+                effect: 0x02,
+                ..Default::default()
+            }, ..Default::default()
+        };
+        msg.payload.color_count = std::cmp::min(colors.len(), msg.payload.colors.len()) as u8;
+        msg.payload.direction = if direction { 0x01 } else { 0x02 };
+        msg.payload.speed = speed;
+        for i in 0..msg.payload.color_count as usize
+        {
+            msg.payload.colors[i] = colors[i];
+        }
+        msg
+    }
+
+
+    #[rustfmt::skip] // Really don't want this to get formatted...
+    pub fn dev() -> Box<dyn Command>
+    {
+        Box::new(ArbitraryCommand {
+            // 0x06 is len, but as we've seen here, it seems pretty much ignored.
+
+            register: Cmd{major: 0x0f, minor: 0x02},
+            //  cmd: 0x450f8200,
+             // payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // led effects off?
+             payload: vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB], // static, 0xAA = R, 0x44 = G, 0xBB = B
+            //  //                                           ^ must be non zero...
+
+            //  payload: vec![0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00], // Fades spectrum in and out; 'breathing'?
+                // payload: vec![0x00, 0x00, 0x02, 0x02, 0x01, 0x03, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xff, 0x00],  // breathing 3 colors.
+
+            //  payload: vec![0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00], // Cycles spectrum
+             // payload: vec![0x01, 0x00, 0x03, 0x00, 0x00, 0x00 ], // Cycles spectrum
+
+            // payload: vec![0x00, 0x00, 0x04, 0x01, 0xFF], //
+            //                              ^ 1 or 2, direction.
+            //                                    ^ Speed, lower is faster, probably delay in msec.
+            // Doesn't seem to have a field for the 'step', which is what would make sense... changing direction to
+            // anything else doesn't seem to work... odd, I would implement step as well.
+
+            // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00],  // Should be reactive, also 0x02, 0x01, 0x00, 0x00 passed <- So cool, spectrum reactive
+            // payload: vec![0x00, 0x00, 0x05, 0x02, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color reactive.
+            //  //                                           ^ Specifies color or not.
+
+
+            // payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00],  // waves propagating out of the keys, random color
+            //  payload: vec![0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color waves, same pattern as reactive for the arguments.
+
+
+             // payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF],  // keys lighting up randomly, different colors.
+            //  payload: vec![0x00, 0x00, 0x07, 0x01, 0x01, 0x01, 0xAA, 0x44, 0xBB],  // Fixed Color randomly lighting keys, same pattern as reactive.
+                // payload: vec![0x00, 0x00, 0x07, 0x01, 0x05, 0x02, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],  // Starlight two colors.
+                
+
+            //  payload: vec![0x00, 0x00, 0x08, 0x05, 0x05, 0x05, 0xAA, 0x44, 0xBB],  // Good question... makes the keyboard green..?
+             // payload: vec![0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0xFF, 0x00, 0x00],  // Good question... makes the keyboard green..?
+
+             // payload: vec![0x00, 0x00, 0x09, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
+             // payload: vec![0x00, 0x00, 0x09, 0x00, 0x01, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00],  // Flickering hue panel? Seems to be a combination of Fire and spectrum or something?
+
+
+             // payload: vec![0x00, 0x00, 0x0a, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x0b, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x0c, 0x01, 0x01, 0x01, 0xFF, 0xAA, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x0d, 0x00, 0x00, 0x00, 0xFF, 0xAA, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x0e, 0x01, 0x01, 0x01, 0xFF, 0xAA, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x0f, 0x01, 0x01, 0x01, 0xFF, 0xAA, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x10, 0x01, 0x01, 0x01, 0xFF, 0xAA, 0x00],  // can't get any colors.
+             // payload: vec![0x00, 0x00, 0x11, 0x01, 0x01, 0x01, 0xFF, 0xAA, 0x00],  // can't get any colors.
+            // There's 17 effects only... 
+
+
+
+            // This returns... something.
+            // register: huntsman_comm::Cmd{major: 0x06, minor: 0x8e},
+            // payload: vec![0x00], //
+
+        })
+    }
 }
+impl Command for SetLedEffect {
+    fn register(&self) -> Cmd {
+        return SetLedEffect::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedEffect>()];
+        self.payload.to_le_bytes(&mut v[..]).expect("Should succeed");
+        v
+    }
+}
+
+
 
 
 #[derive(Default, Copy, Clone, Debug)]

@@ -7,6 +7,80 @@ use huntsman;
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
+// There's probably a more proper way of doing this...
+macro_rules! add_color_arg {
+    ($thing: expr) => {
+        $thing.arg(
+                Arg::with_name("red")
+                    .short("r")
+                    .takes_value(true)
+                    .default_value("0"),
+            )
+            .arg(
+                Arg::with_name("green")
+                    .short("g")
+                    .takes_value(true)
+                    .default_value("0"),
+            )
+            .arg(
+                Arg::with_name("blue")
+                    .short("b")
+                    .takes_value(true)
+                    .default_value("0"),
+            )
+    }
+}
+
+fn get_rgb(matches: &clap::ArgMatches) -> huntsman_comm::RGB
+{
+    let r_in = matches.value_of("red").expect("red be set");
+    let r = r_in
+        .to_string()
+        .parse::<u8>()
+        .expect("Parsing r as a number didn't work");
+    let g_in = matches.value_of("green").expect("green be set");
+    let g = g_in
+        .to_string()
+        .parse::<u8>()
+        .expect("Parsing g as a number didn't work");
+    let b_in = matches.value_of("blue").expect("blue be set");
+    let b = b_in
+        .to_string()
+        .parse::<u8>()
+        .expect("Parsing b as a number didn't work");
+    
+    huntsman_comm::RGB{r, g, b}
+}
+
+
+macro_rules! add_colors {
+    ($thing: expr) => {
+        $thing.arg(
+            Arg::with_name("colors")
+                    .multiple(true)
+                    .takes_value(true)
+                    .help("colors...")
+            )
+    }
+}
+
+fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB>
+{
+    let mut res: Vec<huntsman_comm::RGB> = Vec::new();
+    if let Some(z) = matches.values_of("colors")
+    {
+        println!("Color matches: {:#?}", z);
+        // And now... we build whatever color parsing we need...
+        let mut color: huntsman_comm::RGB  = Default::default();
+        for v in z
+        {
+            println!("v: {:#?}", v);
+        }
+    }
+    res
+}
+
+
 pub fn main() -> Result<(), String> {
     let mut app = App::new("Huntsman Thing")
         .about("Does awesome things")
@@ -21,18 +95,7 @@ pub fn main() -> Result<(), String> {
                 .help("Specifies whether to retrieve the report after sending any command.."),
         )
         .subcommand(
-            SubCommand::with_name("flashy_thing")
-                .about("controls testing features")
-                .arg(
-                    Arg::with_name("delay")
-                        .short("d")
-                        .takes_value(true)
-                        .default_value("100")
-                        .help("delay duration between things."),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("set_brightness")
+            SubCommand::with_name("brightness")
                 .about("Sets the brightness")
                 .arg(
                     Arg::with_name("value")
@@ -43,7 +106,7 @@ pub fn main() -> Result<(), String> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("set_game_mode")
+            SubCommand::with_name("game_mode")
                 .about("Sets game mode on or off")
                 .arg(
                     Arg::with_name("value")
@@ -86,7 +149,18 @@ pub fn main() -> Result<(), String> {
                         .default_value("0"),
                 )
                 .arg(Arg::with_name("index").short("i").takes_value(true)),
+        )
+        .subcommand(
+            SubCommand::with_name("effect").about("Sets an LED effect").subcommand(
+                SubCommand::with_name("off").about("Disables current effect")
+            ).subcommand(
+                add_color_arg!(SubCommand::with_name("fixed").about("Sets a fixed color."))
+            ).subcommand(
+                add_colors!(SubCommand::with_name("breathing").about("Breathes colors."))
+            )
         );
+
+
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
 
     // Abort with the help if no subcommand is given.
@@ -129,7 +203,7 @@ pub fn main() -> Result<(), String> {
         h.dev_run()?;
     }
 
-    if let Some(matches) = matches.subcommand_matches("set_brightness") {
+    if let Some(matches) = matches.subcommand_matches("brightness") {
         let value_in = matches.value_of("value").expect("Value to be set");
         let value = value_in
             .to_string()
@@ -138,13 +212,32 @@ pub fn main() -> Result<(), String> {
         h.set_brightness(value)?;
     }
 
-    if let Some(matches) = matches.subcommand_matches("set_game_mode") {
+    if let Some(matches) = matches.subcommand_matches("game_mode") {
         let value_in = matches.value_of("value").expect("Value to be set");
         let value = value_in
             .to_string()
             .parse::<bool>()
             .expect("Parsing value as a bool didn't work");
         h.set_game_mode(value)?;
+    }
+
+    if let Some(matches) = matches.subcommand_matches("effect") {
+            match matches.subcommand_name() {
+            Some("off") => {
+                h.effect_off()?;
+            },
+            Some("fixed") => {
+                let subargs = matches.subcommand_matches("fixed").unwrap();
+                h.effect_fixed(&get_rgb(subargs))?;
+            },
+            Some("breathing") => {
+                let subargs = matches.subcommand_matches("breathing").unwrap();
+                let colors = get_colors(subargs);
+                h.effect_breathing(3, &colors)?;
+            },
+            None => println!("No subcommand was used"),
+            _ => println!("Some other subcommand was used"),
+        }
     }
 
     if let Some(matches) = matches.subcommand_matches("set_color") {
