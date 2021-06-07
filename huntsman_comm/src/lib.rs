@@ -468,9 +468,37 @@ mod tests {
         return r;
     }
 
+    /// Parses a wireshark value, but assumes null bytes for the remainder, does calculate
+    /// and compare the checksum against the provided check u8, asserts if this fails.
+    fn parse_wireshark_truncated(z: &str, check: u8) -> Vec<u8>
+    {
+        let mut v = parse_wireshark_value(z);
+        const LENGTH: usize = 90;
+        while v.len() != LENGTH
+        {
+            v.push(0);
+        }
+        let mut checksum: u8 = 0;
+        for i in 2..LENGTH {
+            checksum ^= v[i];
+        }
+        assert_eq!(check, checksum);
+        v[LENGTH - 2] = checksum;
+        v
+    }
+    #[test]
+    fn test_helper() {
+        let real = parse_wireshark_value("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:f8:00");
+        let truncated = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78", 0xf8);
+        assert_eq!(real, truncated);
+        let real = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
+        let truncated = parse_wireshark_truncated("00:1f:00:00:00:03:0f:04:01:00:7f", 0x76);
+        assert_eq!(real, truncated);
+    }
+
     #[test]
     fn test_set_led_state() {
-        let expected = parse_wireshark_value("00:1f:00:00:00:4a:0f:03:00:00:06:00:16:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:a9:00");
+        let expected = parse_wireshark_truncated("00:1f:00:00:00:4a:0f:03:00:00:06:00:16:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff:00:00:ff", 0xa9);
         // This is a command for led id 6, with red, except for last 4 bytes, they are dark.
         let mut state: SetLedState = Default::default();
         state.id = 6;
@@ -485,12 +513,12 @@ mod tests {
 
     #[test]
     fn test_set_brightness() {
-        let expected_50_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
+        let expected_50_pct = parse_wireshark_truncated("00:1f:00:00:00:03:0f:04:01:00:7f", 0x76);
         let mut brightness: SetLedBrightness = SetLedBrightness{first: 0x01, ..Default::default()};
         brightness.value = 0.5;
         assert_eq!(brightness.serialize(), expected_50_pct);
 
-        let expected_100_pct = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:f6:00");
+        let expected_100_pct = parse_wireshark_truncated("00:1f:00:00:00:03:0f:04:01:00:ff", 0xf6);
         brightness.value = 1.0;
         assert_eq!(brightness.serialize(), expected_100_pct);
 
@@ -500,12 +528,12 @@ mod tests {
 
     #[test]
     fn test_set_game_mode() {
-        let enable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
+        let enable = parse_wireshark_truncated("00:1f:00:00:00:03:03:00:00:08:01", 0x09);
         let mut game_mode: SetGameMode = Default::default();
         game_mode.value = true;
         assert_eq!(game_mode.serialize(), enable);
 
-        let disable = parse_wireshark_value("00:1f:00:00:00:03:03:00:00:08:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:08:00");
+        let disable = parse_wireshark_truncated("00:1f:00:00:00:03:03:00:00:08", 0x08);
         game_mode.value = false;
         assert_eq!(game_mode.serialize(), disable);
 
@@ -591,6 +619,22 @@ mod tests {
         // key 0x39 is 57, which is R SHIFT, p18
         // key 0x40 is 64, which is R CTRL, p18
     }
+
+    #[test]
+    fn test_profile_deletion() {
+        let remove_profile_1_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:02", 0x05);
+        let remove_profile_2_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:03", 0x04);
+        let remove_profile_3_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:04", 0x03);
+        let remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);
+    }
+
+    #[test]
+    fn test_get_storage()
+    {
+        let request = parse_wireshark_truncated("00:1f:00:00:00:0e:06:8e", 0x86);
+        let resp = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78", 0xf8);
+        // max[102384], free[201968], percent[197.27]
+    }
 }
 
 /*
@@ -599,4 +643,7 @@ let cmd = huntsman_comm::ArbitraryCommand {
             // register: huntsman_comm::Cmd{major: 0x00, minor: 0x04},
             // payload: vec![0x00, 0x00], //
 }
+
+
+
 */
