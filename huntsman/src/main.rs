@@ -121,24 +121,21 @@ pub fn main() -> Result<(), String> {
                 ),
         )
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
-        .subcommand(
-            add_colors!(
-                SubCommand::with_name("set_color").about("Sets colors in the custom frame.")
-                    .arg(
-                        Arg::with_name("count")
-                            .short("c")
-                            .takes_value(true)
-                            .default_value("22"),
-                    )
-                    .arg(
-                        Arg::with_name("start")
-                            .short("s")
-                            .takes_value(true)
-                            .default_value("0"),
-                    )
-                    .arg(Arg::with_name("index").short("i").takes_value(true))
+        .subcommand(add_colors!(SubCommand::with_name("set_color")
+            .about("Sets colors in the custom frame.")
+            .arg(
+                Arg::with_name("count")
+                    .short("c")
+                    .takes_value(true)
+                    .default_value("22"),
             )
-        )
+            .arg(
+                Arg::with_name("start")
+                    .short("s")
+                    .takes_value(true)
+                    .default_value("0"),
+            )
+            .arg(Arg::with_name("index").short("i").takes_value(true))))
         .subcommand(
             SubCommand::with_name("effect")
                 .about("Sets an LED effect")
@@ -175,8 +172,11 @@ pub fn main() -> Result<(), String> {
                 ))
                 .subcommand(add_colors!(add_duration!(SubCommand::with_name(
                     "starlight"
-                ).about("Colors random keys, no color is random"))))
-                .subcommand(SubCommand::with_name("custom").about("No effect, use frame from SetLedState")),
+                )
+                .about("Colors random keys, no color is random"))))
+                .subcommand(
+                    SubCommand::with_name("custom").about("No effect, use frame from SetLedState"),
+                ),
         );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self

@@ -138,5 +138,5 @@ pub struct GetStorageStatistics {
     pub something: u16,
     pub total: u32,
     pub free1: u32,
-    pub free2: u32,    
+    pub free2: u32,
 }

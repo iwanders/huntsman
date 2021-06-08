@@ -66,7 +66,6 @@ impl Huntsman {
         return r;
     }
 
-
     /// Function that sends a single SetLedState instruction, index is the row, start is the column, count is the number
     /// of leds to set from the index.
     pub fn set_color_single(
