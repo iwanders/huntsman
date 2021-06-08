@@ -439,6 +439,32 @@ impl Command for ArbitraryCommand {
     }
 }
 
+
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the memory storage statistics.
+pub struct GetStorageStatistics {}
+impl GetStorageStatistics {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x8E,
+    };
+}
+impl Command for GetStorageStatistics {
+    fn register(&self) -> Cmd {
+        return GetStorageStatistics::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::GetStorageStatistics>()];
+        let wire_cmd = wire::GetStorageStatistics {
+            ..Default::default()
+        };
+        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
+        v
+    }
+}
+
+
 /// Helper function for the dissector that provides the fields for the provided commands.
 pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)> {
     vec![
@@ -455,6 +481,7 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+    const PAYLOAD_START: usize = 8;
     #[cfg(test)]
     fn parse_wireshark_value(z: &str) -> Vec<u8> {
         let mut r: Vec<u8> = Vec::new();
@@ -622,18 +649,31 @@ mod tests {
 
     #[test]
     fn test_profile_deletion() {
-        let remove_profile_1_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:02", 0x05);
-        let remove_profile_2_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:03", 0x04);
-        let remove_profile_3_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:04", 0x03);
-        let remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);
+        // Also issued before we 'upload' a profile.
+        let remove_profile_1_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:02", 0x05);  // red
+        let remove_profile_2_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:03", 0x04);  // green
+        let remove_profile_3_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:04", 0x03);  // blue
+        let remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);  // cyan
+        // This profile deletion supports well the concept of the first payload byte being something of a profile indicator.
     }
 
     #[test]
     fn test_get_storage()
     {
         let request = parse_wireshark_truncated("00:1f:00:00:00:0e:06:8e", 0x86);
-        let resp = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78", 0xf8);
+        let mut request_cmd: GetStorageStatistics = GetStorageStatistics{..Default::default()};
+        assert_eq!(request_cmd.serialize(), request);
+        let respons = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78", 0xf8);
         // max[102384], free[201968], percent[197.27]
+        //                                                                    |102384     |100984     |100984     |
+        // 100984 + 100984 = 201968
+        assert_eq!(0x0e, std::mem::size_of::<wire::GetStorageStatistics>());
+        println!("{:?}", &respons[PAYLOAD_START..]);
+        // TODO: Whelp, the endianness here is wrong :(
+        let decoded = wire::GetStorageStatistics::from_le_bytes(&respons[PAYLOAD_START..]).expect("Should pass");
+        assert_eq!(decoded.something, 0xFFFF);
+        assert_eq!(decoded.total, 102384);
+        // Either the log is lying, or the data is incorrrect.
     }
 }
 

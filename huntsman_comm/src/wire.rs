@@ -128,3 +128,15 @@ pub struct SetLedEffect {
     pub color_count: u8,
     pub colors: [RGB; 10], // not sure how long this one is.
 }
+
+#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C, packed)]
+// Todo; this packed() here makes the structhelper produce errors, references to packed values
+// are phased out because of alignment.
+/// Payload to set an led effect.
+pub struct GetStorageStatistics {
+    pub something: u16,
+    pub total: u32,
+    pub free1: u32,
+    pub free2: u32,    
+}
