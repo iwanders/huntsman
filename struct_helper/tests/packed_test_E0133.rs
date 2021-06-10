@@ -44,7 +44,14 @@ pub trait Inspectable
         // Ok(0)
     // }
 
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>;
+    fn element_len(&self) -> usize
+    {
+        0
+    }
+    fn element(&self, index: usize) -> &dyn Inspectable
+    {
+        panic!("nope");
+    }
 
 
     // The static fields:
@@ -52,7 +59,28 @@ pub trait Inspectable
     {
         return &[];
     }
-    fn foo() -> Self where Self: Sized;
+}
+
+struct FieldInfo<'a>
+{
+    name: &'static str,
+    child: &'a dyn Inspectable
+}
+
+impl Inspectable for FieldInfo<'_>
+{
+    fn type_name(&self) -> &'static str
+    {
+        self.name
+    }
+    fn offset(&self) -> usize
+    {
+        self.child.offset()
+    }
+    fn length(&self) -> usize
+    {
+        self.child.length()
+    }
 }
 
 #[derive(Default, Clone, Debug)]
@@ -77,16 +105,6 @@ impl Inspectable for PrimitiveHelper
     {
         self.length
     }
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
-    {
-        vec!()
-    }
-
-
-    fn foo() -> Self
-    {
-        PrimitiveHelper{start: 0, length: 0, ..Default::default()}
-    }
 
     fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
     {
@@ -98,9 +116,10 @@ impl Inspectable for PrimitiveHelper
 impl std::fmt::Debug for dyn Inspectable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut opener = f.debug_struct(self.type_name());
-        for k in self.elements().iter()
+        for i in 0..self.element_len()
         {
-            opener.field("f", &format_args!("#{}@{}", k.length(), k.offset()));
+            let k = self.element(i);
+            opener.field(k.type_name(), &format_args!("{}  #{}@{}", k.type_name(),  k.length(), k.offset()));
         }
         opener.finish()
     }
@@ -114,6 +133,55 @@ struct Z {
     f: u8,
 }
 
+
+
+impl Inspectable for u8
+{
+    fn type_name(&self) -> &'static str
+    {
+        "u8"
+    }
+    fn offset(&self) -> usize
+    {
+        0
+    }
+    fn length(&self) -> usize
+    {
+        std::mem::size_of::<u8>()
+    }
+
+}
+
+impl Inspectable for u16
+{
+    fn type_name(&self) -> &'static str
+    {
+        "u16"
+    }
+    fn offset(&self) -> usize
+    {
+        0
+    }
+    fn length(&self) -> usize
+    {
+        std::mem::size_of::<u16>()
+    }
+}
+impl Inspectable for u32
+{
+    fn type_name(&self) -> &'static str
+    {
+        "u32"
+    }
+    fn offset(&self) -> usize
+    {
+        0
+    }
+    fn length(&self) -> usize
+    {
+        std::mem::size_of::<u32>()
+    }
+}
 
 impl Inspectable for Z
 {
@@ -129,15 +197,17 @@ impl Inspectable for Z
     {
         std::mem::size_of::<u8>()
     }
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
+
+
+    fn element_len(&self) -> usize
     {
-        vec!()
+        1
+    }
+    fn element(&self, index: usize) -> &dyn Inspectable
+    {
+        &self.f
     }
 
-    fn foo() -> Self
-    {
-        Z{..Default::default()}
-    }
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -147,6 +217,8 @@ struct Pancakes {
     an_uint: u32,
     x: Z,
 }
+
+
 
 impl Inspectable for Pancakes
 {
@@ -158,14 +230,20 @@ impl Inspectable for Pancakes
     {
         std::mem::size_of::<Pancakes>()
     }
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
+
+    fn element_len(&self) -> usize
     {
-        vec!(
-            Box::new(PrimitiveHelper{start: offset_of!(Pancakes, first_char), length: std::mem::size_of::<u16>(), type_name: "instantiated first_char", ..Default::default()}),
-            Box::new(PrimitiveHelper{start: offset_of!(Pancakes, an_uint), length: std::mem::size_of::<u32>(), type_name: "instantiated an_uint", ..Default::default()}),
-            Box::new(self.x),  // this copies self.x, which is kinda mehh...
-            
-        )
+        3
+    }
+    fn element(&self, index: usize) -> &dyn Inspectable
+    {
+        match index
+        {
+            0 => (&self.first_char as &dyn Inspectable),
+            1 => (&self.an_uint as &dyn Inspectable),
+            2 => (&self.x as &dyn Inspectable),
+            _ => panic!("index out of range")
+        }
     }
 
     fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
@@ -175,12 +253,6 @@ impl Inspectable for Pancakes
         const B: PrimitiveHelper = PrimitiveHelper{start: 2, length: std::mem::size_of::<u32>(), type_name: "an_uint"};
         const C: Z = Z{f:0}; // :|
         return &[&A, &B, &C];
-    }
-
-
-    fn foo() -> Self
-    {
-        Pancakes{..Default::default()}
     }
 }
 
@@ -195,9 +267,10 @@ fn test_starts() {
 
     println!("Offset: {}", stack.offset());
     println!("length: {}", stack.length());
-    println!("length: {:?}", stack.elements());
+    // println!("length: {:?}", stack.element());
+    println!("Inspectable fields: {:?}", (&stack as &dyn Inspectable));
     println!("Pancakes fields: {:?}", Pancakes::fields());
-    println!("z: {:?}", z.elements());
+    // println!("z: {:?}", z.elements());
     // let bound = stack.fields_as_mut();
 
     // assert_eq!(
