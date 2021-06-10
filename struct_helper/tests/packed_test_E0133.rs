@@ -2,26 +2,12 @@
 
 pub use memoffset::*;
 
-#[derive(Debug, Default, Copy, Clone)]
-#[repr(C)]
-struct Z {
-    f: u8,
-}
-
-#[derive(Debug, Default, Copy, Clone)]
-#[repr(C, packed)]
-struct Pancakes {
-    first_char: u16,
-    an_uint: u32,
-    x: Z,
-}
 // https://github.com/rust-lang/rust/issues/46043
 // Probably means the entire current setup with the references to primitives is ehm, busted.
 // We do want to keep the functionality to read from a byte array though...
 
 // https://doc.rust-lang.org/reference/items/traits.html#object-safety
 
-/*
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 /// Enum to denote the element type for this field.
 pub enum ElementType {
@@ -39,69 +25,50 @@ pub enum ElementType {
 }
 
 
-#[derive(Debug, Clone)]
-/// Info struct to hold common information for fields.
-pub struct Info {
-    /// The start location of this field from its parent.
-    pub start: usize,
-
-    /// The length of this field.
-    pub length: usize,
-
-    /// A string representation of the type this field is.
-    pub type_name: &'static str,
-
-    /// A [`std::any::TypeId`] instance for the type of this field.
-    pub type_id: std::any::TypeId,
-
-    /// If this field has a name, the name of the field, otherwise `None`.
-    pub name: Option<&'static str>,
-
-    /// The type of field this element is.
-    pub element_type: ElementType,
-
-    /// A hashmap that can contain arbitrary annotations to fields.
-    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
-    // annotations to be completely specified by the user.
-    pub attrs: std::collections::HashMap<&'static str, &'static str>,
-}
-
-#[derive(Debug, Clone)]
-/// Struct to provide information about a field, without any reference to it.
-pub struct Field {
-    pub info: Info,
-    pub children: Vec<Field>,
-}
-
-*/
-
-pub trait Convertible {
-    fn to_le_bytes(self, dest: &mut [u8]) -> Result<(), String>;
-    fn from_le_bytes(src: &[u8]) -> Result<Self, String> where Self: Sized;
-}
-
 pub trait Inspectable
 {
-    // fn type_name(&self) -> &'static str;
+    fn type_name(&self) -> &'static str
+    {
+        "no type"
+    }
     // fn name(&self) -> Option<&'static str>;
     // fn element_type(&self) -> ElementType;
 
+    // The runtime fields;
     fn offset(&self) -> usize;
     fn length(&self) -> usize;
-    // fn from_le_bytes(&mut self, src: &[u8]) -> Result<usize, String>;
-    // fn to_le_bytes(self, dest: &mut [u8]) -> Result<usize, String>;
 
-    fn children(&self) -> Vec<Box<dyn Inspectable>>;
+    // fn from_le_bytes(&mut self, src: &[u8]) -> Result<usize, String>;
+    // fn to_le_bytes(&self, dest: &mut [u8]) -> Result<usize, String>
+    // {
+        // Ok(0)
+    // }
+
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>;
+
+
+    // The static fields:
+    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    {
+        return &[];
+    }
+    fn foo() -> Self where Self: Sized;
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct PrimitiveHelper
 {
+    type_name: &'static str,
     start: usize,
     length: usize,
 }
+
 impl Inspectable for PrimitiveHelper
 {
+    fn type_name(&self) -> &'static str
+    {
+        self.type_name
+    }
     fn offset(&self) -> usize
     {
         self.start
@@ -110,16 +77,28 @@ impl Inspectable for PrimitiveHelper
     {
         self.length
     }
-    fn children(&self) -> Vec<Box<dyn Inspectable>>
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
         vec!()
+    }
+
+
+    fn foo() -> Self
+    {
+        PrimitiveHelper{start: 0, length: 0, ..Default::default()}
+    }
+
+    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    {
+        const A: PrimitiveHelper = PrimitiveHelper{start: 0, length: 0, type_name: "primitive_helper"};
+        return &[&A];
     }
 }
 
 impl std::fmt::Debug for dyn Inspectable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut opener = f.debug_struct("Thing");
-        for k in self.children().iter()
+        let mut opener = f.debug_struct(self.type_name());
+        for k in self.elements().iter()
         {
             opener.field("f", &format_args!("#{}@{}", k.length(), k.offset()));
         }
@@ -127,6 +106,47 @@ impl std::fmt::Debug for dyn Inspectable {
     }
 }
 
+
+
+#[derive(Debug, Default, Copy, Clone)]
+#[repr(C)]
+struct Z {
+    f: u8,
+}
+
+
+impl Inspectable for Z
+{
+    fn type_name(&self) -> &'static str
+    {
+        "ZZZZ"
+    }
+    fn offset(&self) -> usize
+    {
+        0
+    }
+    fn length(&self) -> usize
+    {
+        std::mem::size_of::<u8>()
+    }
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
+    {
+        vec!()
+    }
+
+    fn foo() -> Self
+    {
+        Z{..Default::default()}
+    }
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+#[repr(C, packed)]
+struct Pancakes {
+    first_char: u16,
+    an_uint: u32,
+    x: Z,
+}
 
 impl Inspectable for Pancakes
 {
@@ -138,12 +158,29 @@ impl Inspectable for Pancakes
     {
         std::mem::size_of::<Pancakes>()
     }
-    fn children(&self) -> Vec<Box<dyn Inspectable>>
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
         vec!(
-            Box::new(PrimitiveHelper{start: 0, length: 0, ..Default::default()}),
-            Box::new(PrimitiveHelper{start: 1, length: 2, ..Default::default()}),
+            Box::new(PrimitiveHelper{start: offset_of!(Pancakes, first_char), length: std::mem::size_of::<u16>(), type_name: "instantiated first_char", ..Default::default()}),
+            Box::new(PrimitiveHelper{start: offset_of!(Pancakes, an_uint), length: std::mem::size_of::<u32>(), type_name: "instantiated an_uint", ..Default::default()}),
+            Box::new(self.x),  // this copies self.x, which is kinda mehh...
+            
         )
+    }
+
+    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    {
+        // offsetoff in const context requires nightly, hardcoded here for now.
+        const A: PrimitiveHelper = PrimitiveHelper{start: 0, length: std::mem::size_of::<u16>(), type_name: "first_char"};
+        const B: PrimitiveHelper = PrimitiveHelper{start: 2, length: std::mem::size_of::<u32>(), type_name: "an_uint"};
+        const C: Z = Z{f:0}; // :|
+        return &[&A, &B, &C];
+    }
+
+
+    fn foo() -> Self
+    {
+        Pancakes{..Default::default()}
     }
 }
 
@@ -153,15 +190,19 @@ fn test_starts() {
     let mut stack: Pancakes = Default::default();
 
     let z : Box<dyn Inspectable> = Box::new(stack);
+
+
+
     println!("Offset: {}", stack.offset());
     println!("length: {}", stack.length());
-    println!("length: {:?}", stack.children());
-    println!("z: {:?}", z);
+    println!("length: {:?}", stack.elements());
+    println!("Pancakes fields: {:?}", Pancakes::fields());
+    println!("z: {:?}", z.elements());
     // let bound = stack.fields_as_mut();
 
     // assert_eq!(
         // offset_of!(Pancakes, first_char),
-        // bound.children[0].info.start
+        // bound.elements[0].info.start
     // );
-    // assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].info.start);
+    // assert_eq!(offset_of!(Pancakes, an_uint), bound.elements[1].info.start);
 }
