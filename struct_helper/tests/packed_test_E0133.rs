@@ -19,7 +19,6 @@ struct Pancakes {
 
 #[test]
 fn test_starts() {
-    let mut stack: Pancakes = Default::default();
     let bound = Pancakes::fields();
 
     assert_eq!(

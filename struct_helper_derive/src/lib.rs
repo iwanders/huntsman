@@ -80,8 +80,8 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     let (outer_attribute_tokens, _outer_map) = process_str_attributes(&input.attrs);
 
     let mut fields_static: Vec<proc_macro2::TokenStream> = Vec::new();
-    let mut fields_to_le_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
-    let mut fields_from_le_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_to_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_from_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
 
     match &input.data {
@@ -147,24 +147,23 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                     )
                                 ));
 
-                                fields_to_le_bytes.push(proc_macro2::TokenStream::from(quote!(
-                                    println!("It's an array: {} {}", stringify!(#inner_field_ident), #arr_len);
+                                fields_to_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     for i in 0..#arr_len
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident[i];
-                                        StructHelper::to_le_bytes(&tmp, &mut dest[s..e]).expect("yes");
+                                        StructHelper::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
-                                fields_from_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     for i in 0..#arr_len
                                     {
 
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident[i]  = < #type_ident as StructHelper >::from_le_bytes(&src[s..e]).expect("yes");
+                                        x.#inner_field_ident[i]  = < #type_ident as StructHelper >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -194,20 +193,20 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         children: vec!(<#type_ident as StructHelper>::fields())}
                                 )));
 
-                                fields_to_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                fields_to_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident;
-                                        StructHelper::to_le_bytes(&tmp, &mut dest[s..e]).expect("yes");
+                                        StructHelper::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
-                                fields_from_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident  = < #type_ident as StructHelper >::from_le_bytes(&src[s..e]).expect("yes");
+                                        x.#inner_field_ident  = < #type_ident as StructHelper >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -252,29 +251,29 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                 }
             }
 
-            fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String>
+            fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
             {
                 if (#name::fields()).info.length > dest.len()
                 {
                     return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
                 }
-                #(#fields_to_le_bytes);*
+                #(#fields_to_bytes);*
                 Ok(())
             }
 
-            fn from_le_bytes(src: &[u8]) -> Result<Self, String> where Self: Sized + Default
+            fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String> where Self: Sized + Default
             {
                 let mut x: #name = Default::default();
                 if (#name::fields()).info.length > src.len()
                 {
                     return Err(format!("Type is {} long, only {} provided.", (#name::fields()).info.length, src.len()));
                 }
-                #(#fields_from_le_bytes);*
+                #(#fields_from_bytes);*
                 Ok(x)
             }
         }
     };
-    println!("Output: {:}", gen.to_string());
+    //println!("Output: {:}", gen.to_string());
     gen.into()
 }
 

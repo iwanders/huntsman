@@ -676,11 +676,14 @@ mod tests {
         //                                                                    |102384     |100984     |100984     |
         // 100984 + 100984 = 201968
         assert_eq!(0x0e, std::mem::size_of::<wire::GetStorageStatistics>());
-        println!("{:?}", &respons[PAYLOAD_START..]);
+        // println!("{:?}", &respons[PAYLOAD_START..]);
         // TODO: Whelp, the endianness here is wrong :(
-        // let decoded = wire::GetStorageStatistics::from_le_bytes(&respons[PAYLOAD_START..]).expect("Should pass");
-        // assert_eq!(decoded.something, 0xFFFF);
-        // assert_eq!(decoded.total, 102384);
+        let decoded = wire::GetStorageStatistics::from_be_bytes(&respons[PAYLOAD_START..])
+            .expect("Should pass");
+        let something = decoded.something;
+        let total = decoded.total;
+        assert_eq!(something, 0xFFFF);
+        assert_eq!(total, 102384);
         // Either the log is lying, or the data is incorrrect.
     }
 }

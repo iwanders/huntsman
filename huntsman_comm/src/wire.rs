@@ -1,6 +1,7 @@
 use struct_helper::*;
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[repr(C)]
 /// Denotes a Red, Green and Blue color value.
 pub struct RGB {
     /// Value of the red channel [0, 255]
@@ -131,8 +132,6 @@ pub struct SetLedEffect {
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]
 #[repr(C, packed)]
-// Todo; this packed() here makes the structhelper produce errors, references to packed values
-// are phased out because of alignment.
 /// Payload to set an led effect.
 pub struct GetStorageStatistics {
     pub something: u16,

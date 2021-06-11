@@ -20,7 +20,6 @@ struct Pancakes {
 
 #[test]
 fn test_starts() {
-    let mut stack: Pancakes = Default::default();
     let bound = Pancakes::fields();
 
     assert_eq!(
@@ -76,7 +75,6 @@ fn test_roundtrips_ranges_and_most_things() {
     let float_z_value: f32 = 100f32 / 3.0;
     let char_array_value: [i8; 3] = [-120, 0x55, 20];
 
-    let float_1_value: f32 = 1.0f32 / 3.0;
     let float_1_value: f32 = 1.0f32 / 3.0;
     let float_2_value: f32 = 254468546546.0f32 / 3.0;
     let float_3_value: f32 = 3156416.0f32 / 3.0;
@@ -222,4 +220,33 @@ fn test_roundtrips_ranges_and_most_things() {
         );
         // and this fails because of padding not being zerod :(
     }
+}
+
+#[derive(StructHelper, Debug, Default, Copy, Clone)]
+struct StructWithInteger {
+    int: u32,
+}
+
+#[test]
+fn test_little_endianness() {
+    let v = StructWithInteger { int: 0x11223344 };
+    let mut arr: [u8; std::mem::size_of::<StructWithInteger>()] =
+        [0; std::mem::size_of::<StructWithInteger>()];
+    let little_endian_expected: [u8; 4] = [68, 51, 34, 17]; // [i for i in (struct.pack("<I", 0x11223344))]
+    v.to_le_bytes(&mut arr).expect("Should succeed");
+    assert_eq!(&arr, &little_endian_expected);
+    let w = StructWithInteger::from_le_bytes(&arr).expect("Should succeed");
+    assert_eq!(w.int, v.int);
+}
+
+#[test]
+fn test_big_endianness() {
+    let v = StructWithInteger { int: 0x11223344 };
+    let mut arr: [u8; std::mem::size_of::<StructWithInteger>()] =
+        [0; std::mem::size_of::<StructWithInteger>()];
+    let big_endian_expected: [u8; 4] = [17, 34, 51, 68]; // [i for i in (struct.pack(">I", 0x11223344))]
+    v.to_be_bytes(&mut arr).expect("Should succeed");
+    assert_eq!(&arr, &big_endian_expected);
+    let w = StructWithInteger::from_be_bytes(&arr).expect("Should succeed");
+    assert_eq!(w.int, v.int);
 }

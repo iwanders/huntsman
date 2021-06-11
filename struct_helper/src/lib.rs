@@ -89,6 +89,12 @@ impl Field {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Endianness {
+    Little,
+    Big,
+}
+
 /// Main trait that provides inspection functions to objects that implement this trait, or as a
 /// static method to the type itself.
 pub trait StructHelper {
@@ -98,8 +104,15 @@ pub trait StructHelper {
         Self: Sized;
     // We need to be sized anyway for all this struct stuff.
 
+    fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>;
+    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
+    where
+        Self: Sized + Default;
+
     /// Convert this object into bytes at the destination buffer.
-    fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String>;
+    fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
+        self.to_bytes(dest, Endianness::Little)
+    }
 
     // from_le_bytes(src: &[u8]) -> Result<Self, String> is a bit more involved if we don't want to assume default
     // constructability... Need to tackle it on the derive side mostly... if we assume default constructability, it
@@ -107,7 +120,22 @@ pub trait StructHelper {
     /// Create an object from a byte buffer, this requires the type to be default constructible.
     fn from_le_bytes(src: &[u8]) -> Result<Self, String>
     where
-        Self: Sized + Default;
+        Self: Sized + Default,
+    {
+        Self::from_bytes(src, Endianness::Little)
+    }
+
+    /// Convert this object into bytes at the destination buffer.
+    fn to_be_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
+        self.to_bytes(dest, Endianness::Big)
+    }
+    /// Create an object from a byte buffer, this requires the type to be default constructible.
+    fn from_be_bytes(src: &[u8]) -> Result<Self, String>
+    where
+        Self: Sized + Default,
+    {
+        Self::from_bytes(src, Endianness::Big)
+    }
 }
 
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
@@ -136,8 +164,19 @@ macro_rules! make_inspectable {
                 }
             }
 
-            fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
-                let bytes = (*self as $a).to_le_bytes();
+            fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String> {
+                let bytes;
+                // Why isn't this match the same as the if below?
+                // match endianness
+                // {
+                // Little => {bytes = (*self as $a).to_le_bytes()},
+                // Big => {bytes = (*self as $a).to_be_bytes()},
+                // };
+                if endianness == Endianness::Big {
+                    bytes = (*self as $a).to_be_bytes();
+                } else {
+                    bytes = (*self as $a).to_le_bytes();
+                }
                 if bytes.len() != dest.len() {
                     return Err(format!(
                         "Type is {} long, doesn't fit into {} provided.",
@@ -145,31 +184,36 @@ macro_rules! make_inspectable {
                         dest.len()
                     ));
                 }
-                for i in 0..bytes.len() {
-                    dest[i] = bytes[i];
-                }
+                dest[0..bytes.len()].clone_from_slice(&bytes);
                 Ok(())
             }
 
-            fn from_le_bytes(src: &[u8]) -> Result<Self, String>
+            fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
             where
                 Self: Sized + Default,
             {
-                let dummy: $a = Default::default();
-                let mut bytes = dummy.to_le_bytes(); // just to create an appropriately sized array easily.
-                if bytes.len() != src.len() {
+                use std::convert::TryInto;
+                let len = std::mem::size_of::<$a>();
+                if len != src.len() {
                     return Err(format!(
                         "Type is {} long, doesn't fit into {} provided.",
-                        bytes.len(),
+                        len,
                         src.len()
                     ));
                 }
-                // Now, we can read the bytes.
-                for i in 0..bytes.len() {
-                    bytes[i] = src[i];
+                let (value_bytes, _rest) = src.split_at(len);
+
+                // Why... isn't this match the same as the if below!?
+                // match endianness
+                // {
+                // Little => Ok(<$a>::from_le_bytes(bytes)),
+                // Big => Ok(<$a>::from_be_bytes(bytes)),
+                // }
+                if endianness == Endianness::Big {
+                    return Ok(<$a>::from_be_bytes(value_bytes.try_into().unwrap()));
+                } else {
+                    return Ok(<$a>::from_le_bytes(value_bytes.try_into().unwrap()));
                 }
-                // and perform the real read.
-                Ok(<$a>::from_le_bytes(bytes))
             }
         }
     };
@@ -210,7 +254,7 @@ impl StructHelper for bool {
         }
     }
 
-    fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
+    fn to_bytes(&self, dest: &mut [u8], _endianness: Endianness) -> Result<(), String> {
         if 1 != dest.len() {
             return Err(format!(
                 "Type is {} long, doesn't fit into {} provided.",
@@ -222,7 +266,7 @@ impl StructHelper for bool {
         Ok(())
     }
 
-    fn from_le_bytes(src: &[u8]) -> Result<Self, String>
+    fn from_bytes(src: &[u8], _endianness: Endianness) -> Result<Self, String>
     where
         Self: Sized + Default,
     {
