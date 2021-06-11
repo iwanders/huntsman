@@ -121,6 +121,7 @@ pub fn main() -> Result<(), String> {
                 ),
         )
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
+        .subcommand(SubCommand::with_name("dev_dump_keymaps").about("Dumps all keymappings."))
         .subcommand(add_colors!(SubCommand::with_name("set_color")
             .about("Sets colors in the custom frame.")
             .arg(
@@ -202,6 +203,10 @@ pub fn main() -> Result<(), String> {
 
     if let Some(_matches) = matches.subcommand_matches("dev_run") {
         h.dev_run()?;
+    }
+
+    if let Some(_matches) = matches.subcommand_matches("dev_dump_keymaps") {
+        h.dev_dump_keymaps()?;
     }
 
     if let Some(matches) = matches.subcommand_matches("brightness") {

@@ -42,10 +42,16 @@ impl Huntsman {
         let v = command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", command, v);
+            println!("{}", (v.clone()).iter().map(|x| format!("{:0>2x}", x)).collect::<Vec<String>>().join(":"));
         }
         let r = self.hal.control(&v.as_slice());
         if self.print_retrieve && r.is_ok() {
-            println!("<- {:?}", self.hal.get_report());
+            let result = self.hal.get_report();
+            println!("<- {:?}", result);
+            if result.is_ok()
+            {
+                println!("{}", (result.clone().unwrap()).iter().map(|x| format!("{:0>2x}", x)).collect::<Vec<String>>().join(":"));
+            }
         }
         return r;
     }
@@ -55,15 +61,7 @@ impl Huntsman {
         &mut self,
         boxed_command: &Box<dyn huntsman_comm::Command>,
     ) -> Result<(), String> {
-        let v = boxed_command.serialize();
-        if self.print_comm {
-            println!("{:?} -> {:?}", boxed_command, v);
-        }
-        let r = self.hal.control(&v.as_slice());
-        if self.print_retrieve && r.is_ok() {
-            println!("<- {:?}", self.hal.get_report());
-        }
-        return r;
+        self.set_command(boxed_command.as_ref())
     }
 
     /// Function that sends a single SetLedState instruction, index is the row, start is the column, count is the number
@@ -105,8 +103,29 @@ impl Huntsman {
     pub fn dev_run(&mut self) -> Result<(), String> {
         self.set_print_comm(true);
         self.set_print_retrieve(true);
-        let cmd = huntsman_comm::SetLedEffect::dev();
+        let cmd = huntsman_comm::dev_run_cmd();
         return self.set_command_box(&cmd);
+    }
+
+    /// Dump keymappings.
+    pub fn dev_dump_keymaps(&mut self) -> Result<(), String>
+    {
+        self.set_print_comm(true);
+        self.set_print_retrieve(true);
+        for i in 0..=255
+        {
+            println!("Retrieving keymapping for key {} (0x{:0>2x})", i, i);
+            let cmd = huntsman_comm::ArbitraryCommand{
+                register: huntsman_comm::Cmd {
+                    major: 0x02,
+                    minor: 0x8D,
+                },
+                payload: vec!(0x01, i)
+            };
+            self.set_command(&cmd)?;
+            println!();
+        }
+        Ok(())
     }
 
     /// Disables led effects, turning off each led. See also [`huntsman_comm::SetLedEffect::off()`]

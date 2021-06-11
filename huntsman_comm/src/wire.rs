@@ -114,7 +114,8 @@ impl Default for SetGameMode {
 pub struct SetKeyOverride {
     pub first: u8,
     pub key_code: u8,
-    pub mod_or_hypershift: u8,
+    pub hypershift: u8,
+    pub mapping_type: u8,
 }
 
 #[derive(StructHelper, Default, Copy, Clone, Debug)]

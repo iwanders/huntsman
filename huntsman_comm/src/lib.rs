@@ -421,23 +421,6 @@ impl Command for SetKeyOverride {
         v
     }
 }
-
-#[derive(Default, Clone, Debug)]
-/// Sends an arbitrary payload to a register, use with caution, useful for testing.
-pub struct ArbitraryCommand {
-    pub register: Cmd,
-    pub payload: Vec<u8>,
-}
-
-impl Command for ArbitraryCommand {
-    fn register(&self) -> Cmd {
-        return self.register;
-    }
-    fn payload(&self) -> Vec<u8> {
-        return self.payload.clone();
-    }
-}
-
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
 pub struct GetStorageStatistics {}
@@ -459,6 +442,34 @@ impl Command for GetStorageStatistics {
         wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
         v
     }
+}
+
+
+#[derive(Default, Clone, Debug)]
+/// Sends an arbitrary payload to a register, use with caution, useful for testing.
+pub struct ArbitraryCommand {
+    pub register: Cmd,
+    pub payload: Vec<u8>,
+}
+
+impl Command for ArbitraryCommand {
+    fn register(&self) -> Cmd {
+        return self.register;
+    }
+    fn payload(&self) -> Vec<u8> {
+        return self.payload.clone();
+    }
+}
+
+pub fn dev_run_cmd() -> Box<dyn Command>
+{
+    Box::new(ArbitraryCommand{
+        register: Cmd {
+            major: 0x02,
+            minor: 0x8D,
+        },
+        payload: vec!(0x01, 0x40)
+    })
 }
 
 /// Helper function for the dissector that provides the fields for the provided commands.
@@ -597,11 +608,9 @@ mod tests {
 
     #[test]
     fn overrides_for_keys() {
-        // Readable version of the usb HID id's
-        // https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/translate.pdf
-
-        // Readable key id lookup
-        // https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/scancode.doc
+        // Better; hut1_12v2.pdf -  HID Usage Tables
+        // 'Typical AT-101' column holds the scancode in decimal
+        // Usage ID is the.
 
         // Right shift to k, top two entries seem to be THE thing.
         // TSetMapping MOD: 0x00000000	MAP: MAPPING_SINGLEKEY Key: MC=0x25, EX=0x00, Mods=0x00000000
@@ -636,22 +645,150 @@ mod tests {
 
         // This looks more like a disable...
         // Bind hypershift plus to brightness up:
-        //                              00:1f:00:00:00:0a:02:0d:01:6a:01:00:00:00:00:00....
+        // 00:1f:00:00:00:0a:02:0d:01:6a:01:00:00:00:00:00....
         // Bind hypershift minus to brightness down:
-        //                              00:1f:00:00:00:0a:02:0d:01:69:01:00:00:00:00:00...
+        // 00:1f:00:00:00:0a:02:0d:01:69:01:00:00:00:00:00...
 
-        // Switch profile with right alt;
-        //                              00:1f:00:00:00:0a:02:0d:01:40:00:01:01:01:00:00:00:00
-        //                              00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00:00:00:00:00
-        //                              00:1f:00:00:00:0a:02:0d:01:02:01:00:00:00:00:00:00:00
-        //                              00:1f:00:00:00:0a:02:0d:01:03:01:01:01:01:00:00:00:00
+        // Switch profile with right alt... that just updates the mappings that are currently active
+        // with the '01' in first?
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:01:00:00:00:00
+        // 00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00:00:00:00:00
+        // 00:1f:00:00:00:0a:02:0d:01:02:01:00:00:00:00:00:00:00
+        // 00:1f:00:00:00:0a:02:0d:01:03:01:01:01:01:00:00:00:00
 
-        // Key locations match;
-        // Microsoft Keyboard Scan Code Specification (Appendix C, "USB Keyboard/Keypad Page (0x07)"),
-        // https://en.wikipedia.org/wiki/Scancode#USB
-        // Most certainly, Key location microsofts keyboard scan code lists matches.
-        // key 0x39 is 57, which is R SHIFT, p18
-        // key 0x40 is 64, which is R CTRL, p18
+        // Keyboard instructions;
+
+        // Bind hypershift plus to brightness up:
+        // 00:1f:00:00:00:0a:02:0d:01:6a:01:00:00:00:00:00....
+
+        // 2021_06_05_23_30_set_right_ctrl_alpha_numeric_include_mod_left_shift.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:02:04:00:00:00:00
+        // 2021_06_05_23_31_set_right_ctrl_alpha_numeric_include_mod_left_alt.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:04:04:00:00:00:00
+
+        // 2021_06_05_23_30_set_right_ctrl_alpha_numeric_include_mod_no_mod.pcapng.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:00:04:00:00:00:00
+
+        // 2021_06_05_23_31_set_right_ctrl_alpha_numeric_include_mod_right_ctrl.pcapng
+        // 02:1f:00:00:00:0a:02:0d:01:40:00:02:02:10:04:00:00:00:00
+        // 2021_06_05_23_31_set_right_ctrl_alpha_numeric_include_mod_right_shift.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:20:04:00:00:00:00
+
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00:00
+        //                                        ^ Right modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
+        //                                         ^ Left modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
+
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_and_20_turbo.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:00:04:00:32:00:00
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_tur
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00:00
+
+
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:40:04:00:00:00:00
+
+        // 2021_06_05_23_27_set_right_ctrl_scroll_up.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:09:00:00:00:00:00
+
+        // Mouse instructions
+
+        // 2021_06_05_23_22_set_right_ctrl_left_click_turbo_7_per_s.pcapng
+        // 00:1f:00:00:00:0a:02:0d:03:40:00:0e:03:01:00:8e:00:00:00
+
+        // 2021_06_05_23_24_set_right_ctrl_right_click.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00:00:00:00
+        // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
+        // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:04:00:00:00:00:00
+        // 2021_06_05_23_26_set_right_ctrl_button_5.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00
+
+
+        // 2021_06_05_23_26_set_right_ctrl_dbl_click.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00
+        // 2021_06_05_23_27_set_right_ctrl_scroll_down.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:0a:00:00:00:00:00
+        // 2021_06_05_23_27_set_right_ctrl_scroll_up.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:09:00:00:00:00:00
+        // 2021_06_05_23_27_set_right_ctrl_scroll_left_synapse.pcapng  <- disable
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:00:00:00:00:00:00:00:00
+        // 
+
+        // index[2] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[BUTTON] button[5]
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00:00:00:00:00:41:00
+        // Not too sure what that makecode means... 
+
+        // Doubleclick;
+        //  [Done] index[2] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[BUTTON] button[13]
+        // 02:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00:4f:00
+        //                                  ^^ 0b instead of 01!? Maybe... 
+        //                                  0b for Button Page (0x09)? 01 is Button 1, Primary Button. Used for object selecting, dragging, and double click activation.
+        
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
+        // [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[SINGLEKEYTURBO]
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00:00:3b:00
+        //                                  ^^ 0x0d now...
+
+        // [profile data event] [Done] index[2] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[SINGLEKEYTURBO]
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:00:04:00:32:00:00:7b:00
+
+        // Macro instructions
+        // 2021_06_05_23_36_set_right_ctrl_macro_shift_key.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:01:00:00:00
+        // 2021_06_05_23_36_set_right_ctrl_macro_shift_key_play_multiple_times_twice.pcap
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:02:00:00:00
+        // 2021_06_05_23_37_set_right_ctrl_macro_shift_key_play_multiple_times_5.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:05:00:00:00
+        //                                              ^^ amount of times?
+
+        //                                        ^^ ^^ macro address??
+
+        // 2021_06_05_23_37_set_right_ctrl_macro_shift_key_play_assigned_pressed.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:04:02:3b:68:00:00:00:00
+        //                                  ^^ while pressed?
+
+        // 2021_06_05_23_37_set_right_ctrl_macro_shift_key_play_toggle.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:05:02:3b:68:00:00:00:00
+        //                                  ^^ Toggle?
+
+
+        // 2021_06_05_23_36_set_right_ctrl_macro_shift_key holds macro addition.
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:01:00:16:00
+        // [profile data event] [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[MACRO] guid[B13069EB-E654-49E2-8B6C-204137CC4786]
+        
+
+        // 2021_06_05_23_50_set_right_ctrl_volume_mute
+        // [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[MULTIMEDIA] action type[5]
+        // 02:1f:00:00:00:0a:02:0d:01:40:00:0a:02:00:e2:00:00:ae:00
+        //                                           ^^ e2 is Consumer Page (0x0C) Mute instruction.
+
+        // 2021_06_05_23_50_set_right_ctrl_volume_down
+        // index[1] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[MULTIMEDIA] action type[4]
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:0a:02:00:ea:00:a6:00
+        //                                           ^^ ea is Consumer Page (0x0C) Volume Decrement
+
+        // Lets structure this a bit;
+        // 00:1f:00:00:00:0a:02:0d:01:40:HH:CC:NI
+        //                         ^^  01 seems to denote currently active, otherwise 02 or 03 for profile
+        //                            ^^ AT-101 Position
+        // HH: Hypershift
+        // CC; Class, we have seen:
+        //                                  00 disabled, always followed by zeros
+        //                                  01 Mouse, simple?
+        //                                  02 Keyboard, simple?
+        //                                  03 Macro, 'n' fire
+        //                                  04 Macro, while pressed
+        //                                  05 Macro, toggle
+        //                                  0a Multimedia (Consumer Page?)
+        //                                  0b Mouse, doubleclick
+        //                                  0e Mouse, left click with turbo
+        //                                  0d Single Key Turbo.
+        //                                  11 (Obtained through READ; magical keys?)
+        // NI; No idea; often same as CC, but not always
+
+        // These keystrokes... they may be specified in the same way as the macros? Doesn't look like it...
     }
 
     #[test]
