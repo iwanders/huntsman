@@ -20,7 +20,7 @@ struct Pancakes {
 #[test]
 fn test_starts() {
     let mut stack: Pancakes = Default::default();
-    let bound = stack.fields_as_mut();
+    let bound = Pancakes::fields();
 
     assert_eq!(
         offset_of!(Pancakes, first_char),

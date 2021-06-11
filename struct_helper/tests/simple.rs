@@ -21,7 +21,7 @@ struct Pancakes {
 #[test]
 fn test_starts() {
     let mut stack: Pancakes = Default::default();
-    let bound = stack.fields_as_mut();
+    let bound = Pancakes::fields();
 
     assert_eq!(
         offset_of!(Pancakes, first_char),
@@ -76,6 +76,7 @@ fn test_roundtrips_ranges_and_most_things() {
     let float_z_value: f32 = 100f32 / 3.0;
     let char_array_value: [i8; 3] = [-120, 0x55, 20];
 
+    let float_1_value: f32 = 1.0f32 / 3.0;
     let float_1_value: f32 = 1.0f32 / 3.0;
     let float_2_value: f32 = 254468546546.0f32 / 3.0;
     let float_3_value: f32 = 3156416.0f32 / 3.0;
@@ -204,10 +205,8 @@ fn test_roundtrips_ranges_and_most_things() {
     // If we do the same trick on the fieldref it should also work.
     {
         let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-        expected_result
-            .fields_as_ref()
-            .to_le_bytes(&mut arr)
-            .expect("Should succeed");
+        
+        expected_result.to_le_bytes(&mut arr).expect("Should succeed");
         println!("arr: {:?}", arr);
 
         // The expected result byte array should be identical to the array we just wrote.

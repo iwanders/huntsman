@@ -79,9 +79,9 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     // Lets, for sake of simplicity, just handle string inputs now.
     let (outer_attribute_tokens, _outer_map) = process_str_attributes(&input.attrs);
 
-    let mut fields_for_mut: Vec<proc_macro2::TokenStream> = Vec::new();
-    let mut fields_for_ref: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut fields_static: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_to_le_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
+    let mut fields_from_le_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
 
     match &input.data {
@@ -133,33 +133,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                     }
                                 );
-                                // Create the fields for this array, unwrapping the internals.
-                                fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                        struct_helper::FieldMut{
-                                            value: struct_helper::MutRef::None,
-                                            info: #info,
-                                            children: self.#inner_field_ident.iter_mut().enumerate().map(|(i, mut x)|
-                                                {
-                                                    let mut fields = x.fields_as_mut();
-                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
-                                                    fields
-                                                }).collect::<Vec<struct_helper::FieldMut>>(),
-                                        }
-                                    )
-                                ));
-                                fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
-                                        struct_helper::FieldRef{
-                                            value: struct_helper::Ref::None,
-                                            info: #info,
-                                            children: self.#inner_field_ident.iter().enumerate().map(|(i, mut x)|
-                                                {
-                                                    let mut fields = x.fields_as_ref();
-                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
-                                                    fields
-                                                }).collect::<Vec<struct_helper::FieldRef>>(),
-                                        }
-                                    )
-                                ));
+
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
                                         struct_helper::Field{
                                             info: #info,
@@ -172,6 +146,27 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         }
                                     )
                                 ));
+
+                                fields_to_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                    println!("It's an array: {} {}", stringify!(#inner_field_ident), #arr_len);
+                                    for i in 0..#arr_len
+                                    {
+                                        let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
+                                        let e = std::mem::size_of::<#type_ident>() + s;
+                                        // Copy against reference from packed struct.
+                                        let tmp = self.#inner_field_ident[i];
+                                        StructHelper::to_le_bytes(&tmp, &mut dest[s..e]).expect("yes");
+                                    }
+                                )));
+                                fields_from_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                    for i in 0..#arr_len
+                                    {
+
+                                        let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
+                                        let e = std::mem::size_of::<#type_ident>() + s;
+                                        x.#inner_field_ident[i]  = < #type_ident as StructHelper >::from_le_bytes(&src[s..e]).expect("yes");
+                                    }
+                                )));
                             }
                             syn::Type::Verbatim(v) => {
                                 panic!("Its an verbatim!? {:?}", v); // Shouldn't really happen in a struct derive
@@ -193,22 +188,28 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                     attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                 });
 
-                                fields_for_mut.push(proc_macro2::TokenStream::from(quote!(
-                                    struct_helper::FieldMut{
-                                        value: struct_helper::MutRef::None,
-                                        info: #info,
-                                        children: vec!(self.#inner_field_ident.fields_as_mut())}
-                                )));
-                                fields_for_ref.push(proc_macro2::TokenStream::from(quote!(
-                                    struct_helper::FieldRef{
-                                        value: struct_helper::Ref::None,
-                                        info: #info,
-                                        children: vec!(self.#inner_field_ident.fields_as_ref())}
-                                )));
+
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
                                     struct_helper::Field{
                                         info: #info,
                                         children: vec!(<#type_ident as StructHelper>::fields())}
+                                )));
+
+                                fields_to_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                    {
+                                        let s = offset_of!(#root_struct, #inner_field_ident);
+                                        let e = std::mem::size_of::<#type_ident>() + s;
+                                        // Copy against reference from packed struct.
+                                        let tmp = self.#inner_field_ident;
+                                        StructHelper::to_le_bytes(&tmp, &mut dest[s..e]).expect("yes");
+                                    }
+                                )));
+                                fields_from_le_bytes.push(proc_macro2::TokenStream::from(quote!(
+                                    {
+                                        let s = offset_of!(#root_struct, #inner_field_ident);
+                                        let e = std::mem::size_of::<#type_ident>() + s;
+                                        x.#inner_field_ident  = < #type_ident as StructHelper >::from_le_bytes(&src[s..e]).expect("yes");
+                                    }
                                 )));
                             }
                             _ => {
@@ -245,31 +246,36 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
     );
     let gen = quote! {
         impl struct_helper::StructHelper for #name {
-            fn fields_as_mut<'a>(&'a mut self) -> struct_helper::FieldMut
-            {
-                return struct_helper::FieldMut{
-                             value: struct_helper::MutRef::None,
-                             info: #info,
-                             children: vec!(#(#fields_for_mut),*)};
-            }
-
-            fn fields_as_ref<'a>(&'a self) -> struct_helper::FieldRef
-            {
-                return struct_helper::FieldRef{
-                             value: struct_helper::Ref::None,
-                             info: #info,
-                             children: vec!(#(#fields_for_ref),*)};
-            }
-
             fn fields() -> struct_helper::Field {
                 struct_helper::Field {
                      info: #info,
                      children: vec!(#(#fields_static),*)
                 }
             }
+
+            fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String>
+            {
+                if (#name::fields()).info.length > dest.len()
+                {
+                    return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
+                }
+                #(#fields_to_le_bytes);*
+                Ok(())
+            }
+
+            fn from_le_bytes(src: &[u8]) -> Result<Self, String> where Self: Sized + Default
+            {
+                let mut x: #name = Default::default();
+                if (#name::fields()).info.length > src.len()
+                {
+                    return Err(format!("Type is {} long, only {} provided.", (#name::fields()).info.length, src.len()));
+                }
+                #(#fields_from_le_bytes);*
+                Ok(x)
+            }
         }
     };
-    // println!("Output: {:}", gen.to_string());
+    println!("Output: {:}", gen.to_string());
     gen.into()
 }
 
