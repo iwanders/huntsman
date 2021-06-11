@@ -202,11 +202,13 @@ fn test_roundtrips_ranges_and_most_things() {
         assert_eq!(struct_to_bytes(&expected_result), arr);
     }
 
-    // If we do the same trick on the fieldref it should also work.
+    // If we do a roundtrip, this should work;
     {
         let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-        
-        expected_result.to_le_bytes(&mut arr).expect("Should succeed");
+
+        expected_result
+            .to_le_bytes(&mut arr)
+            .expect("Should succeed");
         println!("arr: {:?}", arr);
 
         // The expected result byte array should be identical to the array we just wrote.

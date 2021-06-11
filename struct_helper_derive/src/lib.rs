@@ -188,7 +188,6 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                     attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                 });
 
-
                                 fields_static.push(proc_macro2::TokenStream::from(quote!(
                                     struct_helper::Field{
                                         info: #info,
