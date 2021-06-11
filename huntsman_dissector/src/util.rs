@@ -15,6 +15,7 @@ type FieldDisplay = dissector::FieldDisplay;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct FieldFlags {
     pub hidden: bool,
+    pub display: Option<FieldDisplay>,
     pub dissect_additional_type: &'static str,
 }
 
@@ -66,6 +67,16 @@ pub fn field_recurser(
     let mut updated_flags = flags.clone();
     match field.info.attrs.get("dissection_hide") {
         Some(v) => updated_flags.hidden = *v == "true",
+        None => {}
+    }
+
+    match field.info.attrs.get("dissection_display") {
+        Some(v) => updated_flags.display = match *v
+        {
+            "hex" => Some(FieldDisplay::BASE_HEX),
+            "dec" => Some(FieldDisplay::BASE_DEC),
+            _ => panic!("Dissection display from dissection_display not handled"),
+        },
         None => {}
     }
 
@@ -201,7 +212,27 @@ fn get_name(v: &Vec<Prefix>) -> String {
 /// used by the Dissector object.
 pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField> {
     v.iter()
-        .map(|x| dissector::PacketField {
+        .map(|x|{
+            let display_field;
+            if let Some(display_override) = x.flags.display
+            {
+                display_field = display_override;
+            }
+            else
+            {
+                display_field = match x.type_name {
+                    "label" => FieldDisplay::BASE_NONE,
+                    "" => FieldDisplay::BASE_NONE,
+                    "u8" => FieldDisplay::BASE_HEX,
+                    "u16" => FieldDisplay::BASE_HEX,
+                    "u32" => FieldDisplay::BASE_HEX,
+                    _ => panic!(
+                        "Unsupport type name \"{}\", add it in the dissector.",
+                        x.type_name
+                    ),
+                };
+            }
+            dissector::PacketField {
             name: dissector::StringContainer::String(String::from(get_name(&x.abbrev))),
             abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(&x.abbrev))),
             field_type: match x.type_name {
@@ -209,21 +240,14 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                 "" => FieldType::NONE,
                 "u8" => FieldType::UINT8,
                 "u16" => FieldType::UINT16,
+                "u32" => FieldType::UINT32,
                 _ => panic!(
                     "Unsupport type name \"{}\", add it in the dissector.",
                     x.type_name
                 ),
             },
-            display: match x.type_name {
-                "label" => FieldDisplay::BASE_NONE,
-                "" => FieldDisplay::BASE_NONE,
-                "u8" => FieldDisplay::BASE_HEX,
-                "u16" => FieldDisplay::BASE_HEX,
-                _ => panic!(
-                    "Unsupport type name \"{}\", add it in the dissector.",
-                    x.type_name
-                ),
-            },
+            display: display_field,
+        }
         })
         .collect()
 }

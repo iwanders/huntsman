@@ -135,7 +135,10 @@ pub struct SetLedEffect {
 /// Payload to set an led effect.
 pub struct GetStorageStatistics {
     pub something: u16,
+    #[struct_helper(dissection_display="dec")]
     pub total: u32,
+    #[struct_helper(dissection_display="dec")]
     pub free1: u32,
+    #[struct_helper(dissection_display="dec")]
     pub free2: u32,
 }

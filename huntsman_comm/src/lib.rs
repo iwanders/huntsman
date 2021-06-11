@@ -472,6 +472,10 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)>
             SetLedBrightness::CMD,
             Box::new(wire::SetLedBrightness::fields),
         ),
+        (
+            GetStorageStatistics::CMD,
+            Box::new(wire::GetStorageStatistics::fields),
+        ),
     ]
 }
 
@@ -685,6 +689,7 @@ mod tests {
         assert_eq!(something, 0xFFFF);
         assert_eq!(total, 102384);
         // Either the log is lying, or the data is incorrrect.
+        let respons2 = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:07:b2:08:");
     }
 }
 
