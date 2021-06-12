@@ -465,10 +465,10 @@ pub fn dev_run_cmd() -> Box<dyn Command>
 {
     Box::new(ArbitraryCommand{
         register: Cmd {
-            major: 0x02,
-            minor: 0x8D,
+            major: 0x06,
+            minor: 0x8e,
         },
-        payload: vec!(0x01, 0x40)
+        payload: vec!(0x3b, 0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
     })
 }
 
@@ -827,6 +827,9 @@ mod tests {
         assert_eq!(total, 102384);
         // Either the log is lying, or the data is incorrrect.
         let respons2 = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:07:b2:08:");
+        // CRSy3_OnboardMem2::GetData: storage: max[102368], free[9075328], percent[8865.40]
+        // Aight.... lets assume logging and the current parsing is broken.
+
     }
 }
 
