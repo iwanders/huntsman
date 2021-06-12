@@ -464,11 +464,11 @@ impl Command for ArbitraryCommand {
 pub fn dev_run_cmd() -> Box<dyn Command>
 {
     Box::new(ArbitraryCommand{
-        register: Cmd {
+        register: Cmd {//06:03:3b:02
             major: 0x06,
-            minor: 0x8e,
+            minor: 0x03,
         },
-        payload: vec!(0x3b, 0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        payload: vec!(0x3b, 0x03)
     })
 }
 
@@ -826,10 +826,16 @@ mod tests {
         assert_eq!(something, 0xFFFF);
         assert_eq!(total, 102384);
         // Either the log is lying, or the data is incorrrect.
-        let respons2 = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:07:b2:08:");
+        // let respons2 = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:07:b2:08:");
         // CRSy3_OnboardMem2::GetData: storage: max[102368], free[9075328], percent[8865.40]
         // Aight.... lets assume logging and the current parsing is broken.
 
+
+        // 0x06, 0x03; delete macro!
+        let has_macro = parse_wireshark_truncated("00:1f:00:00:00:02:06:03:3b:02:00", 0x3e);
+        // returns status 02 if exists, 03 if it doesnt
+
+        // 00:1f:00:00:00:06:06:08:3b:02:00:00:00:04:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:35:00
     }
 }
 
