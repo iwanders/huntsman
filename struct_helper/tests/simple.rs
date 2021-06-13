@@ -1,12 +1,12 @@
 use struct_helper::*;
 
-#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, FromBytes, ToBytes, Debug, Default, Copy, Clone)]
 // #[repr(C)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, FromBytes, ToBytes, Debug, Default, Copy, Clone)]
 #[repr(C)]
 struct Pancakes {
     first_char: u8,
@@ -218,7 +218,7 @@ fn test_roundtrips_ranges_and_most_things() {
     }
 }
 
-#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, FromBytes, ToBytes, Debug, Default, Copy, Clone)]
 struct StructWithInteger {
     int: u32,
 }
@@ -252,7 +252,7 @@ struct VariableLengthStruct
 {
     data: Vec<u8>,
 }
-impl Wireable for VariableLengthStruct
+impl ToBytes for VariableLengthStruct
 {
     fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
     {
@@ -261,10 +261,6 @@ impl Wireable for VariableLengthStruct
             self.data[z].to_bytes(&mut dest[z..], endianness)?
         }
         Ok(())
-    }
-    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
-    {
-        Err("Nope".to_string())
     }
 }
 

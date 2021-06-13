@@ -8,7 +8,6 @@
 extern crate struct_helper_derive;
 
 pub use memoffset::*;
-/// fooo
 pub use struct_helper_derive::*;
 
 /*
@@ -114,19 +113,25 @@ pub trait StructHelper {
 
 }
 
-
-
-pub trait Wireable
+pub trait ToBytes
 {
     fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>;
-    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
-    where
-        Self: Sized + Default;
 
     /// Convert this object into bytes at the destination buffer.
     fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
         self.to_bytes(dest, Endianness::Little)
     }
+    /// Convert this object into bytes at the destination buffer.
+    fn to_be_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
+        self.to_bytes(dest, Endianness::Big)
+    }
+}
+
+pub trait FromBytes
+{
+    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
+    where
+        Self: Sized + Default;
 
     // from_le_bytes(src: &[u8]) -> Result<Self, String> is a bit more involved if we don't want to assume default
     // constructability... Need to tackle it on the derive side mostly... if we assume default constructability, it
@@ -139,10 +144,6 @@ pub trait Wireable
         Self::from_bytes(src, Endianness::Little)
     }
 
-    /// Convert this object into bytes at the destination buffer.
-    fn to_be_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
-        self.to_bytes(dest, Endianness::Big)
-    }
     /// Create an object from a byte buffer, this requires the type to be default constructible.
     fn from_be_bytes(src: &[u8]) -> Result<Self, String>
     where
@@ -408,7 +409,7 @@ macro_rules! make_inspectable {
 
 macro_rules! make_wireable {
     ($a:ty) => {
-        impl Wireable for $a {
+        impl ToBytes for $a {
             fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String> {
                 let bytes;
                 // Why isn't this match the same as the if below?
@@ -432,7 +433,8 @@ macro_rules! make_wireable {
                 dest[0..bytes.len()].clone_from_slice(&bytes);
                 Ok(())
             }
-
+        }
+        impl FromBytes for $a {
             fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
             where
                 Self: Sized + Default,
@@ -493,52 +495,3 @@ make_wireable!(u128);
 
 make_wireable!(f32);
 make_wireable!(f64);
-
-// make_inspectable!(bool);
-impl StructHelper for bool {
-    fn fields() -> Field
-    where
-        Self: Sized,
-    {
-        Field {
-            info: Info {
-                start: 0,
-                length: std::mem::size_of::<bool>(),
-                type_name: std::any::type_name::<bool>(),
-                type_id: std::any::TypeId::of::<bool>(),
-                name: None,
-                element_type: ElementType::Scalar,
-                attrs: std::collections::HashMap::new(),
-            },
-            children: vec![],
-        }
-    }
-}
-
-impl Wireable for bool{
-    fn to_bytes(&self, dest: &mut [u8], _endianness: Endianness) -> Result<(), String> {
-        if 1 != dest.len() {
-            return Err(format!(
-                "Type is {} long, doesn't fit into {} provided.",
-                1,
-                dest.len()
-            ));
-        }
-        dest[0] = *self as u8;
-        Ok(())
-    }
-
-    fn from_bytes(src: &[u8], _endianness: Endianness) -> Result<Self, String>
-    where
-        Self: Sized + Default,
-    {
-        if 1 != src.len() {
-            return Err(format!(
-                "Type is {} long, doesn't fit into {} provided.",
-                1,
-                src.len()
-            ));
-        }
-        Ok(src[0] != 0)
-    }
-}

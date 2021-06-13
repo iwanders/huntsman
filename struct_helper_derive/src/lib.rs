@@ -69,7 +69,8 @@ fn process_str_attributes(
 }
 
 enum TraitToImplement{
-    Wireable,
+    ToBytes,
+    FromBytes,
     Inspectable,
     StructHelper
 }
@@ -181,7 +182,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident[i];
-                                        Wireable::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        ToBytes::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
@@ -190,7 +191,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
 
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident[i]  = < #type_ident as Wireable >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        x.#inner_field_ident[i]  = < #type_ident as FromBytes >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -239,14 +240,14 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident;
-                                        Wireable::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        ToBytes::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident  = < #type_ident as Wireable >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        x.#inner_field_ident  = < #type_ident as FromBytes >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -346,8 +347,8 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
         };
     };
 
-    let trait_wireable = quote! {
-        impl struct_helper::Wireable for #name
+    let trait_to_bytes = quote! {
+        impl struct_helper::ToBytes for #name
         {
             fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
             {
@@ -359,7 +360,12 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                 #(#fields_to_bytes);*
                 Ok(())
             }
+        }};
 
+    let trait_from_bytes = quote! {
+
+        impl struct_helper::FromBytes for #name
+        {
             fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String> where Self: Sized + Default
             {
                 let mut x: #name = Default::default();
@@ -374,7 +380,8 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
     };
     let res: proc_macro::TokenStream = match trait_to_implement
     {
-        TraitToImplement::Wireable => trait_wireable.into(),
+        TraitToImplement::ToBytes => trait_to_bytes.into(),
+        TraitToImplement::FromBytes => trait_from_bytes.into(),
         TraitToImplement::StructHelper => trait_struct_helper.into(),
         TraitToImplement::Inspectable => trait_inspectable.into(),
     };
@@ -403,9 +410,13 @@ pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
 }
 
 
-#[proc_macro_derive(Wireable, attributes(wireable))]
-pub fn wireable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input, TraitToImplement::Wireable)
+#[proc_macro_derive(FromBytes)]
+pub fn from_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, TraitToImplement::FromBytes)
+}
+#[proc_macro_derive(ToBytes)]
+pub fn to_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, TraitToImplement::ToBytes)
 }
 
 #[proc_macro_derive(Inspectable)]
