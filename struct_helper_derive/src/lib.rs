@@ -68,8 +68,14 @@ fn process_str_attributes(
     (res, map)
 }
 
+enum TraitToImplement{
+    Wireable,
+    Inspectable,
+    StructHelper
+}
+
 /// The function that actually generates the code for this derived type.
-fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: bool) -> proc_macro::TokenStream {
+fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: TraitToImplement) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
     // println!("input struct: {:#?}", input);
@@ -80,6 +86,9 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: 
     let (outer_attribute_tokens, _outer_map) = process_str_attributes(&input.attrs);
 
     let mut fields_static: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    let mut inspectable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
+
     let mut fields_to_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut fields_from_bytes: Vec<proc_macro2::TokenStream> = Vec::new();
     let root_struct = &input.ident;
@@ -193,6 +202,18 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: 
                                         children: vec!(<#type_ident as StructHelper>::fields())}
                                 )));
 
+                                inspectable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                    Box::new(struct_helper::SimpleInspectable{
+                                        start: offset_of!(#root_struct, #inner_field_ident),
+                                        length: std::mem::size_of::<#type_ident>(),
+                                        type_name: #n,
+                                        element_type: struct_helper::ElementType::Path,
+                                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
+                                        elements: vec!(),
+                                        ..Default::default()
+                                    })
+                                )));
+
                                 fields_to_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
@@ -242,7 +263,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: 
              attrs: [#outer_attribute_tokens].iter().cloned().collect(),
         }
     );
-    let gen = quote! {
+    let trait_struct_helper = quote! {
         impl struct_helper::StructHelper for #name {
             fn fields() -> struct_helper::Field {
                 struct_helper::Field {
@@ -253,15 +274,42 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: 
         };
     };
 
-    let gen2 = quote! {
+    let trait_inspectable = quote! {
+        impl struct_helper::Inspectable for #name
+        {
+            fn nfields() -> Box<dyn struct_helper::Information>
+            {
+                Box::new(struct_helper::SimpleInspectable{
+                        start: 0,
+                        length: std::mem::size_of::<#name>(),
+                        type_name: stringify!(#name),
+                        element_type: ElementType::Scalar,
+                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
+                        elements: vec!(#(#inspectable_fields),*),
+                        ..Default::default()
+                    })
+            }
+            fn inspect(&self) -> Box<dyn struct_helper::Information>
+            {
+                <#name>::nfields()
+            }
+            fn clone_box(&self) -> Box<dyn Inspectable>
+            {
+                Box::new(self.clone())
+            }
+        };
+    };
+
+    let trait_wireable = quote! {
         impl struct_helper::Wireable for #name
         {
             fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
             {
-                if (#name::fields()).info.length > dest.len()
-                {
-                    return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
-                }
+                // Todo; restore checking here... 
+                // if (#name::fields()).info.length > dest.len()
+                // {
+                    // return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
+                // }
                 #(#fields_to_bytes);*
                 Ok(())
             }
@@ -269,24 +317,23 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: 
             fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String> where Self: Sized + Default
             {
                 let mut x: #name = Default::default();
-                if (#name::fields()).info.length > src.len()
-                {
-                    return Err(format!("Type is {} long, only {} provided.", (#name::fields()).info.length, src.len()));
-                }
+                // if (#name::fields()).info.length > src.len()
+                // {
+                    // return Err(format!("Type is {} long, only {} provided.", (#name::fields()).info.length, src.len()));
+                // }
                 #(#fields_from_bytes);*
                 Ok(x)
             }
         }
     };
-    //println!("Output: {:}", gen.to_string());
-    if struct_helper_impl
+    let res: proc_macro::TokenStream = match trait_to_implement
     {
-        gen.into()
-    }
-    else
-    {
-        gen2.into()
-    }
+        TraitToImplement::Wireable => trait_wireable.into(),
+        TraitToImplement::StructHelper => trait_struct_helper.into(),
+        TraitToImplement::Inspectable => trait_inspectable.into(),
+    };
+    println!("Output: {:}", res.to_string());
+    res
 }
 
 #[doc = "This implements the derive macro for the struct helper.
@@ -306,11 +353,17 @@ So `#[struct_helper(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs
 "]
 #[proc_macro_derive(StructHelper, attributes(struct_helper))]
 pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input, true)
+    impl_struct_helper_macro(input, TraitToImplement::StructHelper)
 }
 
 
 #[proc_macro_derive(Wireable, attributes(wireable))]
 pub fn wireable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input, false)
+    impl_struct_helper_macro(input, TraitToImplement::Wireable)
 }
+
+#[proc_macro_derive(Inspectable)]
+pub fn inspectable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, TraitToImplement::Inspectable)
+}
+

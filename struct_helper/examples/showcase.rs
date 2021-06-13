@@ -1,12 +1,11 @@
 use struct_helper::*;
 
-#[derive(StructHelper, Wireable, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
 #[repr(C)] // Try this example with this line commented out and see how it changes!
 struct Example {
     a_char: u8,
     a_short: i16,
     an_uint: u32,
-    #[struct_helper(my_key = "Pi!")] // can add arbitrary key="string_value" pairs.
     a_float: f32,
 }
 
@@ -45,12 +44,11 @@ fn main() -> Result<(), String> {
             .collect::<Vec<String>>()
             .join(" ")
     );
-    for f in Example::fields().children.iter() {
-        let info = &f.info;
+    for f in Example::nfields().elements().iter() {
         let s = 3; // each byte takes 3 characters in hex, with space to seperate them
-        let start = f.info.start * s;
-        let length = f.info.length * s - 1; // -1 to make the diagram pretty :)
-        let remainder = (buffer.len() - f.info.start - f.info.length) * s;
+        let start = f.start() * s;
+        let length = f.length() * s - 1; // -1 to make the diagram pretty :)
+        let remainder = (buffer.len() - f.start() - f.length()) * s;
         println!(
             "   {:>start$}|{:->length$}|{:remainder$} {name:}: {type_name: >3} {attrs:}",
             "",
@@ -59,10 +57,10 @@ fn main() -> Result<(), String> {
             start = start,
             length = length,
             remainder = remainder,
-            name = info.name.as_ref().unwrap(),
-            type_name = info.type_name,
-            attrs = if !info.attrs.is_empty() {
-                format!(" {:?}", info.attrs)
+            name = f.name().as_ref().unwrap(),
+            type_name = f.type_name(),
+            attrs = if !f.attrs().is_empty() {
+                format!(" {:?}", f.attrs())
             } else {
                 "".to_string()
             }

@@ -38,6 +38,14 @@ pub enum ElementType {
     Other,
 }
 
+impl Default for ElementType
+{
+    fn default() -> ElementType
+    {
+        ElementType::Other
+    }
+}
+
 #[derive(Debug, Clone)]
 /// Info struct to hold common information for fields.
 pub struct Info {
@@ -106,6 +114,8 @@ pub trait StructHelper {
 
 }
 
+
+
 pub trait Wireable
 {
     fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>;
@@ -142,9 +152,192 @@ pub trait Wireable
     }
 }
 
+
+pub trait Inspectable
+{
+    fn nfields() -> Box<dyn Information> where Self: Sized;
+    fn inspect(&self) -> Box<dyn Information>;  // inspect doubles as clone when called on information.
+    fn clone_box(&self) -> Box<dyn Inspectable>;
+}
+
+pub trait Information : Inspectable
+{
+    /// The start offset relative to the parent.
+    fn start(&self) -> usize
+    {
+        0
+    }
+
+    /// The length of this element.
+    fn length(&self) -> usize
+    {
+        0
+    }
+
+    /// The type name, "u8", "u16", "MyStruct"...
+    fn type_name(&self) -> &'static str;
+
+    /// The name, if it has one (so name of the field if inside a struct).
+    fn name(&self) -> Option<String>
+    {
+        None
+    }
+
+    // as_any?
+
+    /// Returns the elements this instance has.
+    fn elements(&self) -> Vec<Box<dyn Information>>
+    {
+        vec!()
+    }
+
+    /// Returns the fields this thing could return.
+    // fn clone_box(&self) -> Box<dyn Information>
+    // fn nfields() -> Vec<Box<dyn Information>> where Self:Sized
+    // {
+        // vec!()
+    // }
+
+    // fn inspect(&self) -> Box<dyn Inspectable>;
+
+    // Below here are things from the old implementation, they may be redundant now.
+
+    /// The type of this thing, may be redundant now?
+    fn element_type(&self) -> ElementType
+    {
+        ElementType::Other
+    }
+
+    /// A hashmap that can contain arbitrary annotations to fields.
+    fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str>
+    {
+        std::collections::HashMap::new()
+    }
+}
+
+impl Clone for Box<dyn Inspectable> {
+    fn clone(&self) -> Box<dyn Inspectable> {
+        self.clone_box()
+    }
+}
+
+
+
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
 
-//https://doc.rust-lang.org/rust-by-example/macros/designators.html
+//https://doc.rust-lang.org/rust-by-example/macros/designators.html 
+#[derive(Default)]
+pub struct SimpleInspectable
+{
+    /// The start location of this field from its parent.
+    pub start: usize,
+
+    /// The length of this field.
+    pub length: usize,
+
+    /// A string representation of the type this field is.
+    pub type_name: &'static str,
+
+    /// If this field has a name, the name of the field, otherwise `None`.
+    pub name: Option<String>,
+
+    /// The type of field this element is.
+    pub element_type: ElementType,
+
+    /// A hashmap that can contain arbitrary annotations to fields.
+    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
+    // annotations to be completely specified by the user.
+    pub attrs: std::collections::HashMap<&'static str, &'static str>,
+
+    pub elements: Vec<Box<dyn Inspectable>>,
+}
+impl Clone for SimpleInspectable
+{
+    fn clone(&self) -> SimpleInspectable
+    {
+        SimpleInspectable{
+            start: self.start,
+            length: self.length,
+            type_name: self.type_name,
+            name: self.name.clone(),
+            element_type: self.element_type,
+            attrs: self.attrs.clone(),
+            elements: self.elements.iter().map(|x|{x.clone()}).collect(),
+        }
+    }
+}
+
+impl Inspectable for SimpleInspectable
+{
+    fn nfields() -> Box<dyn Information> where Self: Sized
+    {
+        Box::new(SimpleInspectable{..Default::default()})
+    }
+    fn inspect(&self) -> Box<dyn Information>
+    {
+        // Box::new(self.clone_box())
+        self.clone_box().inspect()
+    }
+    fn clone_box(&self) -> Box<dyn Inspectable>
+    {
+        Box::new(self.clone())
+    }
+}
+
+
+impl Information for SimpleInspectable
+{
+    fn start(&self) -> usize
+    {
+        self.start
+    }
+    fn length(&self) -> usize
+    {
+        self.length
+    }
+    fn type_name(&self) -> &'static str
+    {
+        self.type_name
+    }
+
+    fn name(&self) -> Option<String>
+    {
+        self.name.clone()
+    }
+
+    fn element_type(&self) -> ElementType
+    {
+        self.element_type
+    }
+
+    /// Returns the elements this instance has.
+    fn elements(&self) -> Vec<Box<dyn Information>>
+    {
+        self.elements.iter().map(|x|{ x.inspect()}).collect() // yuck.
+    }
+
+    /// Returns the fields this thing could return.
+    // fn nfields() -> Vec<Box<dyn Information>> where Self:Sized
+    // {
+        // vec!()
+    // }
+
+    // fn inspect(&self) -> Box<dyn Inspectable>
+    // {
+        // Box::new(self.clone())
+    // }
+
+    // Below here are things from the old implementation, they may be redundant now.
+
+
+
+    /// A hashmap that can contain arbitrary annotations to fields.
+    fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str>
+    {
+        std::collections::HashMap::new()
+    }
+}
+
 
 /// Helper macro to create the implementations for the primitive scalar types.
 macro_rules! make_inspectable {
@@ -166,6 +359,28 @@ macro_rules! make_inspectable {
                     },
                     children: vec![],
                 }
+            }
+        }
+
+        impl Inspectable for $a
+        {
+            fn nfields() -> Box<dyn Information>
+            {
+                Box::new(SimpleInspectable{
+                    start: 0,
+                    length: std::mem::size_of::<$a>(),
+                    type_name: std::any::type_name::<$a>(),
+                    element_type: ElementType::Scalar,
+                    ..Default::default()
+                })
+            }
+            fn inspect(&self) -> Box<dyn Information>
+            {
+                <$a>::nfields()
+            }
+            fn clone_box(&self) -> Box<dyn Inspectable>
+            {
+                Box::new(self.clone())
             }
         }
     }
