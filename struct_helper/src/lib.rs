@@ -69,7 +69,7 @@ pub trait ToBytes {
 }
 
 pub trait FromBytes {
-    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
+    fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String>
     where
         Self: Sized;
 
@@ -79,18 +79,23 @@ pub trait FromBytes {
     /// Create an object from a byte buffer, this requires the type to be default constructible.
     fn from_le_bytes(src: &[u8]) -> Result<Self, String>
     where
-        Self: Sized,
+        Self: Sized + Default,
     {
-        Self::from_bytes(src, Endianness::Little)
+        let mut tmp: Self = Default::default();
+        tmp.from_bytes(src, Endianness::Little)?;
+        Ok(tmp)
     }
 
     /// Create an object from a byte buffer, this requires the type to be default constructible.
     fn from_be_bytes(src: &[u8]) -> Result<Self, String>
     where
-        Self: Sized,
+        Self: Sized + Default,
     {
-        Self::from_bytes(src, Endianness::Big)
+        let mut tmp: Self = Default::default();
+        tmp.from_bytes(src, Endianness::Big)?;
+        Ok(tmp)
     }
+
 }
 
 pub trait Inspectable: std::fmt::Debug {
@@ -327,7 +332,7 @@ macro_rules! make_wireable {
             }
         }
         impl FromBytes for $a {
-            fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
+            fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String>
             where
                 Self: Sized + Default,
             {
@@ -341,6 +346,7 @@ macro_rules! make_wireable {
                     ));
                 }
                 let (value_bytes, _rest) = src.split_at(len);
+                
 
                 // Why... isn't this match the same as the if below!?
                 // match endianness
@@ -349,9 +355,11 @@ macro_rules! make_wireable {
                 // Big => Ok(<$a>::from_be_bytes(bytes)),
                 // }
                 if endianness == Endianness::Big {
-                    return Ok(<$a>::from_be_bytes(value_bytes.try_into().unwrap()));
+                    *self = <$a>::from_be_bytes(value_bytes.try_into().unwrap());
+                    return Ok(len);
                 } else {
-                    return Ok(<$a>::from_le_bytes(value_bytes.try_into().unwrap()));
+                    *self = <$a>::from_le_bytes(value_bytes.try_into().unwrap());
+                    return Ok(len);
                 }
             }
         }

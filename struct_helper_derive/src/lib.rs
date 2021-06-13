@@ -171,7 +171,9 @@ fn impl_struct_helper_macro(
 
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident[i]  = < #type_ident as FromBytes >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        let mut tmp: #type_ident = Default::default(); // avoid borrowed reference on packed struct
+                                        tmp.from_bytes(&src[s..e], endianness).expect("yes");
+                                        self.#inner_field_ident[i] = tmp;
                                     }
                                 )));
                             }
@@ -215,7 +217,11 @@ fn impl_struct_helper_macro(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident  = < #type_ident as FromBytes >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        // again with the borrowed reference on packed structs :(
+                                        // Make local value, then copy.
+                                        let mut tmp: #type_ident = Default::default();
+                                        tmp.from_bytes(&src[s..e], endianness).expect("yes");
+                                        self.#inner_field_ident = tmp;
                                     }
                                 )));
                             }
@@ -321,16 +327,20 @@ fn impl_struct_helper_macro(
 
         impl struct_helper::FromBytes for #name
         {
-            fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String> where Self: Sized + Default
+            fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String>
+            where
+                Self: Sized + Default,
             {
-                let mut x: #name = Default::default();
-                if std::mem::size_of::<#name>() > src.len()
+                // let mut x: #name = Default::default();
+                let len = std::mem::size_of::<#name>();
+                if len > src.len()
                 {
-                    return Err(format!("Type is {} long, only {} provided.", std::mem::size_of::<#name>(), src.len()));
+                    return Err(format!("Type is {} long, only {} provided.", len, src.len()));
                 }
 
                 #(#fields_from_bytes);*
-                Ok(x)
+
+                Ok(len)
             }
         }
     };

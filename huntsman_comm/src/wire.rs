@@ -143,3 +143,118 @@ pub struct GetStorageStatistics {
     #[inspect(dissection_display = "dec")]
     pub free2: u32,
 }
+
+
+
+
+/// 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MacroAction
+{
+    KeyboardMake(u8),
+    KeyboardBreak(u8),
+    None
+}
+impl MacroAction
+{
+    const KEYBOARD_MAKE: u8 = 0x01;
+    const KEYBOARD_BREAK: u8 = 0x02;
+}
+
+impl FromBytes for MacroAction
+{
+    fn from_bytes(&mut self, src: &[u8], _endianness: Endianness) -> Result<usize, String> where Self: Sized
+    {
+        if src.len() < 2
+        {
+            return Err(format!("Not enough bytes to make a macro from, got {:?}", src));
+        }
+        let specification = src[0];
+        if specification == MacroAction::KEYBOARD_MAKE
+        {
+            *self = MacroAction::KeyboardMake(src[1]);
+            return Ok(2);
+        }
+        if specification == MacroAction::KEYBOARD_BREAK
+        {
+            *self = MacroAction::KeyboardBreak(src[1]);
+            return Ok(2);
+        }
+        Ok(1)
+    }
+}
+
+impl ToBytes for MacroAction
+{
+    fn to_bytes(&self, _endianness: Endianness) -> Result<Vec<u8>, String> {
+        let mut buff: Vec<u8> = Vec::new();
+        match self {
+            MacroAction::KeyboardMake(v) => {
+                buff.push(MacroAction::KEYBOARD_MAKE);
+                buff.push(*v);
+            },
+            MacroAction::KeyboardBreak(v) => {
+                buff.push(MacroAction::KEYBOARD_BREAK);
+                buff.push(*v);
+            },
+            z => panic!("Unhandled macro code {:?}", z),
+        }
+        Ok(buff)
+    }
+
+}
+impl Default for MacroAction
+{
+    fn default() -> MacroAction
+    {
+        MacroAction::None
+    }
+}
+
+// Inspectable, FromBytes, ToBytes, Default,   <- This doesn't work with the MacroEvents type.... :( 
+#[derive(Clone, Debug, Default)]
+pub struct MacroActions
+{
+    pub macro_id: u16,
+    pub _pad: u8,
+    pub byte_count: u32,
+    pub events: Vec<MacroAction>,
+}
+
+impl FromBytes for MacroActions
+{
+    fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String> {
+        // let mut tmp: MacroActions = Default::default();
+        self.macro_id.from_bytes(&src[0..2], endianness)?;
+        self.byte_count.from_bytes(&src[3..7], endianness)?;
+        self.events.clear();
+        let mut offset = 6+1;
+        while offset < src.len()
+        {
+            let mut action: MacroAction = Default::default();
+            offset += action.from_bytes(&src[offset..], endianness)?;
+            if action == MacroAction::None
+            {
+                return Ok(offset);
+            }
+            self.events.push(action);
+        }
+
+        Ok(offset)
+    }
+}
+
+impl ToBytes for MacroActions
+{
+    fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String> {
+        let mut buff: Vec<u8> = Vec::new();
+        buff.extend(self.macro_id.to_bytes(endianness)?);
+        buff.push(0);
+        buff.extend(self.byte_count.to_bytes(endianness)?);
+        for event in self.events.iter()
+        {
+            buff.extend(event.to_bytes(endianness)?);
+        }
+        Ok(buff)
+    }
+}
