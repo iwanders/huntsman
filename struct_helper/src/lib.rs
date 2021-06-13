@@ -155,13 +155,9 @@ pub trait Wireable
 
 pub trait Inspectable
 {
-    fn nfields() -> Box<dyn Information> where Self: Sized;
-    fn inspect(&self) -> Box<dyn Information>;  // inspect doubles as clone when called on information.
     fn clone_box(&self) -> Box<dyn Inspectable>;
-}
+    fn nfields() -> Vec<Box<dyn Inspectable>> where Self: Sized;
 
-pub trait Information : Inspectable
-{
     /// The start offset relative to the parent.
     fn start(&self) -> usize
     {
@@ -186,7 +182,7 @@ pub trait Information : Inspectable
     // as_any?
 
     /// Returns the elements this instance has.
-    fn elements(&self) -> Vec<Box<dyn Information>>
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
         vec!()
     }
@@ -250,6 +246,9 @@ pub struct SimpleInspectable
     pub attrs: std::collections::HashMap<&'static str, &'static str>,
 
     pub elements: Vec<Box<dyn Inspectable>>,
+
+    pub fields: Vec<Box<dyn Inspectable>>,
+
 }
 impl Clone for SimpleInspectable
 {
@@ -263,30 +262,25 @@ impl Clone for SimpleInspectable
             element_type: self.element_type,
             attrs: self.attrs.clone(),
             elements: self.elements.iter().map(|x|{x.clone()}).collect(),
+            fields: self.elements.iter().map(|x|{x.clone()}).collect(),
         }
     }
 }
 
+
+
 impl Inspectable for SimpleInspectable
 {
-    fn nfields() -> Box<dyn Information> where Self: Sized
+    fn nfields() -> Vec<Box<dyn Inspectable>> where Self: Sized
     {
-        Box::new(SimpleInspectable{..Default::default()})
+        vec!() // static method for a generic thing... aight.
     }
-    fn inspect(&self) -> Box<dyn Information>
-    {
-        // Box::new(self.clone_box())
-        self.clone_box().inspect()
-    }
+
     fn clone_box(&self) -> Box<dyn Inspectable>
     {
         Box::new(self.clone())
     }
-}
 
-
-impl Information for SimpleInspectable
-{
     fn start(&self) -> usize
     {
         self.start
@@ -311,9 +305,9 @@ impl Information for SimpleInspectable
     }
 
     /// Returns the elements this instance has.
-    fn elements(&self) -> Vec<Box<dyn Information>>
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
-        self.elements.iter().map(|x|{ x.inspect()}).collect() // yuck.
+        self.elements.iter().map(|x|{ x.clone_box()}).collect() // yuck.
     }
 
     /// Returns the fields this thing could return.
@@ -364,19 +358,34 @@ macro_rules! make_inspectable {
 
         impl Inspectable for $a
         {
-            fn nfields() -> Box<dyn Information>
+
+            // fn clone_box(&self) -> Box<dyn Inspectable>;
+            // fn nfields() -> Box<dyn Inspectable> where Self: Sized;
+
+            /// The start offset relative to the parent.
+            fn start(&self) -> usize
             {
-                Box::new(SimpleInspectable{
-                    start: 0,
-                    length: std::mem::size_of::<$a>(),
-                    type_name: std::any::type_name::<$a>(),
-                    element_type: ElementType::Scalar,
-                    ..Default::default()
-                })
+                0
             }
-            fn inspect(&self) -> Box<dyn Information>
+
+            /// The length of this element.
+            fn length(&self) -> usize
             {
-                <$a>::nfields()
+                std::mem::size_of::<$a>()
+            }
+
+            /// The type name, "u8", "u16", "MyStruct"...
+            fn type_name(&self) -> &'static str
+            {
+                std::any::type_name::<$a>()
+            }
+            fn element_type(&self) -> ElementType
+            {
+                ElementType::Scalar
+            }
+            fn nfields() -> Vec<Box<dyn Inspectable>>
+            {
+                vec!()
             }
             fn clone_box(&self) -> Box<dyn Inspectable>
             {

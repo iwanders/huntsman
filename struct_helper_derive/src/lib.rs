@@ -207,6 +207,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                         start: offset_of!(#root_struct, #inner_field_ident),
                                         length: std::mem::size_of::<#type_ident>(),
                                         type_name: #n,
+                                        name: Some((#name).to_string()),
                                         element_type: struct_helper::ElementType::Path,
                                         // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
                                         elements: vec!(),
@@ -277,26 +278,35 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
     let trait_inspectable = quote! {
         impl struct_helper::Inspectable for #name
         {
-            fn nfields() -> Box<dyn struct_helper::Information>
+            fn start(&self) -> usize
             {
-                Box::new(struct_helper::SimpleInspectable{
-                        start: 0,
-                        length: std::mem::size_of::<#name>(),
-                        type_name: stringify!(#name),
-                        element_type: ElementType::Scalar,
-                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
-                        elements: vec!(#(#inspectable_fields),*),
-                        ..Default::default()
-                    })
+                0
             }
-            fn inspect(&self) -> Box<dyn struct_helper::Information>
+            fn length(&self) -> usize
+            {
+                std::mem::size_of::<#name>()
+            }
+            fn type_name(&self) -> &'static str
+            {
+                stringify!(#name)
+            }
+            fn element_type(&self) -> struct_helper::ElementType
+            {
+                struct_helper::ElementType::Other
+            }
+            fn nfields() -> Vec<Box<dyn Inspectable>>
+            {
+                vec!(#(#inspectable_fields),*)
+            }
+            fn elements(&self) -> Vec<Box<dyn Inspectable>>
             {
                 <#name>::nfields()
             }
-            fn clone_box(&self) -> Box<dyn Inspectable>
+            fn clone_box(&self) -> Box<dyn struct_helper::Inspectable>
             {
                 Box::new(self.clone())
             }
+
         };
     };
 
