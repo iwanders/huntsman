@@ -120,6 +120,7 @@ pub fn main() -> Result<(), String> {
                         .help("The state to set it to."),
                 ),
         )
+        .subcommand(SubCommand::with_name("serial_number").about("Retrieves the serial number"))
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
         .subcommand(SubCommand::with_name("dev_dump_keymaps").about("Dumps all keymappings."))
         .subcommand(add_colors!(SubCommand::with_name("set_color")
@@ -207,6 +208,9 @@ pub fn main() -> Result<(), String> {
 
     if let Some(_matches) = matches.subcommand_matches("dev_dump_keymaps") {
         h.dev_dump_keymaps()?;
+    }
+    if let Some(_matches) = matches.subcommand_matches("serial_number") {
+        h.get_serial_number()?;
     }
 
     if let Some(matches) = matches.subcommand_matches("brightness") {

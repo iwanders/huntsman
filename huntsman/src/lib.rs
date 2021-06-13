@@ -1,6 +1,7 @@
 //! This crate provides an object to interface with the keyboard, it also provides a command line
 //! utility that makes use of this object.
 
+
 mod hid_hal;
 use huntsman_comm::RGB;
 
@@ -105,6 +106,14 @@ impl Huntsman {
         self.set_print_retrieve(true);
         let cmd = huntsman_comm::dev_run_cmd();
         return self.set_command_box(&cmd);
+    }
+
+    /// Retrieve the serial number
+    pub fn get_serial_number(&mut self) -> Result<(), String> {
+        self.set_print_comm(true);
+        self.set_print_retrieve(true);
+        let cmd : huntsman_comm::GetSerialNumber = Default::default();
+        return self.set_command(&cmd);
     }
 
     /// Dump keymappings.

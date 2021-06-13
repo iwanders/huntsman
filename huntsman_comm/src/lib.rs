@@ -54,6 +54,26 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 }
 
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Retrieves the serial number
+pub struct GetSerialNumber {}
+impl GetSerialNumber {
+    pub const CMD: Cmd = Cmd {
+        major: 0x00,
+        minor: 0x82,
+    };
+}
+impl Command for GetSerialNumber {
+    fn register(&self) -> Cmd {
+        return GetSerialNumber::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        vec![0; 0x16]
+    }
+}
+
+
 // 1, short, 2 medium, 3 long, 3 values matches slider in ui.
 #[repr(u8)]
 /// Duration, short, medium or long, like the slider in the ui.
@@ -421,6 +441,28 @@ impl Command for SetKeyOverride {
         v
     }
 }
+
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the memory storage statistics.
+pub struct GetActiveProfiles {}
+impl GetActiveProfiles {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x81,
+    };
+}
+impl Command for GetActiveProfiles {
+    fn register(&self) -> Cmd {
+        return GetActiveProfiles::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        vec![0; 0x41]
+    }
+}
+
+
+
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
 pub struct GetStorageStatistics {}
@@ -461,15 +503,22 @@ impl Command for ArbitraryCommand {
     }
 }
 
-pub fn dev_run_cmd() -> Box<dyn Command>
+fn remove_macro()
 {
+    // for macro id 3b:02, returns 02 status if existed, 03 if not.
     Box::new(ArbitraryCommand{
         register: Cmd {//06:03:3b:02
             major: 0x06,
             minor: 0x03,
         },
-        payload: vec!(0x3b, 0x03)
-    })
+        payload: vec!(0x3b, 0x02)
+    });
+}
+
+
+pub fn dev_run_cmd() -> Box<dyn Command>
+{
+    Box::new(GetActiveProfiles{..Default::default()})
 }
 
 /// Helper function for the dissector that provides the fields for the provided commands.
@@ -800,6 +849,15 @@ mod tests {
         let remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);
         // cyan
         // This profile deletion supports well the concept of the first payload byte being something of a profile indicator.
+
+        // 0x0502 adds a profile
+        // 0x0508 adds the profile metadata / guid stuffs
+        // 0x0588 u8 u16:  u8 profile id, u16 page.
+        // 
+        let potential_list_profiles = parse_wireshark_truncated("00:1f:00:00:00:41:05:81", 0xc5);
+        
+
+        // Storage metric retrieval before write goes through 0x068e
     }
 
     #[test]
@@ -834,6 +892,8 @@ mod tests {
         // 0x06, 0x03; delete macro!
         let has_macro = parse_wireshark_truncated("00:1f:00:00:00:02:06:03:3b:02:00", 0x3e);
         // returns status 02 if exists, 03 if it doesnt
+
+        // 0x06, 0x08; add macro (by id? Or memory address??)
 
         // 00:1f:00:00:00:06:06:08:3b:02:00:00:00:04:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:35:00
     }
