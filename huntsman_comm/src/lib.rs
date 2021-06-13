@@ -54,7 +54,6 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 }
 
-
 #[derive(Default, Copy, Clone, Debug)]
 /// Retrieves the serial number
 pub struct GetSerialNumber {}
@@ -72,7 +71,6 @@ impl Command for GetSerialNumber {
         vec![0; 0x16]
     }
 }
-
 
 // 1, short, 2 medium, 3 long, 3 values matches slider in ui.
 #[repr(u8)]
@@ -442,7 +440,6 @@ impl Command for SetKeyOverride {
     }
 }
 
-
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
 pub struct GetActiveProfiles {}
@@ -460,8 +457,6 @@ impl Command for GetActiveProfiles {
         vec![0; 0x41]
     }
 }
-
-
 
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
@@ -486,7 +481,6 @@ impl Command for GetStorageStatistics {
     }
 }
 
-
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
@@ -503,22 +497,22 @@ impl Command for ArbitraryCommand {
     }
 }
 
-fn remove_macro()
-{
+fn remove_macro() {
     // for macro id 3b:02, returns 02 status if existed, 03 if not.
-    Box::new(ArbitraryCommand{
-        register: Cmd {//06:03:3b:02
+    Box::new(ArbitraryCommand {
+        register: Cmd {
+            //06:03:3b:02
             major: 0x06,
             minor: 0x03,
         },
-        payload: vec!(0x3b, 0x02)
+        payload: vec![0x3b, 0x02],
     });
 }
 
-
-pub fn dev_run_cmd() -> Box<dyn Command>
-{
-    Box::new(GetActiveProfiles{..Default::default()})
+pub fn dev_run_cmd() -> Box<dyn Command> {
+    Box::new(GetActiveProfiles {
+        ..Default::default()
+    })
 }
 
 /// Helper function for the dissector that provides the fields for the provided commands.
@@ -733,7 +727,6 @@ mod tests {
         // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_tur
         // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00:00
 
-
         // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:02:02:40:04:00:00:00:00
 
@@ -754,7 +747,6 @@ mod tests {
         // 2021_06_05_23_26_set_right_ctrl_button_5.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00
 
-
         // 2021_06_05_23_26_set_right_ctrl_dbl_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00
         // 2021_06_05_23_27_set_right_ctrl_scroll_down.pcapng
@@ -763,18 +755,18 @@ mod tests {
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:09:00:00:00:00:00
         // 2021_06_05_23_27_set_right_ctrl_scroll_left_synapse.pcapng  <- disable
         // 00:1f:00:00:00:0a:02:0d:01:40:00:00:00:00:00:00:00:00:00
-        // 
+        //
 
         // index[2] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[BUTTON] button[5]
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00:00:00:00:00:41:00
-        // Not too sure what that makecode means... 
+        // Not too sure what that makecode means...
 
         // Doubleclick;
         //  [Done] index[2] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[BUTTON] button[13]
         // 02:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00:4f:00
-        //                                  ^^ 0b instead of 01!? Maybe... 
+        //                                  ^^ 0b instead of 01!? Maybe...
         //                                  0b for Button Page (0x09)? 01 is Button 1, Primary Button. Used for object selecting, dragging, and double click activation.
-        
+
         // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
         // [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[SINGLEKEYTURBO]
         // 00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00:00:3b:00
@@ -802,11 +794,9 @@ mod tests {
         // 00:1f:00:00:00:0a:02:0d:01:40:00:05:02:3b:68:00:00:00:00
         //                                  ^^ Toggle?
 
-
         // 2021_06_05_23_36_set_right_ctrl_macro_shift_key holds macro addition.
         // 00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:01:00:16:00
         // [profile data event] [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[MACRO] guid[B13069EB-E654-49E2-8B6C-204137CC4786]
-        
 
         // 2021_06_05_23_50_set_right_ctrl_volume_mute
         // [Done] index[0] input type[KEYBOARD] flag[2] makecode[29] modifier[0x0] mapping type[MULTIMEDIA] action type[5]
@@ -853,9 +843,8 @@ mod tests {
         // 0x0502 adds a profile
         // 0x0508 adds the profile metadata / guid stuffs
         // 0x0588 u8 u16:  u8 profile id, u16 page.
-        // 
+        //
         let potential_list_profiles = parse_wireshark_truncated("00:1f:00:00:00:41:05:81", 0xc5);
-        
 
         // Storage metric retrieval before write goes through 0x068e
     }
@@ -887,7 +876,6 @@ mod tests {
         // let respons2 = parse_wireshark_truncated("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:07:b2:08:");
         // CRSy3_OnboardMem2::GetData: storage: max[102368], free[9075328], percent[8865.40]
         // Aight.... lets assume logging and the current parsing is broken.
-
 
         // 0x06, 0x03; delete macro!
         let has_macro = parse_wireshark_truncated("00:1f:00:00:00:02:06:03:3b:02:00", 0x3e);

@@ -1,7 +1,6 @@
 //! This crate provides an object to interface with the keyboard, it also provides a command line
 //! utility that makes use of this object.
 
-
 mod hid_hal;
 use huntsman_comm::RGB;
 
@@ -43,15 +42,28 @@ impl Huntsman {
         let v = command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", command, v);
-            println!("{}", (v.clone()).iter().map(|x| format!("{:0>2x}", x)).collect::<Vec<String>>().join(":"));
+            println!(
+                "{}",
+                (v.clone())
+                    .iter()
+                    .map(|x| format!("{:0>2x}", x))
+                    .collect::<Vec<String>>()
+                    .join(":")
+            );
         }
         let r = self.hal.control(&v.as_slice());
         if self.print_retrieve && r.is_ok() {
             let result = self.hal.get_report();
             println!("<- {:?}", result);
-            if result.is_ok()
-            {
-                println!("{}", (result.clone().unwrap()).iter().map(|x| format!("{:0>2x}", x)).collect::<Vec<String>>().join(":"));
+            if result.is_ok() {
+                println!(
+                    "{}",
+                    (result.clone().unwrap())
+                        .iter()
+                        .map(|x| format!("{:0>2x}", x))
+                        .collect::<Vec<String>>()
+                        .join(":")
+                );
             }
         }
         return r;
@@ -112,24 +124,22 @@ impl Huntsman {
     pub fn get_serial_number(&mut self) -> Result<(), String> {
         self.set_print_comm(true);
         self.set_print_retrieve(true);
-        let cmd : huntsman_comm::GetSerialNumber = Default::default();
+        let cmd: huntsman_comm::GetSerialNumber = Default::default();
         return self.set_command(&cmd);
     }
 
     /// Dump keymappings.
-    pub fn dev_dump_keymaps(&mut self) -> Result<(), String>
-    {
+    pub fn dev_dump_keymaps(&mut self) -> Result<(), String> {
         self.set_print_comm(true);
         self.set_print_retrieve(true);
-        for i in 0..=255
-        {
+        for i in 0..=255 {
             println!("Retrieving keymapping for key {} (0x{:0>2x})", i, i);
-            let cmd = huntsman_comm::ArbitraryCommand{
+            let cmd = huntsman_comm::ArbitraryCommand {
                 register: huntsman_comm::Cmd {
                     major: 0x02,
                     minor: 0x8D,
                 },
-                payload: vec!(0x01, i)
+                payload: vec![0x01, i],
             };
             self.set_command(&cmd)?;
             println!();

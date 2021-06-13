@@ -24,16 +24,10 @@ fn test_starts() {
     let bound = Pancakes::nfields();
     println!("{:?}", bound);
 
-    assert_eq!(
-        offset_of!(Pancakes, first_char),
-        bound[0].start()
-    );
+    assert_eq!(offset_of!(Pancakes, first_char), bound[0].start());
     assert_eq!(offset_of!(Pancakes, an_uint), bound[1].start());
     assert_eq!(offset_of!(Pancakes, a_float), bound[2].start());
-    assert_eq!(
-        offset_of!(Pancakes, array_three_chars),
-        bound[3].start()
-    );
+    assert_eq!(offset_of!(Pancakes, array_three_chars), bound[3].start());
     assert_eq!(offset_of!(Pancakes, struct_z), bound[4].start());
     assert_eq!(
         offset_of!(Pancakes, array_with_three_structs),
@@ -107,33 +101,21 @@ fn test_roundtrips_ranges_and_most_things() {
 
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(
-            for_lookup[0]
-                .name()
-                .expect("Should have a name"),
+            for_lookup[0].name().expect("Should have a name"),
             "first_char"
         );
         raw_bytes[for_lookup[0].start()] = char_value; // first byte.
-                                                                   // 3 bytes padding.
+                                                       // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
         let int_bytes = int_value.to_le_bytes();
-        assert_eq!(
-            for_lookup[1]
-                .name()
-                .expect("Should have a name"),
-            "an_uint"
-        );
+        assert_eq!(for_lookup[1].name().expect("Should have a name"), "an_uint");
         for i in 0..for_lookup[1].length() {
             raw_bytes[for_lookup[1].start() + i] = int_bytes[i];
         }
 
         let float_bytes = float_value.to_le_bytes();
-        assert_eq!(
-            for_lookup[2]
-                .name()
-                .expect("Should have a name"),
-            "a_float"
-        );
+        assert_eq!(for_lookup[2].name().expect("Should have a name"), "a_float");
         for i in 0..for_lookup[2].length() {
             raw_bytes[for_lookup[2].start() + i] = float_bytes[i];
         }
@@ -141,9 +123,7 @@ fn test_roundtrips_ranges_and_most_things() {
         // Now we get to the realm of nesting...
         let array_offset = for_lookup[3].start();
         assert_eq!(
-            for_lookup[3]
-                .name()
-                .expect("Should have a name"),
+            for_lookup[3].name().expect("Should have a name"),
             "array_three_chars"
         );
         for i in 0..for_lookup[3].elements().len() {
@@ -153,9 +133,7 @@ fn test_roundtrips_ranges_and_most_things() {
 
         let float_z_bytes = float_z_value.to_le_bytes();
         assert_eq!(
-            for_lookup[4]
-                .name()
-                .expect("Should have a name"),
+            for_lookup[4].name().expect("Should have a name"),
             "struct_z"
         );
         for i in 0..for_lookup[4].length() {
@@ -163,18 +141,14 @@ fn test_roundtrips_ranges_and_most_things() {
         }
 
         assert_eq!(
-            for_lookup[5]
-                .name()
-                .expect("Should have a name"),
+            for_lookup[5].name().expect("Should have a name"),
             "array_with_three_structs"
         );
         let float_array = [float_1_value, float_2_value, float_3_value];
         for i in 0..for_lookup[5].elements().len() {
             let b = float_array[i].to_le_bytes();
             for j in 0..for_lookup[5].elements()[i].length() {
-                raw_bytes[for_lookup[5].start()
-                    + for_lookup[5].elements()[i].start()
-                    + j] = b[j];
+                raw_bytes[for_lookup[5].start() + for_lookup[5].elements()[i].start() + j] = b[j];
             }
         }
     }
@@ -195,8 +169,6 @@ fn test_roundtrips_ranges_and_most_things() {
 
     // If we do a roundtrip, this should work;
     {
-        let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-
         let arr = expected_result.to_le_bytes().expect("Should succeed");
         println!("arr: {:?}", arr);
 
@@ -239,17 +211,13 @@ fn test_big_endianness() {
 }
 
 // Let us test a dynamic length type;
-struct VariableLengthStruct
-{
+struct VariableLengthStruct {
     data: Vec<u8>,
 }
-impl ToBytes for VariableLengthStruct
-{
-    fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>
-    {
-        let mut buff : Vec<u8> = Vec::new();
-        for z in 0..self.data.len()
-        {
+impl ToBytes for VariableLengthStruct {
+    fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String> {
+        let mut buff: Vec<u8> = Vec::new();
+        for z in 0..self.data.len() {
             buff.extend(self.data[z].to_bytes(endianness)?)
         }
         Ok(buff)
@@ -257,32 +225,28 @@ impl ToBytes for VariableLengthStruct
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum TripleEnum
-{
+enum TripleEnum {
     One,
     Two,
     Three,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct Thing
-{
+struct Thing {
     data: Vec<TripleEnum>,
 }
 
-impl FromBytes for Thing
-{
-    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Thing, String>
-    {
-        let mut tmp : Thing = Thing{data:vec!()};
-        for z in 0..src.len()
-        {
-            let v = match src[z]
-            {
+impl FromBytes for Thing {
+    fn from_bytes(src: &[u8], _endianness: Endianness) -> Result<Thing, String> {
+        let mut tmp: Thing = Thing { data: vec![] };
+        for z in 0..src.len() {
+            let v = match src[z] {
                 1 => TripleEnum::One,
                 2 => TripleEnum::Two,
                 3 => TripleEnum::Three,
-                _ => {return Err("Nope".to_string());},
+                _ => {
+                    return Err("Nope".to_string());
+                }
             };
             tmp.data.push(v)
         }
@@ -293,7 +257,9 @@ impl FromBytes for Thing
 #[test]
 fn test_variable_length() {
     // let mut arr: [u8; 20] = [0; 20];
-    let t = VariableLengthStruct{data: vec!(1, 2, 3, 4)};
+    let t = VariableLengthStruct {
+        data: vec![1, 2, 3, 4],
+    };
     let r = t.to_le_bytes().expect("Should succeed");
     println!("{:?}", r);
     assert_eq!(r[0], 1);
@@ -301,9 +267,8 @@ fn test_variable_length() {
     assert_eq!(Thing::from_bytes(&r[..], Endianness::Little).is_err(), true);
     let one_less = &r[0..3];
     let res = Thing::from_bytes(&one_less, Endianness::Little).expect("Should be ok now");
-    let expected = Thing{data:vec!(TripleEnum::One, TripleEnum::Two, TripleEnum::Three)};
+    let expected = Thing {
+        data: vec![TripleEnum::One, TripleEnum::Two, TripleEnum::Three],
+    };
     assert_eq!(expected, res);
-
 }
-
-

@@ -16,9 +16,6 @@ fn main() -> Result<(), String> {
         an_uint: 0xDEADBEEF,
         a_float: std::f32::consts::PI,
     };
-
-    let mut buffer: [u8; std::mem::size_of::<Example>()] = [0; std::mem::size_of::<Example>()];
-
     // Convert to bytes;
     let mut buffer = v.to_le_bytes()?;
     println!("v: {:?}", v);

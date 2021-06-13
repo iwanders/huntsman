@@ -24,10 +24,8 @@ pub enum ElementType {
     Other,
 }
 
-pub trait Inspectable
-{
-    fn type_name(&self) -> &'static str
-    {
+pub trait Inspectable {
+    fn type_name(&self) -> &'static str {
         "no type"
     }
     // fn name(&self) -> Option<&'static str>;
@@ -37,20 +35,18 @@ pub trait Inspectable
     fn offset(&self) -> usize;
     fn length(&self) -> usize;
 
-
-    fn as_any(&self) -> Option<Box<dyn std::any::Any>>
-    {
+    fn as_any(&self) -> Option<Box<dyn std::any::Any>> {
         None
     }
 
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
-    {
-        vec!()
+    fn elements(&self) -> Vec<Box<dyn Inspectable>> {
+        vec![]
     }
 
-
     // The static fields:
-    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    fn fields() -> &'static [&'static dyn Inspectable]
+    where
+        Self: Sized,
     {
         return &[];
     }
@@ -58,37 +54,37 @@ pub trait Inspectable
     // fn clone_box(&self) -> Box<dyn Inspectable>;
 }
 
-pub trait Wireable
-{
+pub trait Wireable {
     // Convert from and two bytes.
 }
 
 #[derive(Default, Clone, Debug)]
-struct PrimitiveHelper
-{
+struct PrimitiveHelper {
     type_name: &'static str,
     start: usize,
     length: usize,
 }
 
-impl Inspectable for PrimitiveHelper
-{
-    fn type_name(&self) -> &'static str
-    {
+impl Inspectable for PrimitiveHelper {
+    fn type_name(&self) -> &'static str {
         self.type_name
     }
-    fn offset(&self) -> usize
-    {
+    fn offset(&self) -> usize {
         self.start
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         self.length
     }
 
-    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    fn fields() -> &'static [&'static dyn Inspectable]
+    where
+        Self: Sized,
     {
-        const A: PrimitiveHelper = PrimitiveHelper{start: 0, length: 0, type_name: "primitive_helper"};
+        const A: PrimitiveHelper = PrimitiveHelper {
+            start: 0,
+            length: 0,
+            type_name: "primitive_helper",
+        };
         return &[&A];
     }
 }
@@ -96,15 +92,15 @@ impl Inspectable for PrimitiveHelper
 impl std::fmt::Debug for dyn Inspectable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut opener = f.debug_struct(self.type_name());
-        for k in self.elements()
-        {
-            opener.field(k.type_name(), &format_args!("{}  #{}@{}", k.type_name(),  k.length(), k.offset()));
+        for k in self.elements() {
+            opener.field(
+                k.type_name(),
+                &format_args!("{}  #{}@{}", k.type_name(), k.length(), k.offset()),
+            );
         }
         opener.finish()
     }
 }
-
-
 
 #[derive(Debug, Default, Copy, Clone)]
 #[repr(C)]
@@ -112,76 +108,55 @@ struct Z {
     f: u8,
 }
 
-
-
-impl Inspectable for u8
-{
-    fn type_name(&self) -> &'static str
-    {
+impl Inspectable for u8 {
+    fn type_name(&self) -> &'static str {
         "u8"
     }
-    fn offset(&self) -> usize
-    {
+    fn offset(&self) -> usize {
         0
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         std::mem::size_of::<u8>()
     }
-
 }
 
-impl Inspectable for u16
-{
-    fn type_name(&self) -> &'static str
-    {
+impl Inspectable for u16 {
+    fn type_name(&self) -> &'static str {
         "u16"
     }
-    fn offset(&self) -> usize
-    {
+    fn offset(&self) -> usize {
         0
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         std::mem::size_of::<u16>()
     }
 }
-impl Inspectable for u32
-{
-    fn type_name(&self) -> &'static str
-    {
+impl Inspectable for u32 {
+    fn type_name(&self) -> &'static str {
         "u32"
     }
-    fn offset(&self) -> usize
-    {
+    fn offset(&self) -> usize {
         0
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         std::mem::size_of::<u32>()
     }
 }
 
-impl Inspectable for Z
-{
-    fn type_name(&self) -> &'static str
-    {
+impl Inspectable for Z {
+    fn type_name(&self) -> &'static str {
         "ZZZZ"
     }
-    fn offset(&self) -> usize
-    {
+    fn offset(&self) -> usize {
         0
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         std::mem::size_of::<u8>()
     }
 
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
-    {
-        vec!(Box::new(self.f))
+    fn elements(&self) -> Vec<Box<dyn Inspectable>> {
+        vec![Box::new(self.f)]
     }
-
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -192,43 +167,45 @@ struct Pancakes {
     x: Z,
 }
 
-
-impl Inspectable for Pancakes
-{
-    fn offset(&self) -> usize
-    {
+impl Inspectable for Pancakes {
+    fn offset(&self) -> usize {
         0
     }
-    fn length(&self) -> usize
-    {
+    fn length(&self) -> usize {
         std::mem::size_of::<Pancakes>()
     }
 
-    fn elements(&self) -> Vec<Box<dyn Inspectable>>
-    {
-        vec!(Box::new(self.first_char),
+    fn elements(&self) -> Vec<Box<dyn Inspectable>> {
+        vec![
+            Box::new(self.first_char),
             Box::new(self.an_uint),
-            Box::new(self.x))
+            Box::new(self.x),
+        ]
     }
 
-    fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
+    fn fields() -> &'static [&'static dyn Inspectable]
+    where
+        Self: Sized,
     {
         // offsetoff in const context requires nightly, hardcoded here for now.
-        const A: PrimitiveHelper = PrimitiveHelper{start: 0, length: std::mem::size_of::<u16>(), type_name: "first_char"};
-        const B: PrimitiveHelper = PrimitiveHelper{start: 2, length: std::mem::size_of::<u32>(), type_name: "an_uint"};
-        const C: Z = Z{f:0}; // :|
+        const A: PrimitiveHelper = PrimitiveHelper {
+            start: 0,
+            length: std::mem::size_of::<u16>(),
+            type_name: "first_char",
+        };
+        const B: PrimitiveHelper = PrimitiveHelper {
+            start: 2,
+            length: std::mem::size_of::<u32>(),
+            type_name: "an_uint",
+        };
+        const C: Z = Z { f: 0 }; // :|
         return &[&A, &B, &C];
     }
 }
 
-
 #[test]
 fn test_starts() {
-    let mut stack: Pancakes = Default::default();
-
-    let z : Box<dyn Inspectable> = Box::new(stack);
-
-
+    let stack: Pancakes = Default::default();
 
     println!("Offset: {}", stack.offset());
     println!("length: {}", stack.length());
@@ -239,8 +216,8 @@ fn test_starts() {
     // let bound = stack.fields_as_mut();
 
     // assert_eq!(
-        // offset_of!(Pancakes, first_char),
-        // bound.elements[0].info.start
+    // offset_of!(Pancakes, first_char),
+    // bound.elements[0].info.start
     // );
     // assert_eq!(offset_of!(Pancakes, an_uint), bound.elements[1].info.start);
 }
