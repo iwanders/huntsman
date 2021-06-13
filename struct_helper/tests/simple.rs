@@ -246,3 +246,36 @@ fn test_big_endianness() {
     let w = StructWithInteger::from_be_bytes(&arr).expect("Should succeed");
     assert_eq!(w.int, v.int);
 }
+
+// Let us test a dynamic length type;
+struct VariableLengthStruct
+{
+    data: Vec<u8>,
+}
+impl Wireable for VariableLengthStruct
+{
+    fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
+    {
+        for z in 0..self.data.len()
+        {
+            self.data[z].to_bytes(&mut dest[z..], endianness)?
+        }
+        Ok(())
+    }
+    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
+    {
+        Err("Nope".to_string())
+    }
+}
+
+
+#[test]
+fn test_variable_length() {
+    let mut arr: [u8; 20] = [0; 20];
+    let t = VariableLengthStruct{data: vec!(1, 2,3,4)};
+    let r = t.to_le_bytes(&mut arr);
+    println!("{:?}", r);
+    assert_eq!(arr[0], 1);
+}
+
+

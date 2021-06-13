@@ -422,7 +422,7 @@ macro_rules! make_wireable {
                 } else {
                     bytes = (*self as $a).to_le_bytes();
                 }
-                if bytes.len() != dest.len() {
+                if bytes.len() > dest.len() {
                     return Err(format!(
                         "Type is {} long, doesn't fit into {} provided.",
                         bytes.len(),
@@ -439,7 +439,7 @@ macro_rules! make_wireable {
             {
                 use std::convert::TryInto;
                 let len = std::mem::size_of::<$a>();
-                if len != src.len() {
+                if len > src.len() {
                     return Err(format!(
                         "Type is {} long, doesn't fit into {} provided.",
                         len,
