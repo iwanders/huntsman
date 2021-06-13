@@ -867,17 +867,38 @@ mod tests {
         // 00:1f:00:00:00:06:06:08:3b:02:00:00:00:04:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:35:00
     }
 
-    
     #[test]
     fn test_macro_events() {
         // This is the actual macro payload, not the metadata.
-        let shift_b = parse_wireshark_truncated("00:1f:00:00:00:0f:06:09:3b:68:00:00:00:00:08:01:e1:01:05:02:05:02:e1", 0x5b);
-        let cmd = wire::MacroActions::from_be_bytes(&shift_b[PAYLOAD_START..]).expect("Should pass");
+        let shift_b = parse_wireshark_truncated(
+            "00:1f:00:00:00:0f:06:09:3b:68:00:00:00:00:08:01:e1:01:05:02:05:02:e1",
+            0x5b,
+        );
+        let cmd =
+            wire::MacroActions::from_be_bytes(&shift_b[PAYLOAD_START..]).expect("Should pass");
         println!("{:?}", cmd);
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 15);
         println!("{:?}", and_back);
-        assert_eq!(&shift_b[PAYLOAD_START..PAYLOAD_START+and_back.len()], and_back);
+        assert_eq!(
+            &shift_b[PAYLOAD_START..PAYLOAD_START + and_back.len()],
+            and_back
+        );
+
+        let delay_b_a = parse_wireshark_truncated(
+            "00:1f:00:00:00:12:06:09:3b:68:00:00:00:00:0b:12:03:e8:01:05:02:05:01:04:02:04",
+            0xbc,
+        );
+        let cmd =
+            wire::MacroActions::from_be_bytes(&delay_b_a[PAYLOAD_START..]).expect("Should pass");
+        println!("{:?}", cmd);
+        let and_back = cmd.to_be_bytes().expect("Success");
+        assert_eq!(and_back.len(), 18);
+        println!("{:?}", and_back);
+        assert_eq!(
+            &delay_b_a[PAYLOAD_START..PAYLOAD_START + and_back.len()],
+            and_back
+        );
     }
 }
 

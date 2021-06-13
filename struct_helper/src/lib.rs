@@ -95,7 +95,6 @@ pub trait FromBytes {
         tmp.from_bytes(src, Endianness::Big)?;
         Ok(tmp)
     }
-
 }
 
 pub trait Inspectable: std::fmt::Debug {
@@ -346,7 +345,6 @@ macro_rules! make_wireable {
                     ));
                 }
                 let (value_bytes, _rest) = src.split_at(len);
-                
 
                 // Why... isn't this match the same as the if below!?
                 // match endianness
