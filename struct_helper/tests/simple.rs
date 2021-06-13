@@ -187,10 +187,7 @@ fn test_roundtrips_ranges_and_most_things() {
 
     // Also check the to_le_bytes operation for the pancake struct.
     {
-        let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
-        expected_result
-            .to_le_bytes(&mut arr)
-            .expect("Should succeed");
+        let arr = expected_result.to_le_bytes().expect("Should succeed");
 
         // The expected result byte array should be identical to the array we just wrote.
         assert_eq!(struct_to_bytes(&expected_result), arr);
@@ -200,9 +197,7 @@ fn test_roundtrips_ranges_and_most_things() {
     {
         let mut arr: [u8; std::mem::size_of::<Pancakes>()] = [0; std::mem::size_of::<Pancakes>()];
 
-        expected_result
-            .to_le_bytes(&mut arr)
-            .expect("Should succeed");
+        let arr = expected_result.to_le_bytes().expect("Should succeed");
         println!("arr: {:?}", arr);
 
         // The expected result byte array should be identical to the array we just wrote.
@@ -226,10 +221,8 @@ struct StructWithInteger {
 #[test]
 fn test_little_endianness() {
     let v = StructWithInteger { int: 0x11223344 };
-    let mut arr: [u8; std::mem::size_of::<StructWithInteger>()] =
-        [0; std::mem::size_of::<StructWithInteger>()];
     let little_endian_expected: [u8; 4] = [68, 51, 34, 17]; // [i for i in (struct.pack("<I", 0x11223344))]
-    v.to_le_bytes(&mut arr).expect("Should succeed");
+    let arr = v.to_le_bytes().expect("Should succeed");
     assert_eq!(&arr, &little_endian_expected);
     let w = StructWithInteger::from_le_bytes(&arr).expect("Should succeed");
     assert_eq!(w.int, v.int);
@@ -238,10 +231,8 @@ fn test_little_endianness() {
 #[test]
 fn test_big_endianness() {
     let v = StructWithInteger { int: 0x11223344 };
-    let mut arr: [u8; std::mem::size_of::<StructWithInteger>()] =
-        [0; std::mem::size_of::<StructWithInteger>()];
     let big_endian_expected: [u8; 4] = [17, 34, 51, 68]; // [i for i in (struct.pack(">I", 0x11223344))]
-    v.to_be_bytes(&mut arr).expect("Should succeed");
+    let arr = v.to_be_bytes().expect("Should succeed");
     assert_eq!(&arr, &big_endian_expected);
     let w = StructWithInteger::from_be_bytes(&arr).expect("Should succeed");
     assert_eq!(w.int, v.int);
@@ -254,24 +245,25 @@ struct VariableLengthStruct
 }
 impl ToBytes for VariableLengthStruct
 {
-    fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
+    fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>
     {
+        let mut buff : Vec<u8> = Vec::new();
         for z in 0..self.data.len()
         {
-            self.data[z].to_bytes(&mut dest[z..], endianness)?
+            buff.extend(self.data[z].to_bytes(endianness)?)
         }
-        Ok(())
+        Ok(buff)
     }
 }
 
 
 #[test]
 fn test_variable_length() {
-    let mut arr: [u8; 20] = [0; 20];
+    // let mut arr: [u8; 20] = [0; 20];
     let t = VariableLengthStruct{data: vec!(1, 2,3,4)};
-    let r = t.to_le_bytes(&mut arr);
+    let r = t.to_le_bytes().expect("Should succeed");
     println!("{:?}", r);
-    assert_eq!(arr[0], 1);
+    assert_eq!(r[0], 1);
 }
 
 

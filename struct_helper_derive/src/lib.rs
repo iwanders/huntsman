@@ -179,10 +179,15 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                     for i in 0..#arr_len
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
-                                        let e = std::mem::size_of::<#type_ident>() + s;
+                                        // let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident[i];
-                                        ToBytes::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        let buff = ToBytes::to_bytes(&tmp, endianness)?;
+                                        for i in 0..buff.len()
+                                        {
+                                            // dest[s..e] = [..];
+                                            dest[s + i] = buff[i];
+                                        }
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
@@ -240,7 +245,12 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident;
-                                        ToBytes::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        let buff = ToBytes::to_bytes(&tmp, endianness)?;
+                                        // dest[s..e] = buff[..];
+                                        for i in 0..buff.len()
+                                        {
+                                            dest[s + i] = buff[i];
+                                        }
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
@@ -350,15 +360,16 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
     let trait_to_bytes = quote! {
         impl struct_helper::ToBytes for #name
         {
-            fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
+            fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>
             {
+                let mut dest : [u8; std::mem::size_of::<#name>()] = [0; std::mem::size_of::<#name>()];
                 // Todo; restore checking here... 
                 // if (#name::fields()).info.length > dest.len()
                 // {
                     // return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
                 // }
                 #(#fields_to_bytes);*
-                Ok(())
+                Ok(dest.to_vec())
             }
         }};
 

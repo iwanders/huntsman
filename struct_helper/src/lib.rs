@@ -113,17 +113,25 @@ pub trait StructHelper {
 
 }
 
+
 pub trait ToBytes
 {
-    fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>;
+    fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>;
+
+    fn length_as_bytes(&self) -> Result<usize, String>
+    {
+        let r = self.to_bytes(Endianness::Little)?;
+        Ok(r.len())
+    }
 
     /// Convert this object into bytes at the destination buffer.
-    fn to_le_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
-        self.to_bytes(dest, Endianness::Little)
+    fn to_le_bytes(&self) -> Result<Vec<u8>, String> {
+        self.to_bytes(Endianness::Little)
     }
+
     /// Convert this object into bytes at the destination buffer.
-    fn to_be_bytes(&self, dest: &mut [u8]) -> Result<(), String> {
-        self.to_bytes(dest, Endianness::Big)
+    fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+        self.to_bytes(Endianness::Big)
     }
 }
 
@@ -410,28 +418,18 @@ macro_rules! make_inspectable {
 macro_rules! make_wireable {
     ($a:ty) => {
         impl ToBytes for $a {
-            fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String> {
-                let bytes;
-                // Why isn't this match the same as the if below?
+            fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String> {
+                // Why isn't this match the same as the if below? Because of the footgun if the label isn't known.
                 // match endianness
                 // {
                 // Little => {bytes = (*self as $a).to_le_bytes()},
                 // Big => {bytes = (*self as $a).to_be_bytes()},
                 // };
                 if endianness == Endianness::Big {
-                    bytes = (*self as $a).to_be_bytes();
+                    Ok((*self as $a).to_be_bytes().to_vec())
                 } else {
-                    bytes = (*self as $a).to_le_bytes();
+                    Ok((*self as $a).to_le_bytes().to_vec())
                 }
-                if bytes.len() > dest.len() {
-                    return Err(format!(
-                        "Type is {} long, doesn't fit into {} provided.",
-                        bytes.len(),
-                        dest.len()
-                    ));
-                }
-                dest[0..bytes.len()].clone_from_slice(&bytes);
-                Ok(())
             }
         }
         impl FromBytes for $a {

@@ -20,7 +20,7 @@ fn main() -> Result<(), String> {
     let mut buffer: [u8; std::mem::size_of::<Example>()] = [0; std::mem::size_of::<Example>()];
 
     // Convert to bytes;
-    v.to_le_bytes(&mut buffer)?;
+    let mut buffer = v.to_le_bytes()?;
     println!("v: {:?}", v);
     // v: Example { a_char: 130, a_short: -3120, an_uint: 3735928559, a_float: 3.1415927 }
 
