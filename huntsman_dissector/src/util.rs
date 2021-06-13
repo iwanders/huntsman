@@ -191,7 +191,6 @@ fn get_name(v: &Vec<Prefix>) -> String {
     let mut x = v.clone();
     loop {
         let last_element = x.pop().expect("should have something");
-        println!("V: {:?}", v);
 
         match &last_element {
             Prefix::Label(s) => {
