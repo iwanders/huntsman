@@ -231,14 +231,14 @@ enum TripleEnum {
     Three,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Default)]
 struct Thing {
     data: Vec<TripleEnum>,
 }
 
 impl FromBytes for Thing {
-    fn from_bytes(src: &[u8], _endianness: Endianness) -> Result<Thing, String> {
-        let mut tmp: Thing = Thing { data: vec![] };
+    fn from_bytes(&mut self, src: &[u8], _endianness: Endianness) -> Result<usize, String> {
+        // let mut tmp: Thing = Thing { data: vec![] };
         for z in 0..src.len() {
             let v = match src[z] {
                 1 => TripleEnum::One,
@@ -248,9 +248,9 @@ impl FromBytes for Thing {
                     return Err("Nope".to_string());
                 }
             };
-            tmp.data.push(v)
+            self.data.push(v)
         }
-        Ok(tmp)
+        Ok(src.len())
     }
 }
 
@@ -264,9 +264,11 @@ fn test_variable_length() {
     println!("{:?}", r);
     assert_eq!(r[0], 1);
 
-    assert_eq!(Thing::from_bytes(&r[..], Endianness::Little).is_err(), true);
+    let mut t : Thing = Thing{data:vec!()};
+
+    assert_eq!(t.from_bytes(&r[..], Endianness::Little).is_err(), true);
     let one_less = &r[0..3];
-    let res = Thing::from_bytes(&one_less, Endianness::Little).expect("Should be ok now");
+    let res = Thing::from_le_bytes(&one_less).expect("Should be ok now");
     let expected = Thing {
         data: vec![TripleEnum::One, TripleEnum::Two, TripleEnum::Three],
     };
