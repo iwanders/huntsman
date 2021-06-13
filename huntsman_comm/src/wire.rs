@@ -153,6 +153,16 @@ pub enum MacroAction {
     None,
 }
 
+#[derive(Clone, Debug, Default)]
+/// Struct definition to hold the actions that make up a macro.
+pub struct MacroActions {
+    pub macro_id: u16,
+    pub _pad: u8,
+    pub byte_count: u32,
+    pub events: Vec<MacroAction>,
+}
+
+
 impl MacroAction {
     const KEYBOARD_MAKE: u8 = 0x01;
     const KEYBOARD_BREAK: u8 = 0x02;
@@ -190,10 +200,9 @@ impl FromBytes for MacroAction {
             | MacroAction::KEYBOARD_DELAY_U32 => {
                 let get_delay_byte_length = (specification & 0x0F) as usize;
                 // lets always use a 32 bit integer.
-                let mut arr : [u8; 4] = [0; 4];
+                let mut arr: [u8; 4] = [0; 4];
                 // Now copy the correct number of bytes to the correct location
-                for i in 0..get_delay_byte_length
-                {
+                for i in 0..get_delay_byte_length {
                     arr[i + get_delay_byte_length] = src[1 + i];
                 }
                 // Now, we interpret this as big endian.
@@ -220,22 +229,23 @@ impl ToBytes for MacroAction {
             MacroAction::Delay(v) => {
                 let b = v.to_be_bytes()?;
                 // now... we do things based on the amount of zeros :(
-                if b[0] != 0 // need 4 bytes
+                if b[0] != 0
+                // need 4 bytes
                 {
                     buff.push(MacroAction::KEYBOARD_DELAY_U32);
                     buff.extend(b.to_vec());
-                }
-                else if b[1] != 0  // 3 byte
+                } else if b[1] != 0
+                // 3 byte
                 {
                     buff.push(MacroAction::KEYBOARD_DELAY_U24);
                     buff.extend(b[1..].to_vec());
-                }
-                else if b[2] != 0  // 2 byte
+                } else if b[2] != 0
+                // 2 byte
                 {
                     buff.push(MacroAction::KEYBOARD_DELAY_U16);
                     buff.extend(b[2..].to_vec());
-                }
-                else if b[3] != 0  // 1 byte
+                } else if b[3] != 0
+                // 1 byte
                 {
                     buff.push(MacroAction::KEYBOARD_DELAY_U16);
                     buff.extend(b[3..].to_vec());
@@ -250,15 +260,6 @@ impl Default for MacroAction {
     fn default() -> MacroAction {
         MacroAction::None
     }
-}
-
-// Inspectable, FromBytes, ToBytes, Default,   <- This doesn't work with the MacroEvents type.... :(
-#[derive(Clone, Debug, Default)]
-pub struct MacroActions {
-    pub macro_id: u16,
-    pub _pad: u8,
-    pub byte_count: u32,
-    pub events: Vec<MacroAction>,
 }
 
 impl FromBytes for MacroActions {

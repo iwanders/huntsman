@@ -264,7 +264,7 @@ fn test_variable_length() {
     println!("{:?}", r);
     assert_eq!(r[0], 1);
 
-    let mut t : Thing = Thing{data:vec!()};
+    let mut t: Thing = Thing { data: vec![] };
 
     assert_eq!(t.from_bytes(&r[..], Endianness::Little).is_err(), true);
     let one_less = &r[0..3];

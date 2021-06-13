@@ -353,7 +353,7 @@ fn impl_struct_helper_macro(
     res
 }
 
-#[doc = "This implements the derive macro for the Inspectable.
+#[doc = "This implements the derive macro for the [`Inspectable`].
 
 Any fields that start with an undercore (`_`) are ignored and not traversed into.
 
@@ -373,7 +373,7 @@ pub fn inspectable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::T
     impl_struct_helper_macro(input, TraitToImplement::Inspectable)
 }
 
-#[doc = "This implements the derive macro for the FromBytes.
+#[doc = "This implements the derive macro for the [`FromBytes`].
 
 This calls requires them to implement Default.
 "]
@@ -381,7 +381,7 @@ This calls requires them to implement Default.
 pub fn from_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_struct_helper_macro(input, TraitToImplement::FromBytes)
 }
-#[doc = "This implements the derive macro for the ToBytes.
+#[doc = "This implements the derive macro for the [`ToBytes`].
 
 This calls requires them to implement Default.
 "]
