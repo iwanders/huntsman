@@ -139,7 +139,7 @@ pub trait FromBytes
 {
     fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
     where
-        Self: Sized + Default;
+        Self: Sized;
 
     // from_le_bytes(src: &[u8]) -> Result<Self, String> is a bit more involved if we don't want to assume default
     // constructability... Need to tackle it on the derive side mostly... if we assume default constructability, it

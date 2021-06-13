@@ -256,14 +256,54 @@ impl ToBytes for VariableLengthStruct
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+enum TripleEnum
+{
+    One,
+    Two,
+    Three,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct Thing
+{
+    data: Vec<TripleEnum>,
+}
+
+impl FromBytes for Thing
+{
+    fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Thing, String>
+    {
+        let mut tmp : Thing = Thing{data:vec!()};
+        for z in 0..src.len()
+        {
+            let v = match src[z]
+            {
+                1 => TripleEnum::One,
+                2 => TripleEnum::Two,
+                3 => TripleEnum::Three,
+                _ => {return Err("Nope".to_string());},
+            };
+            tmp.data.push(v)
+        }
+        Ok(tmp)
+    }
+}
 
 #[test]
 fn test_variable_length() {
     // let mut arr: [u8; 20] = [0; 20];
-    let t = VariableLengthStruct{data: vec!(1, 2,3,4)};
+    let t = VariableLengthStruct{data: vec!(1, 2, 3, 4)};
     let r = t.to_le_bytes().expect("Should succeed");
     println!("{:?}", r);
     assert_eq!(r[0], 1);
+
+    assert_eq!(Thing::from_bytes(&r[..], Endianness::Little).is_err(), true);
+    let one_less = &r[0..3];
+    let res = Thing::from_bytes(&one_less, Endianness::Little).expect("Should be ok now");
+    let expected = Thing{data:vec!(TripleEnum::One, TripleEnum::Two, TripleEnum::Three)};
+    assert_eq!(expected, res);
+
 }
 
 
