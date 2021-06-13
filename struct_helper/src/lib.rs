@@ -104,6 +104,10 @@ pub trait StructHelper {
         Self: Sized;
     // We need to be sized anyway for all this struct stuff.
 
+}
+
+pub trait Wireable
+{
     fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>;
     fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String>
     where
@@ -163,7 +167,13 @@ macro_rules! make_inspectable {
                     children: vec![],
                 }
             }
+        }
+    }
+}
 
+macro_rules! make_wireable {
+    ($a:ty) => {
+        impl Wireable for $a {
             fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String> {
                 let bytes;
                 // Why isn't this match the same as the if below?
@@ -234,6 +244,21 @@ make_inspectable!(u128);
 make_inspectable!(f32);
 make_inspectable!(f64);
 
+make_wireable!(i8);
+make_wireable!(i16);
+make_wireable!(i32);
+make_wireable!(i64);
+make_wireable!(i128);
+
+make_wireable!(u8);
+make_wireable!(u16);
+make_wireable!(u32);
+make_wireable!(u64);
+make_wireable!(u128);
+
+make_wireable!(f32);
+make_wireable!(f64);
+
 // make_inspectable!(bool);
 impl StructHelper for bool {
     fn fields() -> Field
@@ -253,7 +278,9 @@ impl StructHelper for bool {
             children: vec![],
         }
     }
+}
 
+impl Wireable for bool{
     fn to_bytes(&self, dest: &mut [u8], _endianness: Endianness) -> Result<(), String> {
         if 1 != dest.len() {
             return Err(format!(

@@ -69,7 +69,7 @@ fn process_str_attributes(
 }
 
 /// The function that actually generates the code for this derived type.
-fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn impl_struct_helper_macro(input: proc_macro::TokenStream, struct_helper_impl: bool) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = &input.ident;
     // println!("input struct: {:#?}", input);
@@ -154,7 +154,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident[i];
-                                        StructHelper::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        Wireable::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
@@ -163,7 +163,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
 
                                         let s = offset_of!(#root_struct, #inner_field_ident) + i * std::mem::size_of::<#type_ident>();
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident[i]  = < #type_ident as StructHelper >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        x.#inner_field_ident[i]  = < #type_ident as Wireable >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -199,14 +199,14 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                                         let e = std::mem::size_of::<#type_ident>() + s;
                                         // Copy against reference from packed struct.
                                         let tmp = self.#inner_field_ident;
-                                        StructHelper::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
+                                        Wireable::to_bytes(&tmp, &mut dest[s..e], endianness).expect("yes");
                                     }
                                 )));
                                 fields_from_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     {
                                         let s = offset_of!(#root_struct, #inner_field_ident);
                                         let e = std::mem::size_of::<#type_ident>() + s;
-                                        x.#inner_field_ident  = < #type_ident as StructHelper >::from_bytes(&src[s..e], endianness).expect("yes");
+                                        x.#inner_field_ident  = < #type_ident as Wireable >::from_bytes(&src[s..e], endianness).expect("yes");
                                     }
                                 )));
                             }
@@ -250,7 +250,12 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
                      children: vec!(#(#fields_static),*)
                 }
             }
+        };
+    };
 
+    let gen2 = quote! {
+        impl struct_helper::Wireable for #name
+        {
             fn to_bytes(&self, dest: &mut [u8], endianness: Endianness) -> Result<(), String>
             {
                 if (#name::fields()).info.length > dest.len()
@@ -274,7 +279,14 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream) -> proc_macro::Token
         }
     };
     //println!("Output: {:}", gen.to_string());
-    gen.into()
+    if struct_helper_impl
+    {
+        gen.into()
+    }
+    else
+    {
+        gen2.into()
+    }
 }
 
 #[doc = "This implements the derive macro for the struct helper.
@@ -293,6 +305,12 @@ So `#[struct_helper(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs
 `{\"foo\": \"alpha\", \"bar\": \"bravo\"}`.
 "]
 #[proc_macro_derive(StructHelper, attributes(struct_helper))]
-pub fn hello_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input)
+pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, true)
+}
+
+
+#[proc_macro_derive(Wireable, attributes(wireable))]
+pub fn wireable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, false)
 }

@@ -1,6 +1,6 @@
 use struct_helper::*;
 
-#[derive(StructHelper, Debug, Default, Copy, Clone)]
+#[derive(StructHelper, Wireable, Debug, Default, Copy, Clone)]
 #[repr(C)] // Try this example with this line commented out and see how it changes!
 struct Example {
     a_char: u8,
