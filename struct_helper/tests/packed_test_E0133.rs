@@ -24,7 +24,6 @@ pub enum ElementType {
     Other,
 }
 
-
 pub trait Inspectable
 {
     fn type_name(&self) -> &'static str
@@ -38,19 +37,15 @@ pub trait Inspectable
     fn offset(&self) -> usize;
     fn length(&self) -> usize;
 
-    // fn from_le_bytes(&mut self, src: &[u8]) -> Result<usize, String>;
-    // fn to_le_bytes(&self, dest: &mut [u8]) -> Result<usize, String>
-    // {
-        // Ok(0)
-    // }
 
-    fn element_len(&self) -> usize
+    fn as_any(&self) -> Option<Box<dyn std::any::Any>>
     {
-        0
+        None
     }
-    fn element(&self, index: usize) -> &dyn Inspectable
+
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
-        panic!("nope");
+        vec!()
     }
 
 
@@ -59,28 +54,13 @@ pub trait Inspectable
     {
         return &[];
     }
+
+    // fn clone_box(&self) -> Box<dyn Inspectable>;
 }
 
-struct FieldInfo<'a>
+pub trait Wireable
 {
-    name: &'static str,
-    child: &'a dyn Inspectable
-}
-
-impl Inspectable for FieldInfo<'_>
-{
-    fn type_name(&self) -> &'static str
-    {
-        self.name
-    }
-    fn offset(&self) -> usize
-    {
-        self.child.offset()
-    }
-    fn length(&self) -> usize
-    {
-        self.child.length()
-    }
+    // Convert from and two bytes.
 }
 
 #[derive(Default, Clone, Debug)]
@@ -116,9 +96,8 @@ impl Inspectable for PrimitiveHelper
 impl std::fmt::Debug for dyn Inspectable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut opener = f.debug_struct(self.type_name());
-        for i in 0..self.element_len()
+        for k in self.elements()
         {
-            let k = self.element(i);
             opener.field(k.type_name(), &format_args!("{}  #{}@{}", k.type_name(),  k.length(), k.offset()));
         }
         opener.finish()
@@ -198,14 +177,9 @@ impl Inspectable for Z
         std::mem::size_of::<u8>()
     }
 
-
-    fn element_len(&self) -> usize
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
-        1
-    }
-    fn element(&self, index: usize) -> &dyn Inspectable
-    {
-        &self.f
+        vec!(Box::new(self.f))
     }
 
 }
@@ -219,7 +193,6 @@ struct Pancakes {
 }
 
 
-
 impl Inspectable for Pancakes
 {
     fn offset(&self) -> usize
@@ -231,19 +204,11 @@ impl Inspectable for Pancakes
         std::mem::size_of::<Pancakes>()
     }
 
-    fn element_len(&self) -> usize
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
     {
-        3
-    }
-    fn element(&self, index: usize) -> &dyn Inspectable
-    {
-        match index
-        {
-            0 => (&self.first_char as &dyn Inspectable),
-            1 => (&self.an_uint as &dyn Inspectable),
-            2 => (&self.x as &dyn Inspectable),
-            _ => panic!("index out of range")
-        }
+        vec!(Box::new(self.first_char),
+            Box::new(self.an_uint),
+            Box::new(self.x))
     }
 
     fn fields() -> &'static [&'static  dyn Inspectable] where Self:Sized
