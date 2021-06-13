@@ -135,14 +135,11 @@ pub trait Inspectable: std::fmt::Debug {
         vec![]
     }
 
-    fn get(&self, search_name: &str) -> Option<Box<dyn Inspectable>>
-    {
+    fn get(&self, search_name: &str) -> Option<Box<dyn Inspectable>> {
         let children = self.elements();
         for child in children.iter() {
-            if let Some(name) = child.name()
-            {
-                if name == search_name
-                {
+            if let Some(name) = child.name() {
+                if name == search_name {
                     return Some(child.clone_box());
                 }
             }
@@ -268,7 +265,6 @@ impl Inspectable for SimpleInspectable {
 /// Helper macro to create the implementations for the primitive scalar types.
 macro_rules! make_inspectable {
     ($a:ty) => {
-
         impl Inspectable for $a {
             /// The start offset relative to the parent.
             fn start(&self) -> usize {

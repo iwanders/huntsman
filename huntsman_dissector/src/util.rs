@@ -6,7 +6,7 @@ use wireshark_dissector_rs::dissector;
 extern crate huntsman_comm;
 use huntsman_comm::wire;
 extern crate struct_helper;
-use struct_helper::{Inspectable, FromBytes};
+use struct_helper::Inspectable;
 
 type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;

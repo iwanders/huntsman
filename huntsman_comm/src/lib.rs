@@ -1,8 +1,9 @@
 //! This crate holds the communication details and provides the available commands.
 
-use struct_helper::{Inspectable, FromBytes, ToBytes};
+use struct_helper::{Inspectable, ToBytes};
 /// The wire module holds the structs as they actually go over the USB bus.
 pub mod wire;
+pub use struct_helper::FromBytes;
 pub use wire::Cmd;
 pub use wire::RGB;
 
@@ -292,9 +293,7 @@ impl Command for SetLedEffect {
         return SetLedEffect::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        self.payload
-            .to_le_bytes()
-            .expect("Should succeed")
+        self.payload.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -815,10 +814,10 @@ mod tests {
     #[test]
     fn test_profile_deletion() {
         // Also issued before we 'upload' a profile.
-        let remove_profile_1_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:02", 0x05); // red
-        let remove_profile_2_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:03", 0x04); // green
-        let remove_profile_3_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:04", 0x03); // blue
-        let remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);
+        let _remove_profile_1_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:02", 0x05); // red
+        let _remove_profile_2_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:03", 0x04); // green
+        let _remove_profile_3_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:04", 0x03); // blue
+        let _remove_profile_4_event = parse_wireshark_truncated("00:1f:00:00:00:01:05:03:05", 0x02);
         // cyan
         // This profile deletion supports well the concept of the first payload byte being something of a profile indicator.
 
@@ -826,7 +825,7 @@ mod tests {
         // 0x0508 adds the profile metadata / guid stuffs
         // 0x0588 u8 u16:  u8 profile id, u16 page.
         //
-        let potential_list_profiles = parse_wireshark_truncated("00:1f:00:00:00:41:05:81", 0xc5);
+        let _potential_list_profiles = parse_wireshark_truncated("00:1f:00:00:00:41:05:81", 0xc5);
 
         // Storage metric retrieval before write goes through 0x068e
     }
@@ -834,7 +833,7 @@ mod tests {
     #[test]
     fn test_get_storage() {
         let request = parse_wireshark_truncated("00:1f:00:00:00:0e:06:8e", 0x86);
-        let mut request_cmd: GetStorageStatistics = GetStorageStatistics {
+        let request_cmd: GetStorageStatistics = GetStorageStatistics {
             ..Default::default()
         };
         assert_eq!(request_cmd.serialize(), request);
@@ -860,7 +859,7 @@ mod tests {
         // Aight.... lets assume logging and the current parsing is broken.
 
         // 0x06, 0x03; delete macro!
-        let has_macro = parse_wireshark_truncated("00:1f:00:00:00:02:06:03:3b:02:00", 0x3e);
+        let _delete_macro = parse_wireshark_truncated("00:1f:00:00:00:02:06:03:3b:02:00", 0x3e);
         // returns status 02 if exists, 03 if it doesnt
 
         // 0x06, 0x08; add macro (by id? Or memory address??)

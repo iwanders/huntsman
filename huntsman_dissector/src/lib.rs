@@ -15,7 +15,7 @@ extern crate huntsman_comm;
 use huntsman_comm::wire;
 
 extern crate struct_helper;
-use struct_helper::{Inspectable, FromBytes};
+use struct_helper::{FromBytes, Inspectable};
 
 mod util;
 use util::*;
@@ -119,7 +119,6 @@ impl HuntsmanDissector {
 
         // Iterate over all the fields.
         let flags: FieldFlags = Default::default();
-        let command_fields = wire::Command::fields();
 
         let mut proto_stack: Vec<epan::ProtoTree> = vec![root];
 
@@ -212,7 +211,13 @@ impl HuntsmanDissector {
         }
 
         if let Some(f) = fields {
-            field_recurser(f.as_ref(), &flags, prefix_start(), offset, &mut dissection_visitor);
+            field_recurser(
+                f.as_ref(),
+                &flags,
+                prefix_start(),
+                offset,
+                &mut dissection_visitor,
+            );
         }
 
         // Return how many bytes we read.

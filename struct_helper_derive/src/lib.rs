@@ -72,7 +72,6 @@ enum TraitToImplement {
     ToBytes,
     FromBytes,
     Inspectable,
-    StructHelper,
 }
 
 /// The function that actually generates the code for this derived type.
@@ -88,8 +87,6 @@ fn impl_struct_helper_macro(
     // Seems it MUST be a literal expression; https://doc.rust-lang.org/reference/expressions/literal-expr.html
     // Lets, for sake of simplicity, just handle string inputs now.
     let (outer_attribute_tokens, _outer_map) = process_str_attributes(&input.attrs);
-
-    let mut fields_static: Vec<proc_macro2::TokenStream> = Vec::new();
 
     let mut inspectable_fields: Vec<proc_macro2::TokenStream> = Vec::new();
 
@@ -134,31 +131,6 @@ fn impl_struct_helper_macro(
                                 // Element type
                                 let type_ident = &arr.elem;
                                 let arr_len = &arr.len;
-
-                                let info = quote!(
-                                    struct_helper::Info{
-                                        start: offset_of!(#root_struct, #inner_field_ident),
-                                        length: std::mem::size_of::<#type_ident>() *#arr_len ,
-                                        type_name: stringify!(#type_ident),
-                                        type_id: std::any::TypeId::of::<#type_ident>(),
-                                        name: Some((#name)),
-                                        element_type: struct_helper::ElementType::Array,
-                                        attrs: [#inner_attribute_tokens].iter().cloned().collect(),
-                                    }
-                                );
-
-                                fields_static.push(proc_macro2::TokenStream::from(quote!(
-                                        struct_helper::Field{
-                                            info: #info,
-                                            children: (0..#arr_len).map(|i|
-                                                {
-                                                    let mut fields = <#type_ident as StructHelper>::fields();
-                                                    fields.info.start = i * std::mem::size_of::<#type_ident>();
-                                                    fields
-                                                }).collect::<Vec<struct_helper::Field>>(),
-                                        }
-                                    )
-                                ));
 
                                 inspectable_fields.push(proc_macro2::TokenStream::from(quote!(
                                     Box::new(struct_helper::SimpleInspectable{
@@ -211,23 +183,6 @@ fn impl_struct_helper_macro(
                                 // println!("Its a type_path {:#?}", type_path);
                                 let type_ident = &type_path.path.segments[0].ident;
                                 let n = type_ident.to_string();
-
-                                let info = quote!(
-                                struct_helper::Info{
-                                    start: offset_of!(#root_struct, #inner_field_ident),
-                                    length: std::mem::size_of::<#type_ident>(),
-                                    type_name: #n,
-                                    type_id: std::any::TypeId::of::<#type_ident>(),
-                                    name: Some((#name)),
-                                    element_type: struct_helper::ElementType::Path,
-                                    attrs: [#inner_attribute_tokens].iter().cloned().collect(),
-                                });
-
-                                fields_static.push(proc_macro2::TokenStream::from(quote!(
-                                    struct_helper::Field{
-                                        info: #info,
-                                        children: vec!(<#type_ident as StructHelper>::fields())}
-                                )));
 
                                 inspectable_fields.push(proc_macro2::TokenStream::from(quote!(
                                     Box::new(struct_helper::SimpleInspectable{
@@ -285,27 +240,6 @@ fn impl_struct_helper_macro(
             panic!("Unions aren't supported. {:?}", data_union);
         }
     }
-    let info = quote!(
-        struct_helper::Info{
-             start: 0,
-             length: std::mem::size_of::<#name>(),
-             type_name: stringify!(#name),
-             type_id: std::any::TypeId::of::<#name>(),
-             name: Some(stringify!(#name)),
-             element_type: struct_helper::ElementType::Other,
-             attrs: [#outer_attribute_tokens].iter().cloned().collect(),
-        }
-    );
-    let trait_struct_helper = quote! {
-        impl struct_helper::StructHelper for #name {
-            fn fields() -> struct_helper::Field {
-                struct_helper::Field {
-                     info: #info,
-                     children: vec!(#(#fields_static),*)
-                }
-            }
-        };
-    };
 
     let trait_inspectable = quote! {
         impl struct_helper::Inspectable for #name
@@ -343,7 +277,7 @@ fn impl_struct_helper_macro(
                 Box::new(self.clone())
             }
 
-            fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str> 
+            fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str>
             {
                 [#outer_attribute_tokens].iter().cloned().collect()
             }
@@ -366,20 +300,22 @@ fn impl_struct_helper_macro(
     };
 
     let trait_to_bytes = quote! {
-    impl struct_helper::ToBytes for #name
-    {
-        fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>
+        impl struct_helper::ToBytes for #name
         {
-            let mut dest : [u8; std::mem::size_of::<#name>()] = [0; std::mem::size_of::<#name>()];
-            // Todo; restore checking here...
-            // if (#name::fields()).info.length > dest.len()
-            // {
-                // return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
-            // }
-            #(#fields_to_bytes);*
-            Ok(dest.to_vec())
+            fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String>
+            {
+                let mut dest : [u8; std::mem::size_of::<#name>()] = [0; std::mem::size_of::<#name>()];
+                // Todo; restore checking here...
+                // Not sure... can this ever fail?
+                // if (#name::fields()).info.length > dest.len()
+                // {
+                    // return Err(format!("Type is {} long, doesn't fit into {} provided.", (#name::fields()).info.length, dest.len()));
+                // }
+                #(#fields_to_bytes);*
+                Ok(dest.to_vec())
+            }
         }
-    }};
+    };
 
     let trait_from_bytes = quote! {
 
@@ -388,10 +324,11 @@ fn impl_struct_helper_macro(
             fn from_bytes(src: &[u8], endianness: Endianness) -> Result<Self, String> where Self: Sized + Default
             {
                 let mut x: #name = Default::default();
-                // if (#name::fields()).info.length > src.len()
-                // {
-                    // return Err(format!("Type is {} long, only {} provided.", (#name::fields()).info.length, src.len()));
-                // }
+                if std::mem::size_of::<#name>() > src.len()
+                {
+                    return Err(format!("Type is {} long, only {} provided.", std::mem::size_of::<#name>(), src.len()));
+                }
+
                 #(#fields_from_bytes);*
                 Ok(x)
             }
@@ -400,18 +337,17 @@ fn impl_struct_helper_macro(
     let res: proc_macro::TokenStream = match trait_to_implement {
         TraitToImplement::ToBytes => trait_to_bytes.into(),
         TraitToImplement::FromBytes => trait_from_bytes.into(),
-        TraitToImplement::StructHelper => trait_struct_helper.into(),
         TraitToImplement::Inspectable => trait_inspectable.into(),
     };
     // println!("Output: {:}", res.to_string());
     res
 }
 
-#[doc = "This implements the derive macro for the struct helper.
+#[doc = "This implements the derive macro for the Inspectable.
 
 Any fields that start with an undercore (`_`) are ignored and not traversed into.
 
-Attributes can be added with `#[struct_helper(my_key = \"Pi!\")]`, the keys (like `my_key`) can be
+Attributes can be added with `#[inspect(my_key = \"Pi!\")]`, the keys (like `my_key`) can be
 anything, the value must always be string at the moment.
 
 The following pre-defined keys exist:
@@ -419,24 +355,27 @@ The following pre-defined keys exist:
 - `ignore`, if the value for this is `\"true\"`, this field is ignored as if it started with an
 underscore.
 
-So `#[struct_helper(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs` HashMap of 
+So `#[inspect(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs` HashMap of 
 `{\"foo\": \"alpha\", \"bar\": \"bravo\"}`.
 "]
-// #[proc_macro_derive(StructHelper)]
-// pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // impl_struct_helper_macro(input, TraitToImplement::StructHelper)
-// }
+#[proc_macro_derive(Inspectable, attributes(inspect))]
+pub fn inspectable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    impl_struct_helper_macro(input, TraitToImplement::Inspectable)
+}
 
+#[doc = "This implements the derive macro for the FromBytes.
+
+This calls requires them to implement Default.
+"]
 #[proc_macro_derive(FromBytes)]
 pub fn from_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_struct_helper_macro(input, TraitToImplement::FromBytes)
 }
+#[doc = "This implements the derive macro for the ToBytes.
+
+This calls requires them to implement Default.
+"]
 #[proc_macro_derive(ToBytes)]
 pub fn to_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_struct_helper_macro(input, TraitToImplement::ToBytes)
-}
-
-#[proc_macro_derive(Inspectable, attributes(inspect))]
-pub fn inspectable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input, TraitToImplement::Inspectable)
 }
