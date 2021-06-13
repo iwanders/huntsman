@@ -1,6 +1,6 @@
 use struct_helper::*;
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 /// Denotes a Red, Green and Blue color value.
 pub struct RGB {
@@ -12,7 +12,7 @@ pub struct RGB {
     pub b: u8,
 }
 
-#[derive(StructHelper, Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Inspectable, FromBytes, ToBytes, Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[repr(C)]
 /// Struct to denote a command registers.
 pub struct Cmd {
@@ -22,7 +22,7 @@ pub struct Cmd {
     pub minor: u8,
 }
 
-#[derive(StructHelper, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Copy, Clone, Debug)]
 #[repr(C)]
 /// The command header.
 pub struct Command {
@@ -30,9 +30,9 @@ pub struct Command {
     pub the_1f: u8, // Almost always 1f.
     pub _three: [u8; 3], // these bytes always seem to be zero, ALWAYS
     pub len: u8,
-    #[struct_helper(dissect_additional_type = "u16")] // Also dissect this as an u16.
+    #[inspect(dissect_additional_type = "u16")] // Also dissect this as an u16.
     pub cmd: Cmd,
-    #[struct_helper(dissection_hide = "true")]
+    #[inspect(dissection_hide = "true")]
     pub payload: [u8; 80],
     pub checksum: u8,
     pub _closing: u8,
@@ -66,7 +66,7 @@ impl Default for Command {
     }
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 /// Payload for the SetLedState command
 pub struct SetLedState {
@@ -79,7 +79,7 @@ pub struct SetLedState {
     pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 /// Payload for the SetLedBrightness command.
 pub struct SetLedBrightness {
@@ -88,7 +88,7 @@ pub struct SetLedBrightness {
     pub value: u8,
 }
 
-#[derive(StructHelper, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Copy, Clone, Debug)]
 #[repr(C)]
 /// Payload to set the game mode.
 pub struct SetGameMode {
@@ -108,7 +108,7 @@ impl Default for SetGameMode {
     }
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 /// Payload to set the key override.
 pub struct SetKeyOverride {
@@ -118,7 +118,7 @@ pub struct SetKeyOverride {
     pub mapping_type: u8,
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 /// Payload to set an led effect.
 pub struct SetLedEffect {
@@ -131,15 +131,15 @@ pub struct SetLedEffect {
     pub colors: [RGB; 10], // not sure how long this one is.
 }
 
-#[derive(StructHelper, Default, Copy, Clone, Debug)]
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C, packed)]
 /// Payload to set an led effect.
 pub struct GetStorageStatistics {
     pub something: u16,
-    #[struct_helper(dissection_display = "dec")]
+    #[inspect(dissection_display = "dec")]
     pub total: u32,
-    #[struct_helper(dissection_display = "dec")]
+    #[inspect(dissection_display = "dec")]
     pub free1: u32,
-    #[struct_helper(dissection_display = "dec")]
+    #[inspect(dissection_display = "dec")]
     pub free2: u32,
 }

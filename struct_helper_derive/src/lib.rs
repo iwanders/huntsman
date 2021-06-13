@@ -167,7 +167,7 @@ fn impl_struct_helper_macro(
                                         type_name:  stringify!(#type_ident),
                                         name: Some((#name).to_string()),
                                         element_type: struct_helper::ElementType::Array,
-                                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
+                                        attrs: [#inner_attribute_tokens].iter().cloned().collect(),
                                         elements: (0..#arr_len).map(|i|
                                                 {
                                                     let mut entry = <#type_ident as Inspectable>::inspect();
@@ -236,8 +236,8 @@ fn impl_struct_helper_macro(
                                         type_name: #n,
                                         name: Some((#name).to_string()),
                                         element_type: struct_helper::ElementType::Path,
-                                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
-                                        elements: <#type_ident as Inspectable>::nfields(),
+                                        attrs: [#inner_attribute_tokens].iter().cloned().collect(),
+                                        elements: <#type_ident as Inspectable>::fields(),
                                         ..Default::default()
                                     })
                                 )));
@@ -330,17 +330,22 @@ fn impl_struct_helper_macro(
             {
                 struct_helper::ElementType::Other
             }
-            fn nfields() -> Vec<Box<dyn Inspectable>>
+            fn fields() -> Vec<Box<dyn Inspectable>>
             {
                 vec!(#(#inspectable_fields),*)
             }
             fn elements(&self) -> Vec<Box<dyn Inspectable>>
             {
-                <#name>::nfields()
+                <#name>::fields()
             }
             fn clone_box(&self) -> Box<dyn struct_helper::Inspectable>
             {
                 Box::new(self.clone())
+            }
+
+            fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str> 
+            {
+                [#outer_attribute_tokens].iter().cloned().collect()
             }
 
             fn inspect() -> Box<dyn struct_helper::Inspectable>
@@ -351,8 +356,8 @@ fn impl_struct_helper_macro(
                     type_name: stringify!(#name),
                     name: Some(stringify!(#name).to_string()),
                     element_type: struct_helper::ElementType::Path,
-                    // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
-                    elements: #name::nfields(),
+                    attrs: [#outer_attribute_tokens].iter().cloned().collect(),
+                    elements: #name::fields(),
                     ..Default::default()
                 })
             }
@@ -417,10 +422,10 @@ underscore.
 So `#[struct_helper(foo = \"alpha\", bar = \"bravo\")]` will result in an `attrs` HashMap of 
 `{\"foo\": \"alpha\", \"bar\": \"bravo\"}`.
 "]
-#[proc_macro_derive(StructHelper, attributes(struct_helper))]
-pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    impl_struct_helper_macro(input, TraitToImplement::StructHelper)
-}
+// #[proc_macro_derive(StructHelper)]
+// pub fn struct_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // impl_struct_helper_macro(input, TraitToImplement::StructHelper)
+// }
 
 #[proc_macro_derive(FromBytes)]
 pub fn from_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -431,7 +436,7 @@ pub fn to_bytes_macro_derive(input: proc_macro::TokenStream) -> proc_macro::Toke
     impl_struct_helper_macro(input, TraitToImplement::ToBytes)
 }
 
-#[proc_macro_derive(Inspectable)]
+#[proc_macro_derive(Inspectable, attributes(inspect))]
 pub fn inspectable_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     impl_struct_helper_macro(input, TraitToImplement::Inspectable)
 }

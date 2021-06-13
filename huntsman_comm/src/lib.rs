@@ -1,6 +1,6 @@
 //! This crate holds the communication details and provides the available commands.
 
-use struct_helper::StructHelper;
+use struct_helper::{Inspectable, FromBytes, ToBytes};
 /// The wire module holds the structs as they actually go over the USB bus.
 pub mod wire;
 pub use wire::Cmd;
@@ -33,7 +33,6 @@ pub trait Command: std::fmt::Debug {
         let cmd = self.register();
         let payload = self.payload();
 
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::Command>()];
         let mut wire: wire::Command = Default::default();
         wire.cmd = cmd;
         wire.len = payload.len() as u8;
@@ -43,8 +42,7 @@ pub trait Command: std::fmt::Debug {
             wire.payload[i] = payload[i];
         }
         wire.update_checksum(); // update the checksum based on the currently populated values.
-        wire.to_le_bytes(&mut v[..]).expect("Should succeed"); // serialize the struct.
-        return v;
+        wire.to_le_bytes().expect("Should succeed")
     }
 
     /// Provides the two register addressses that are to be sent in the header.
@@ -294,11 +292,9 @@ impl Command for SetLedEffect {
         return SetLedEffect::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedEffect>()];
         self.payload
-            .to_le_bytes(&mut v[..])
-            .expect("Should succeed");
-        v
+            .to_le_bytes()
+            .expect("Should succeed")
     }
 }
 
@@ -342,7 +338,6 @@ impl Command for SetLedState {
         return SetLedState::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedState>()];
         let wire_ledstate: wire::SetLedState = wire::SetLedState {
             first: 0,
             id: self.id,
@@ -350,10 +345,7 @@ impl Command for SetLedState {
             leds: self.leds,
             ..Default::default()
         };
-        wire_ledstate
-            .to_le_bytes(&mut v[..])
-            .expect("Should succeed");
-        v
+        wire_ledstate.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -376,16 +368,12 @@ impl Command for SetLedBrightness {
         return SetLedBrightness::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetLedBrightness>()];
         let wire_setbrightness: wire::SetLedBrightness = wire::SetLedBrightness {
             first: self.first, // 0x01 or 0x00, doesn't seem to matter much.
             value: (self.value * 255.0) as u8,
             ..Default::default()
         };
-        wire_setbrightness
-            .to_le_bytes(&mut v[..])
-            .expect("Should succeed");
-        v
+        wire_setbrightness.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -406,13 +394,11 @@ impl Command for SetGameMode {
         return SetGameMode::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetGameMode>()];
         let wire_cmd = wire::SetGameMode {
             game_mode_enabled: self.value as u8,
             ..Default::default()
         };
-        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
-        v
+        wire_cmd.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -431,12 +417,10 @@ impl Command for SetKeyOverride {
         return SetKeyOverride::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::SetKeyOverride>()];
         let wire_cmd = wire::SetKeyOverride {
             ..Default::default()
         };
-        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
-        v
+        wire_cmd.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -472,12 +456,10 @@ impl Command for GetStorageStatistics {
         return GetStorageStatistics::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = vec![0; std::mem::size_of::<wire::GetStorageStatistics>()];
         let wire_cmd = wire::GetStorageStatistics {
             ..Default::default()
         };
-        wire_cmd.to_le_bytes(&mut v[..]).expect("Should succeed");
-        v
+        wire_cmd.to_le_bytes().expect("Should succeed")
     }
 }
 
@@ -497,7 +479,7 @@ impl Command for ArbitraryCommand {
     }
 }
 
-fn remove_macro() {
+fn _remove_macro() {
     // for macro id 3b:02, returns 02 status if existed, 03 if not.
     Box::new(ArbitraryCommand {
         register: Cmd {
@@ -516,19 +498,19 @@ pub fn dev_run_cmd() -> Box<dyn Command> {
 }
 
 /// Helper function for the dissector that provides the fields for the provided commands.
-pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> struct_helper::Field>)> {
+pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::Inspectable>>)> {
     vec![
-        (SetGameMode::CMD, Box::new(wire::SetGameMode::fields)),
-        (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::fields)),
-        (SetLedEffect::CMD, Box::new(wire::SetLedEffect::fields)),
-        (SetLedState::CMD, Box::new(wire::SetLedState::fields)),
+        (SetGameMode::CMD, Box::new(wire::SetGameMode::inspect)),
+        (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::inspect)),
+        (SetLedEffect::CMD, Box::new(wire::SetLedEffect::inspect)),
+        (SetLedState::CMD, Box::new(wire::SetLedState::inspect)),
         (
             SetLedBrightness::CMD,
-            Box::new(wire::SetLedBrightness::fields),
+            Box::new(wire::SetLedBrightness::inspect),
         ),
         (
             GetStorageStatistics::CMD,
-            Box::new(wire::GetStorageStatistics::fields),
+            Box::new(wire::GetStorageStatistics::inspect),
         ),
     ]
 }

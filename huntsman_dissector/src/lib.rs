@@ -15,7 +15,7 @@ extern crate huntsman_comm;
 use huntsman_comm::wire;
 
 extern crate struct_helper;
-use struct_helper::StructHelper;
+use struct_helper::{Inspectable, FromBytes};
 
 mod util;
 use util::*;
@@ -136,7 +136,7 @@ impl HuntsmanDissector {
         // The actual dissection happens in this visitor.
         let mut dissection_visitor: Visitor =
             &mut |loc: Location,
-                  field: &struct_helper::Field,
+                  field: &dyn Inspectable,
                   prefix: &Vec<Prefix>,
                   flags: &FieldFlags,
                   visit_offset: usize| {
@@ -153,7 +153,7 @@ impl HuntsmanDissector {
                             hfid,
                             tvb,
                             visit_offset,
-                            field.info.length,
+                            field.length(),
                             Encoding::BIG_ENDIAN,
                         );
                     }
@@ -166,7 +166,7 @@ impl HuntsmanDissector {
                             hfid,
                             tvb,
                             visit_offset,
-                            field.info.length,
+                            field.length(),
                             Encoding::BIG_ENDIAN,
                         );
 
@@ -183,7 +183,7 @@ impl HuntsmanDissector {
 
         // Recurse over the command fields.
         field_recurser(
-            &command_fields,
+            &command,
             &flags,
             prefix_start(),
             offset,
@@ -191,17 +191,16 @@ impl HuntsmanDissector {
         );
 
         // We have the command, now we can match on the payload.
-        offset += command_fields
-            .find("payload")
+        offset += command
+            .get("payload")
             .expect("Payload should exist")
-            .info
-            .start;
+            .start();
 
         let cmd_id = huntsman_comm::Cmd {
             major: command.cmd.major,
             minor: command.cmd.minor,
         };
-        let mut fields: Option<struct_helper::Field> = None;
+        let mut fields: Option<Box<dyn Inspectable>> = None;
 
         // Iterate over all known commands from the comms side, and dissect their wire definitions
         // if available.
@@ -213,7 +212,7 @@ impl HuntsmanDissector {
         }
 
         if let Some(f) = fields {
-            field_recurser(&f, &flags, prefix_start(), offset, &mut dissection_visitor);
+            field_recurser(f.as_ref(), &flags, prefix_start(), offset, &mut dissection_visitor);
         }
 
         // Return how many bytes we read.

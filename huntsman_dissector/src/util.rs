@@ -6,7 +6,7 @@ use wireshark_dissector_rs::dissector;
 extern crate huntsman_comm;
 use huntsman_comm::wire;
 extern crate struct_helper;
-use struct_helper::StructHelper;
+use struct_helper::{Inspectable, FromBytes};
 
 type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;
@@ -45,19 +45,19 @@ pub enum Prefix {
 }
 
 pub type Visitor<'a> =
-    &'a mut dyn FnMut(Location, &struct_helper::Field, &Vec<Prefix>, &FieldFlags, usize) -> ();
+    &'a mut dyn FnMut(Location, &dyn Inspectable, &Vec<Prefix>, &FieldFlags, usize) -> ();
 
 /// Worker function to traverse the tree of [`struct_helper::Field`], calling a visitor at certain
 /// locations of interest.
 pub fn field_recurser(
-    field: &struct_helper::Field,
+    field: &dyn Inspectable,
     flags: &FieldFlags,
     prefix: Vec<Prefix>,
     offset: usize,
     visitor: &mut Visitor,
 ) {
     let mut updated_prefix = prefix;
-    match field.info.name {
+    match field.name() {
         Some(n) => {
             updated_prefix.push(Prefix::Label(n.to_string()));
         }
@@ -65,12 +65,12 @@ pub fn field_recurser(
     }
 
     let mut updated_flags = flags.clone();
-    match field.info.attrs.get("dissection_hide") {
+    match field.attrs().get("dissection_hide") {
         Some(v) => updated_flags.hidden = *v == "true",
         None => {}
     }
 
-    match field.info.attrs.get("dissection_display") {
+    match field.attrs().get("dissection_display") {
         Some(v) => {
             updated_flags.display = match *v {
                 "hex" => Some(FieldDisplay::BASE_HEX),
@@ -81,7 +81,7 @@ pub fn field_recurser(
         None => {}
     }
 
-    if let Some(z) = field.info.attrs.get("dissect_additional_type") {
+    if let Some(z) = field.attrs().get("dissect_additional_type") {
         let mut local_updated_flags = flags.clone();
         local_updated_flags.dissect_additional_type = z;
         let mut additional_prefix = updated_prefix.clone();
@@ -90,53 +90,54 @@ pub fn field_recurser(
         additional_prefix.push(current_name);
         visitor(
             Location::Leaf,
-            &field,
+            field,
             &additional_prefix,
             &local_updated_flags,
             offset,
         );
     }
+    let children = field.elements();
 
-    if field.children.len() > 1 {
+    if children.len() > 1 {
         visitor(
             Location::MultipleChildrenStart,
-            &field,
+            field,
             &updated_prefix,
             &updated_flags,
             offset,
         );
     }
 
-    for k in 0..field.children.len() {
-        let c = &field.children[k];
+    for k in 0..children.len() {
+        let c = &children[k];
         let mut child_prefix = updated_prefix.clone();
-        if field.children.len() > 1 {
+        if children.len() > 1 {
             child_prefix.push(Prefix::Index(k));
         }
         field_recurser(
-            &c,
+            c.as_ref(),
             &updated_flags,
             child_prefix,
-            c.info.start + offset,
+            c.start() + offset,
             visitor,
         );
     }
 
-    if field.children.len() > 1 {
+    if children.len() > 1 {
         visitor(
             Location::MultipleChildrenEnd,
-            &field,
+            field,
             &updated_prefix,
             &updated_flags,
             offset,
         );
     }
 
-    if field.children.is_empty() {
+    if children.is_empty() {
         // We are a leaf, add the final field we'll be dissecting as.
         visitor(
             Location::Leaf,
-            &field,
+            field,
             &updated_prefix,
             &updated_flags,
             offset,
@@ -190,6 +191,7 @@ fn get_name(v: &Vec<Prefix>) -> String {
     let mut x = v.clone();
     loop {
         let last_element = x.pop().expect("should have something");
+        println!("V: {:?}", v);
 
         match &last_element {
             Prefix::Label(s) => {
@@ -204,7 +206,7 @@ fn get_name(v: &Vec<Prefix>) -> String {
             Prefix::Label(s) => {
                 return s.clone();
             }
-            _ => panic!(),
+            _ => panic!("could not make name from prefix"),
         }
     }
 }
@@ -257,12 +259,12 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
     let mut all_fields: Vec<DissectionField> = Vec::new();
     let mut folds: Vec<String> = Vec::new();
 
-    let command_fields = wire::Command::fields();
+    let command_fields = wire::Command::inspect();
     let flags: FieldFlags = Default::default();
 
     let mut all_leaf_fields: Visitor =
         &mut |loc: Location,
-              field: &struct_helper::Field,
+              field: &dyn Inspectable,
               prefix: &Vec<Prefix>,
               flags: &FieldFlags,
               offset: usize| {
@@ -276,11 +278,11 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                         flags: *flags,
                         abbrev: prefix.clone(),
                         start: offset,
-                        length: field.info.length,
+                        length: field.length(),
                         type_name: if flags.dissect_additional_type != "" {
                             flags.dissect_additional_type
                         } else {
-                            field.info.type_name
+                            field.type_name()
                         },
                     });
                 }
@@ -291,7 +293,7 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
                         flags: *flags,
                         abbrev: make_fold_item_label(prefix),
                         start: offset,
-                        length: field.info.length,
+                        length: field.length(),
                         type_name: "label",
                     });
                 }
@@ -301,7 +303,7 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
 
     // Actually recurse.
     field_recurser(
-        &command_fields,
+        command_fields.as_ref(),
         &flags,
         prefix_start(),
         0,
@@ -309,14 +311,14 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
     );
 
     let payload_offset = command_fields
-        .find("payload")
+        .get("payload")
         .expect("Payload should exist")
-        .info
-        .start;
+        .start();
 
     for (_cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+        let fields = field_fun();
         field_recurser(
-            &field_fun(),
+            fields.as_ref(),
             &flags,
             prefix_start(),
             payload_offset,

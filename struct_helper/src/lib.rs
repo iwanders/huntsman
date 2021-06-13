@@ -135,6 +135,21 @@ pub trait Inspectable: std::fmt::Debug {
         vec![]
     }
 
+    fn get(&self, search_name: &str) -> Option<Box<dyn Inspectable>>
+    {
+        let children = self.elements();
+        for child in children.iter() {
+            if let Some(name) = child.name()
+            {
+                if name == search_name
+                {
+                    return Some(child.clone_box());
+                }
+            }
+        }
+        None
+    }
+
     /// Returns the fields this thing could return.
     // fn clone_box(&self) -> Box<dyn Information>
     // fn fields()() -> Vec<Box<dyn Information>> where Self:Sized
@@ -246,7 +261,7 @@ impl Inspectable for SimpleInspectable {
 
     /// A hashmap that can contain arbitrary annotations to fields.
     fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str> {
-        std::collections::HashMap::new()
+        self.attrs.clone()
     }
 }
 
