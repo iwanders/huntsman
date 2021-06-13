@@ -1,18 +1,19 @@
 use struct_helper::*;
 
-#[derive(StructHelper, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
+// #[repr(C)]
 struct StructWithFloat {
     float_inside: f32,
 }
 
-#[derive(StructHelper, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
 #[repr(C)]
 struct Pancakes {
     first_char: u8,
     _x: [u8; 3], // This is ignored in the Inspectable entry
     an_uint: u32,
     a_float: f32,
-    #[struct_helper(annotation = "foo")]
+    // #[struct_helper(annotation = "foo")]
     array_three_chars: [i8; 3],
     struct_z: StructWithFloat,
     array_with_three_structs: [StructWithFloat; 3],
@@ -20,22 +21,23 @@ struct Pancakes {
 
 #[test]
 fn test_starts() {
-    let bound = Pancakes::fields();
+    let bound = Pancakes::nfields();
+    println!("{:?}", bound);
 
     assert_eq!(
         offset_of!(Pancakes, first_char),
-        bound.children[0].info.start
+        bound[0].start()
     );
-    assert_eq!(offset_of!(Pancakes, an_uint), bound.children[1].info.start);
-    assert_eq!(offset_of!(Pancakes, a_float), bound.children[2].info.start);
+    assert_eq!(offset_of!(Pancakes, an_uint), bound[1].start());
+    assert_eq!(offset_of!(Pancakes, a_float), bound[2].start());
     assert_eq!(
         offset_of!(Pancakes, array_three_chars),
-        bound.children[3].info.start
+        bound[3].start()
     );
-    assert_eq!(offset_of!(Pancakes, struct_z), bound.children[4].info.start);
+    assert_eq!(offset_of!(Pancakes, struct_z), bound[4].start());
     assert_eq!(
         offset_of!(Pancakes, array_with_three_structs),
-        bound.children[5].info.start
+        bound[5].start()
     );
 }
 
@@ -101,83 +103,77 @@ fn test_roundtrips_ranges_and_most_things() {
     };
 
     {
-        let for_lookup = Pancakes::fields();
+        let for_lookup = Pancakes::nfields();
 
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(
-            for_lookup.children[0]
-                .info
-                .name
+            for_lookup[0]
+                .name()
                 .expect("Should have a name"),
             "first_char"
         );
-        raw_bytes[for_lookup.children[0].info.start] = char_value; // first byte.
+        raw_bytes[for_lookup[0].start()] = char_value; // first byte.
                                                                    // 3 bytes padding.
 
         // And this will only work if the host is little endian as well...
         let int_bytes = int_value.to_le_bytes();
         assert_eq!(
-            for_lookup.children[1]
-                .info
-                .name
+            for_lookup[1]
+                .name()
                 .expect("Should have a name"),
             "an_uint"
         );
-        for i in 0..for_lookup.children[1].info.length {
-            raw_bytes[for_lookup.children[1].info.start + i] = int_bytes[i];
+        for i in 0..for_lookup[1].length() {
+            raw_bytes[for_lookup[1].start() + i] = int_bytes[i];
         }
 
         let float_bytes = float_value.to_le_bytes();
         assert_eq!(
-            for_lookup.children[2]
-                .info
-                .name
+            for_lookup[2]
+                .name()
                 .expect("Should have a name"),
             "a_float"
         );
-        for i in 0..for_lookup.children[2].info.length {
-            raw_bytes[for_lookup.children[2].info.start + i] = float_bytes[i];
+        for i in 0..for_lookup[2].length() {
+            raw_bytes[for_lookup[2].start() + i] = float_bytes[i];
         }
 
         // Now we get to the realm of nesting...
-        let array_offset = for_lookup.children[3].info.start;
+        let array_offset = for_lookup[3].start();
         assert_eq!(
-            for_lookup.children[3]
-                .info
-                .name
+            for_lookup[3]
+                .name()
                 .expect("Should have a name"),
             "array_three_chars"
         );
-        for i in 0..for_lookup.children[3].children.len() {
-            raw_bytes[array_offset + for_lookup.children[3].children[i].info.start] =
+        for i in 0..for_lookup[3].elements().len() {
+            raw_bytes[array_offset + for_lookup[3].elements()[i].start()] =
                 char_array_value[i].to_le_bytes()[0];
         }
 
         let float_z_bytes = float_z_value.to_le_bytes();
         assert_eq!(
-            for_lookup.children[4]
-                .info
-                .name
+            for_lookup[4]
+                .name()
                 .expect("Should have a name"),
             "struct_z"
         );
-        for i in 0..for_lookup.children[4].info.length {
-            raw_bytes[for_lookup.children[4].info.start + i] = float_z_bytes[i];
+        for i in 0..for_lookup[4].length() {
+            raw_bytes[for_lookup[4].start() + i] = float_z_bytes[i];
         }
 
         assert_eq!(
-            for_lookup.children[5]
-                .info
-                .name
+            for_lookup[5]
+                .name()
                 .expect("Should have a name"),
             "array_with_three_structs"
         );
         let float_array = [float_1_value, float_2_value, float_3_value];
-        for i in 0..for_lookup.children[5].children.len() {
+        for i in 0..for_lookup[5].elements().len() {
             let b = float_array[i].to_le_bytes();
-            for j in 0..for_lookup.children[5].children[i].info.length {
-                raw_bytes[for_lookup.children[5].info.start
-                    + for_lookup.children[5].children[i].info.start
+            for j in 0..for_lookup[5].elements()[i].length() {
+                raw_bytes[for_lookup[5].start()
+                    + for_lookup[5].elements()[i].start()
                     + j] = b[j];
             }
         }
@@ -222,7 +218,7 @@ fn test_roundtrips_ranges_and_most_things() {
     }
 }
 
-#[derive(StructHelper, Debug, Default, Copy, Clone)]
+#[derive(Inspectable, Wireable, Debug, Default, Copy, Clone)]
 struct StructWithInteger {
     int: u32,
 }

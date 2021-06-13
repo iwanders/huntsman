@@ -153,15 +153,26 @@ pub trait Wireable
 }
 
 
-pub trait Inspectable
+pub trait Inspectable : std::fmt::Debug
 {
     fn clone_box(&self) -> Box<dyn Inspectable>;
     fn nfields() -> Vec<Box<dyn Inspectable>> where Self: Sized;
+
+
+    fn inspect() -> Box<dyn Inspectable> where Self: Sized
+    {
+        panic!("Doesn't implement the static constructor");
+    }
 
     /// The start offset relative to the parent.
     fn start(&self) -> usize
     {
         0
+    }
+
+    fn set_start(&mut self, start: usize)
+    {
+        panic!("Can't set start");
     }
 
     /// The length of this element.
@@ -222,7 +233,7 @@ impl Clone for Box<dyn Inspectable> {
 //https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#fully-qualified-syntax-for-disambiguation-calling-methods-with-the-same-name
 
 //https://doc.rust-lang.org/rust-by-example/macros/designators.html 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SimpleInspectable
 {
     /// The start location of this field from its parent.
@@ -247,8 +258,6 @@ pub struct SimpleInspectable
 
     pub elements: Vec<Box<dyn Inspectable>>,
 
-    pub fields: Vec<Box<dyn Inspectable>>,
-
 }
 impl Clone for SimpleInspectable
 {
@@ -262,7 +271,6 @@ impl Clone for SimpleInspectable
             element_type: self.element_type,
             attrs: self.attrs.clone(),
             elements: self.elements.iter().map(|x|{x.clone()}).collect(),
-            fields: self.elements.iter().map(|x|{x.clone()}).collect(),
         }
     }
 }
@@ -273,7 +281,7 @@ impl Inspectable for SimpleInspectable
 {
     fn nfields() -> Vec<Box<dyn Inspectable>> where Self: Sized
     {
-        vec!() // static method for a generic thing... aight.
+        panic!("One should never use the StaticInspectable...");
     }
 
     fn clone_box(&self) -> Box<dyn Inspectable>
@@ -285,6 +293,12 @@ impl Inspectable for SimpleInspectable
     {
         self.start
     }
+
+    fn set_start(&mut self, start: usize)
+    {
+        self.start = start;
+    }
+
     fn length(&self) -> usize
     {
         self.length
@@ -309,20 +323,6 @@ impl Inspectable for SimpleInspectable
     {
         self.elements.iter().map(|x|{ x.clone_box()}).collect() // yuck.
     }
-
-    /// Returns the fields this thing could return.
-    // fn nfields() -> Vec<Box<dyn Information>> where Self:Sized
-    // {
-        // vec!()
-    // }
-
-    // fn inspect(&self) -> Box<dyn Inspectable>
-    // {
-        // Box::new(self.clone())
-    // }
-
-    // Below here are things from the old implementation, they may be redundant now.
-
 
 
     /// A hashmap that can contain arbitrary annotations to fields.
@@ -358,10 +358,6 @@ macro_rules! make_inspectable {
 
         impl Inspectable for $a
         {
-
-            // fn clone_box(&self) -> Box<dyn Inspectable>;
-            // fn nfields() -> Box<dyn Inspectable> where Self: Sized;
-
             /// The start offset relative to the parent.
             fn start(&self) -> usize
             {
@@ -379,18 +375,33 @@ macro_rules! make_inspectable {
             {
                 std::any::type_name::<$a>()
             }
+
             fn element_type(&self) -> ElementType
             {
                 ElementType::Scalar
             }
+
             fn nfields() -> Vec<Box<dyn Inspectable>>
             {
                 vec!()
             }
+
             fn clone_box(&self) -> Box<dyn Inspectable>
             {
                 Box::new(self.clone())
             }
+
+            fn inspect() -> Box<dyn Inspectable> where Self: Sized
+            {
+                Box::new(SimpleInspectable{
+                    start: 0,
+                    length: std::mem::size_of::<$a>(),
+                    type_name: std::any::type_name::<$a>(),
+                    element_type: ElementType::Scalar,
+                    ..Default::default()
+                })
+            }
+
         }
     }
 }

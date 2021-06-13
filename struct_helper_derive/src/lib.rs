@@ -156,6 +156,24 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                     )
                                 ));
 
+                                inspectable_fields.push(proc_macro2::TokenStream::from(quote!(
+                                    Box::new(struct_helper::SimpleInspectable{
+                                        start: offset_of!(#root_struct, #inner_field_ident),
+                                        length: std::mem::size_of::<#type_ident>() *#arr_len ,
+                                        type_name:  stringify!(#type_ident),
+                                        name: Some((#name).to_string()),
+                                        element_type: struct_helper::ElementType::Array,
+                                        // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
+                                        elements: (0..#arr_len).map(|i|
+                                                {
+                                                    let mut entry = <#type_ident as Inspectable>::inspect();    
+                                                    entry.set_start(i * std::mem::size_of::<#type_ident>());
+                                                    entry
+                                                }).collect::<Vec<Box<dyn Inspectable>>>(),
+                                        ..Default::default()
+                                    })
+                                )));
+
                                 fields_to_bytes.push(proc_macro2::TokenStream::from(quote!(
                                     for i in 0..#arr_len
                                     {
@@ -210,7 +228,7 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
                                         name: Some((#name).to_string()),
                                         element_type: struct_helper::ElementType::Path,
                                         // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
-                                        elements: vec!(),
+                                        elements: <#type_ident as Inspectable>::nfields(),
                                         ..Default::default()
                                     })
                                 )));
@@ -290,6 +308,10 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
             {
                 stringify!(#name)
             }
+            fn name(&self) -> Option<String>
+            {
+                Some(stringify!(#name).to_string())
+            }
             fn element_type(&self) -> struct_helper::ElementType
             {
                 struct_helper::ElementType::Other
@@ -305,6 +327,20 @@ fn impl_struct_helper_macro(input: proc_macro::TokenStream, trait_to_implement: 
             fn clone_box(&self) -> Box<dyn struct_helper::Inspectable>
             {
                 Box::new(self.clone())
+            }
+
+            fn inspect() -> Box<dyn struct_helper::Inspectable>
+            {
+                Box::new(struct_helper::SimpleInspectable{
+                    start: 0,
+                    length: std::mem::size_of::<#name>(),
+                    type_name: stringify!(#name),
+                    name: Some(stringify!(#name).to_string()),
+                    element_type: struct_helper::ElementType::Path,
+                    // attrs: vec!(#(#outer_attribute_tokens),*).iter().cloned().collect(),
+                    elements: #name::nfields(),
+                    ..Default::default()
+                })
             }
 
         };
