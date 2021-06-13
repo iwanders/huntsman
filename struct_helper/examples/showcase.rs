@@ -41,7 +41,7 @@ fn main() -> Result<(), String> {
             .collect::<Vec<String>>()
             .join(" ")
     );
-    for f in Example::nfields().iter() {
+    for f in Example::fields().iter() {
         let s = 3; // each byte takes 3 characters in hex, with space to seperate them
         let start = f.start() * s;
         let length = f.length() * s - 1; // -1 to make the diagram pretty :)

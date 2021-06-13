@@ -21,7 +21,7 @@ struct Pancakes {
 
 #[test]
 fn test_starts() {
-    let bound = Pancakes::nfields();
+    let bound = Pancakes::fields();
     println!("{:?}", bound);
 
     assert_eq!(offset_of!(Pancakes, first_char), bound[0].start());
@@ -97,7 +97,7 @@ fn test_roundtrips_ranges_and_most_things() {
     };
 
     {
-        let for_lookup = Pancakes::nfields();
+        let for_lookup = Pancakes::fields();
 
         let raw_bytes = struct_to_bytes_mut(&mut to_be_modified);
         assert_eq!(

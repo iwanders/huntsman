@@ -43,71 +43,10 @@ impl Default for ElementType {
     }
 }
 
-#[derive(Debug, Clone)]
-/// Info struct to hold common information for fields.
-pub struct Info {
-    /// The start location of this field from its parent.
-    pub start: usize,
-
-    /// The length of this field.
-    pub length: usize,
-
-    /// A string representation of the type this field is.
-    pub type_name: &'static str,
-
-    /// A [`std::any::TypeId`] instance for the type of this field.
-    pub type_id: std::any::TypeId,
-
-    /// If this field has a name, the name of the field, otherwise `None`.
-    pub name: Option<&'static str>,
-
-    /// The type of field this element is.
-    pub element_type: ElementType,
-
-    /// A hashmap that can contain arbitrary annotations to fields.
-    // This feels 100% over the top, we'll have 0 to 1 keys at most. But this is the most flexible, allowing free-form
-    // annotations to be completely specified by the user.
-    pub attrs: std::collections::HashMap<&'static str, &'static str>,
-}
-
-#[derive(Debug, Clone)]
-/// Struct to provide information about a field, without any reference to it.
-pub struct Field {
-    pub info: Info,
-    pub children: Vec<Field>,
-}
-
-impl Field {
-    /// Retrieve a particular field by name.
-    pub fn find(&self, name: &str) -> Option<Field> {
-        for i in 0..self.children.len() {
-            match self.children[i].info.name {
-                Some(n) => {
-                    if n == name {
-                        return Some(self.children[i].clone());
-                    }
-                }
-                None => {}
-            }
-        }
-        return None;
-    }
-}
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Endianness {
     Little,
     Big,
-}
-
-/// Main trait that provides inspection functions to objects that implement this trait, or as a
-/// static method to the type itself.
-pub trait StructHelper {
-    /// Retrieve the fields without references.
-    fn fields() -> Field
-    where
-        Self: Sized;
-    // We need to be sized anyway for all this struct stuff.
 }
 
 pub trait ToBytes {
@@ -156,7 +95,7 @@ pub trait FromBytes {
 
 pub trait Inspectable: std::fmt::Debug {
     fn clone_box(&self) -> Box<dyn Inspectable>;
-    fn nfields() -> Vec<Box<dyn Inspectable>>
+    fn fields() -> Vec<Box<dyn Inspectable>>
     where
         Self: Sized;
 
@@ -198,7 +137,7 @@ pub trait Inspectable: std::fmt::Debug {
 
     /// Returns the fields this thing could return.
     // fn clone_box(&self) -> Box<dyn Information>
-    // fn nfields() -> Vec<Box<dyn Information>> where Self:Sized
+    // fn fields()() -> Vec<Box<dyn Information>> where Self:Sized
     // {
     // vec!()
     // }
@@ -266,7 +205,7 @@ impl Clone for SimpleInspectable {
 }
 
 impl Inspectable for SimpleInspectable {
-    fn nfields() -> Vec<Box<dyn Inspectable>>
+    fn fields() -> Vec<Box<dyn Inspectable>>
     where
         Self: Sized,
     {
@@ -314,25 +253,6 @@ impl Inspectable for SimpleInspectable {
 /// Helper macro to create the implementations for the primitive scalar types.
 macro_rules! make_inspectable {
     ($a:ty) => {
-        impl StructHelper for $a {
-            fn fields() -> Field
-            where
-                Self: Sized,
-            {
-                Field {
-                    info: Info {
-                        start: 0,
-                        length: std::mem::size_of::<$a>(),
-                        type_name: std::any::type_name::<$a>(),
-                        type_id: std::any::TypeId::of::<$a>(),
-                        name: None,
-                        element_type: ElementType::Scalar,
-                        attrs: std::collections::HashMap::new(),
-                    },
-                    children: vec![],
-                }
-            }
-        }
 
         impl Inspectable for $a {
             /// The start offset relative to the parent.
@@ -354,7 +274,7 @@ macro_rules! make_inspectable {
                 ElementType::Scalar
             }
 
-            fn nfields() -> Vec<Box<dyn Inspectable>> {
+            fn fields() -> Vec<Box<dyn Inspectable>> {
                 vec![]
             }
 
