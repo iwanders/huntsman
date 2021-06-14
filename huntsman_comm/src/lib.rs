@@ -927,6 +927,16 @@ mod tests {
             and_back
         );
 
+        let set_mouse_stroke_left = parse_wireshark_truncated("00:1f:00:00:00:0b:06:09:3b:68:00:00:00:00:04:08:01:08:00", 0x52);
+        let cmd =
+            wire::MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..]).expect("Should pass");
+        let and_back = cmd.to_be_bytes().expect("Success");
+        assert_eq!(and_back.len(), 11);
+        assert_eq!(
+            &set_mouse_stroke_left[PAYLOAD_START..PAYLOAD_START + and_back.len()],
+            and_back
+        );
+
     }
 }
 

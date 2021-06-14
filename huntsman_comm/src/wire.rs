@@ -144,12 +144,23 @@ pub struct GetStorageStatistics {
     pub free2: u32,
 }
 
+
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum MouseButton
+{
+    None = 0,
+    Left = 1,
+    Right = 2,
+    Scroll = 4,
+}
 // What follows is _really_ ugly :(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MacroAction {
     KeyboardMake(u8),
     KeyboardBreak(u8),
     Delay(u32),
+    MouseClick(MouseButton),
     None,
 }
 
@@ -170,6 +181,8 @@ impl MacroAction {
     const KEYBOARD_DELAY_U16: u8 = 0x12;
     const KEYBOARD_DELAY_U24: u8 = 0x13; // for real... :(
     const KEYBOARD_DELAY_U32: u8 = 0x14;
+
+    const MOUSE_CLICK: u8 = 0x08;
 }
 
 impl FromBytes for MacroAction {
@@ -207,8 +220,23 @@ impl FromBytes for MacroAction {
                 // Now, we interpret this as little endian, since least significant is left.
                 *self = MacroAction::Delay(u32::from_le_bytes(arr));
                 return Ok(1 + get_delay_byte_length);
+            },
+            MacroAction::MOUSE_CLICK => {
+                let key_code = src[1];
+                let button = 
+                match key_code
+                {
+                    i if i == MouseButton::None as u8 => MouseButton::None,
+                    i if i == MouseButton::Left as u8 => MouseButton::Left,
+                    i if i == MouseButton::Right as u8 => MouseButton::Right,
+                    i if i == MouseButton::Scroll as u8 => MouseButton::Scroll,
+                    _ => panic!("Unhandled mouse code: {:?}, total: {:?}", key_code, src),
+                };
+                
+                *self = MacroAction::MouseClick(button);
+                return Ok(2);
             }
-            z => panic!("Unhandled macro code {:?}", z),
+            z => panic!("Unhandled macro code {:?}, total src: {:?}", z, src),
         }
     }
 }
@@ -249,6 +277,11 @@ impl ToBytes for MacroAction {
                     buff.push(MacroAction::KEYBOARD_DELAY_U8);
                     buff.extend(b[3..].to_vec());
                 }
+            }
+            MacroAction::MouseClick(button) =>
+            {
+                buff.push(MacroAction::MOUSE_CLICK);
+                buff.push(*button as u8);
             }
             z => panic!("Unhandled macro code {:?}", z),
         }
