@@ -205,7 +205,7 @@ fn get_name(v: &Vec<Prefix>) -> String {
             Prefix::Label(s) => {
                 return s.clone();
             }
-            _ => panic!("could not make name from prefix"),
+            _ => panic!("could not make name from prefix {:?}", v),
         }
     }
 }
@@ -225,6 +225,7 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     "u8" => FieldDisplay::BASE_HEX,
                     "u16" => FieldDisplay::BASE_HEX,
                     "u32" => FieldDisplay::BASE_HEX,
+                    "bytes" => FieldDisplay::SEP_COLON,
                     _ => panic!(
                         "Unsupport type name \"{}\", add it in the dissector.",
                         x.type_name
@@ -242,6 +243,7 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     "u8" => FieldType::UINT8,
                     "u16" => FieldType::UINT16,
                     "u32" => FieldType::UINT32,
+                    "bytes" => FieldType::BYTES,
                     _ => panic!(
                         "Unsupport type name \"{}\", add it in the dissector.",
                         x.type_name
@@ -314,7 +316,7 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
         .expect("Payload should exist")
         .start();
 
-    for (_cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+    for (_cmd, _dissect_fun, field_fun) in huntsman_comm::get_command_fields().iter() {
         let fields = field_fun();
         field_recurser(
             fields.as_ref(),
@@ -335,11 +337,13 @@ mod tests {
 
     #[test]
     fn wrangle_commands_into_fields() {
+
+        let command_fields = wire::Command::fields();
+        println!("{:#?}", command_fields);
+
         let all_fields = make_all_fields();
         println!("{:#?}", all_fields.0);
         println!("{:#?}", all_fields.1);
 
-        let command_fields = wire::Command::fields();
-        println!("{:#?}", command_fields);
     }
 }

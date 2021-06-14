@@ -496,22 +496,55 @@ pub fn dev_run_cmd() -> Box<dyn Command> {
     })
 }
 
+pub struct SetMacroActions
+{
+}
+impl SetMacroActions
+{
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x09,
+    };
+}
+
+
+trait Dissectable: FromBytes +  Default + Inspectable {}
+impl Dissectable for wire::SetGameMode{}
+impl Dissectable for wire::SetKeyOverride{}
+impl Dissectable for wire::SetLedEffect{}
+impl Dissectable for wire::SetLedState{}
+impl Dissectable for wire::SetLedBrightness{}
+impl Dissectable for wire::GetStorageStatistics{}
+impl Dissectable for wire::MacroActions{}
+
+
+pub type DissectableFun = Box<dyn Fn(&[u8]) -> Box<dyn struct_helper::Inspectable>>;
+pub type FieldFun = Box<dyn Fn() -> Box<dyn struct_helper::Inspectable>>;
+fn add_functions<T: 'static + Dissectable>(cmd: Cmd, v: &mut Vec<(Cmd, DissectableFun, FieldFun)>)
+{
+    v.push((
+        cmd,
+        Box::new(|x: &[u8]|
+        {
+            let z: T = T::from_be_bytes(x).expect("Should be able to parse thigs...");
+            return z.clone_box();
+        }),
+        Box::new(T::inspect)
+    ))
+    
+}
 /// Helper function for the dissector that provides the fields for the provided commands.
-pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::Inspectable>>)> {
-    vec![
-        (SetGameMode::CMD, Box::new(wire::SetGameMode::inspect)),
-        (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::inspect)),
-        (SetLedEffect::CMD, Box::new(wire::SetLedEffect::inspect)),
-        (SetLedState::CMD, Box::new(wire::SetLedState::inspect)),
-        (
-            SetLedBrightness::CMD,
-            Box::new(wire::SetLedBrightness::inspect),
-        ),
-        (
-            GetStorageStatistics::CMD,
-            Box::new(wire::GetStorageStatistics::inspect),
-        ),
-    ]
+pub fn get_command_fields() -> Vec<(Cmd, DissectableFun, FieldFun)> {
+    let mut v: Vec<(Cmd, DissectableFun, FieldFun)> = Vec::new();
+    add_functions::<wire::SetGameMode>(SetGameMode::CMD, &mut v);
+    add_functions::<wire::SetKeyOverride>(SetKeyOverride::CMD, &mut v);
+    add_functions::<wire::SetLedEffect>(SetLedEffect::CMD, &mut v);
+    add_functions::<wire::SetLedState>(SetLedState::CMD, &mut v);
+    add_functions::<wire::SetLedBrightness>(SetLedBrightness::CMD, &mut v);
+    add_functions::<wire::GetStorageStatistics>(GetStorageStatistics::CMD, &mut v);
+    add_functions::<wire::MacroActions>(SetMacroActions::CMD, &mut v);
+
+    return v;
 }
 
 #[cfg(test)]

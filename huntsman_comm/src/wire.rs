@@ -162,7 +162,6 @@ pub struct MacroActions {
     pub events: Vec<MacroAction>,
 }
 
-
 impl MacroAction {
     const KEYBOARD_MAKE: u8 = 0x01;
     const KEYBOARD_BREAK: u8 = 0x02;
@@ -290,5 +289,152 @@ impl ToBytes for MacroActions {
             buff.extend(event.to_bytes(endianness)?);
         }
         Ok(buff)
+    }
+}
+
+impl Inspectable for MacroActions
+{
+    fn clone_box(&self) -> Box<dyn Inspectable>
+    {
+        Box::new(self.clone())
+    }
+    fn element_type(&self) -> struct_helper::ElementType {
+        struct_helper::ElementType::Other
+    }
+    fn type_name(&self) -> &'static str
+    {
+        "MacroActions"
+    }
+    fn name(&self) -> Option<String>
+    {
+        Some("MacroActions".to_string())
+        // Self::inspect().name()
+    }
+
+
+    /// Return an inspectable that represents this type fully. So the returned value's
+    /// elements() methods should be identical to called the returns [`Inspectable::elements()`].
+    fn inspect() -> Box<dyn Inspectable>
+    {
+        Box::new(struct_helper::SimpleInspectable{
+            start: 0,
+            length: 30,
+            type_name: "MacroActions",
+            name: Some("MacroActions".to_string()),
+            elements: MacroActions::fields(),
+            element_type: ElementType::Path,
+            ..Default::default()
+        })
+    }
+
+    /// Return a list of inspectables that hold represent the fields in this type. Or, if returns
+    /// less in an instance, this should still return all possible fields.
+    fn fields() -> Vec<Box<dyn Inspectable>>
+    {
+        let macro_id = Box::new(struct_helper::SimpleInspectable{
+            name: Some("macro_id".to_string()),
+            start: 0,
+            length: u16::inspect().length(),
+            element_type: ElementType::Path,
+            type_name: "u16",
+            elements: <u16 as Inspectable>::fields(),
+            ..Default::default()
+        });
+
+        let byte_count = Box::new(struct_helper::SimpleInspectable{
+            name: Some("byte_count".to_string()),
+            start: 3,
+            type_name: "u32",
+            length: u32::inspect().length(),
+            element_type: ElementType::Path,
+            elements: <u32 as Inspectable>::fields(),
+            ..Default::default()
+        });
+
+        // let action_id = Box::new(struct_helper::SimpleInspectable{
+            // name: Some("action_id".to_string()),
+            // start: 0,
+            // type_name: "u8",
+            // length: 1,
+            // element_type: ElementType::Path,
+            // elements: <u8 as Inspectable>::fields(),
+            // ..Default::default()
+        // });
+
+        // let action_thing = Box::new(struct_helper::SimpleInspectable{
+            // name: Some("action_thing".to_string()),
+            // start: 0,
+            // type_name: "bytes",
+            // length: 1,
+            // element_type: ElementType::Path,
+            // elements: <u8 as Inspectable>::fields(),
+            // ..Default::default()
+        // });
+
+        let action = Box::new(struct_helper::SimpleInspectable{
+            name: Some("action".to_string()),
+            start: 0,
+            type_name: "u8",
+            length: 1,
+            element_type: ElementType::Path,
+            elements: <u8 as Inspectable>::fields(),
+            ..Default::default()
+        });
+
+        let action_array = Box::new(struct_helper::SimpleInspectable{
+            name: Some("action_array".to_string()),
+            start: 0,
+            type_name: "bytes",
+            length: 10,
+            element_type: ElementType::Array,
+            elements: vec!(action.clone(), action.clone(), action.clone(), action.clone()),
+            ..Default::default()
+        });
+
+        let macros = Box::new(struct_helper::SimpleInspectable{
+            name: Some("macros".to_string()),
+            start: 0,
+            type_name: "bytes",
+            length: 10,
+            element_type: ElementType::Path,
+            elements: vec!(action_array),
+            ..Default::default()
+        });
+        
+        vec!(macro_id, byte_count, macros)
+    }
+
+    fn elements(&self) -> Vec<Box<dyn Inspectable>>
+    {
+        println!("EElements on: {:?}", self);
+        let mut base = MacroActions::fields();
+        // return base;
+        // modify the length of the macros block.
+        base[2].set_length(self.byte_count as usize);
+        // extract a macro building block.
+        let dummy = base[2].elements()[0].clone();
+
+        let mut collected : Vec<Box<dyn Inspectable>>  = Vec::new();
+        let mut offset = 0;
+        for event in self.events.iter()
+        {
+            let converted_event = event.to_be_bytes().unwrap();
+            collected.push(Box::new(struct_helper::SimpleInspectable{
+                name: Some("action".to_string()),
+                start: offset,
+                type_name: "u8",
+                length: converted_event.len(),
+                element_type: ElementType::Path,
+                elements: <u8 as Inspectable>::fields(),
+                ..Default::default()
+            }));
+            offset += converted_event.len();
+        }
+        while collected.len() < 4
+        {
+            collected.push(dummy.clone())
+        }
+        base[2].set_elements(collected);
+        return base;
     }
 }

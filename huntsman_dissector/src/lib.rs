@@ -199,25 +199,22 @@ impl HuntsmanDissector {
             major: command.cmd.major,
             minor: command.cmd.minor,
         };
-        let mut fields: Option<Box<dyn Inspectable>> = None;
 
         // Iterate over all known commands from the comms side, and dissect their wire definitions
         // if available.
-        for (cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+        for (cmd, dissect_fun, _field_fun) in huntsman_comm::get_command_fields().iter() {
             if cmd_id == *cmd {
-                fields = Some(field_fun());
+                let payload = tvb.get_mem(offset, left - offset);
+                let parsed = dissect_fun(&payload[..]);
+                field_recurser(
+                    parsed.as_ref(),
+                    &flags,
+                    prefix_start(),
+                    offset,
+                    &mut dissection_visitor,
+                );
                 break;
             }
-        }
-
-        if let Some(f) = fields {
-            field_recurser(
-                f.as_ref(),
-                &flags,
-                prefix_start(),
-                offset,
-                &mut dissection_visitor,
-            );
         }
 
         // Return how many bytes we read.

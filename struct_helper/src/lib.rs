@@ -135,6 +135,12 @@ pub trait Inspectable: std::fmt::Debug {
         vec![]
     }
 
+    /// Updates the elements with the provided vector.
+    fn set_elements(&mut self, _elements: Vec<Box<dyn Inspectable>>)
+    {
+        panic!("Can't set elements on this Inspectable type");
+    }
+
     /// Helper function to retrieve the element with a certain name. None if not found.
     fn get(&self, search_name: &str) -> Option<Box<dyn Inspectable>> {
         let children = self.elements();
@@ -253,6 +259,11 @@ impl Inspectable for SimpleInspectable {
     fn elements(&self) -> Vec<Box<dyn Inspectable>> {
         self.elements.iter().map(|x| x.clone_box()).collect() // yuck.
     }
+    fn set_elements(&mut self, elements: Vec<Box<dyn Inspectable>>)
+    {
+        self.elements = elements;
+    }
+
 
     fn attrs(&self) -> std::collections::HashMap<&'static str, &'static str> {
         self.attrs.clone()
