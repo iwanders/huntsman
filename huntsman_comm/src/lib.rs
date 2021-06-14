@@ -462,6 +462,17 @@ impl Command for GetStorageStatistics {
     }
 }
 
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the memory storage statistics.
+pub struct MacroActions {}
+impl MacroActions {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x09,
+    };
+}
+
+
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
@@ -513,7 +524,6 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
         ),
     ]
 }
-
 
 pub const WIRESHARK_PAYLOAD_START: usize = 8;
 pub fn parse_wireshark_value(z: &str) -> Vec<u8> {

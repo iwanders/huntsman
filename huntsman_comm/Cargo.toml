@@ -14,10 +14,11 @@ crate-type = ["lib"]
 struct_helper = { path = "../struct_helper" }
 
 serde_json = { version = "^1.0", optional = true }
+clap = { version = "2.33.3", optional = true }
 
 
 [features]
-build-devtool = ["serde_json"]
+build-devtool = ["serde_json", "clap"]
 
 [[bin]]
 name = "dev_analyse"
