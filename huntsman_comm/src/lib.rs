@@ -514,25 +514,25 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
     ]
 }
 
+
+pub const WIRESHARK_PAYLOAD_START: usize = 8;
+pub fn parse_wireshark_value(z: &str) -> Vec<u8> {
+    let mut r: Vec<u8> = Vec::new();
+    let bytes = z.split(":");
+    for b in bytes {
+        match u8::from_str_radix(b, 16) {
+            Ok(number) => r.push(number),
+            Err(e) => panic!("{}; {:?} (full: {:?})", e, b, z),
+        };
+    }
+    return r;
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-
-    const PAYLOAD_START: usize = 8;
-    #[cfg(test)]
-    fn parse_wireshark_value(z: &str) -> Vec<u8> {
-        let mut r: Vec<u8> = Vec::new();
-        let bytes = z.split(":");
-        for b in bytes {
-            match u8::from_str_radix(b, 16) {
-                Ok(number) => r.push(number),
-                Err(e) => panic!("{}; {:?} (full: {:?})", e, b, z),
-            };
-        }
-        return r;
-    }
-
+    const PAYLOAD_START: usize = WIRESHARK_PAYLOAD_START;
     /// Parses a wireshark value, but assumes null bytes for the remainder, does calculate
     /// and compare the checksum against the provided check u8, asserts if this fails.
     fn parse_wireshark_truncated(z: &str, check: u8) -> Vec<u8> {

@@ -162,7 +162,6 @@ pub struct MacroActions {
     pub events: Vec<MacroAction>,
 }
 
-
 impl MacroAction {
     const KEYBOARD_MAKE: u8 = 0x01;
     const KEYBOARD_BREAK: u8 = 0x02;

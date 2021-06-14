@@ -12,3 +12,14 @@ crate-type = ["lib"]
 
 [dependencies]
 struct_helper = { path = "../struct_helper" }
+
+serde_json = { version = "^1.0", optional = true }
+
+
+[features]
+build-devtool = ["serde_json"]
+
+[[bin]]
+name = "dev_analyse"
+path = "dev/analyse.rs"
+required-features = ["build-devtool"]
