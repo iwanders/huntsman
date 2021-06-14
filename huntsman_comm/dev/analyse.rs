@@ -140,7 +140,6 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         SetLedBrightness::CMD => Ok(payload_as::<wire::SetLedBrightness>(p)),
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
         SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
-        GetStorageStatistics::CMD => Ok(payload_as::<wire::GetStorageStatistics>(p)),
         MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
         _ => Ok("".to_string()),
     }
@@ -155,6 +154,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
         let frames = obtain_frames(k)?;
 
         for f in frames.iter() {
+            println!("f.data: {:?}", to_wireshark_value(&f.data));
             let command = wire::Command::from_be_bytes(&f.data)?;
             let payload = payload_str(&command)?;
             let dir = if command.status == 0 { ">" } else { "<" };

@@ -538,6 +538,13 @@ pub fn parse_wireshark_value(z: &str) -> Vec<u8> {
     return r;
 }
 
+pub fn to_wireshark_value(v: &Vec<u8>) -> String
+{
+    (v.clone()).iter().map(|x| format!("{:0>2x}", x))
+                    .collect::<Vec<String>>()
+                    .join(":")
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -909,6 +916,17 @@ mod tests {
             &delay_b_a[PAYLOAD_START..PAYLOAD_START + and_back.len()],
             and_back
         );
+
+        let parsing_breaks_1 = parse_wireshark_truncated("00:1f:00:00:00:18:06:09:3b:68:00:00:00:00:11:11:fa:01:05:13:01:d4:c0:02:05:12:13:88:01:04:02:04:00", 0x31);
+        let cmd =
+            wire::MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..]).expect("Should pass");
+        let and_back = cmd.to_be_bytes().expect("Success");
+        assert_eq!(and_back.len(), 24);
+        assert_eq!(
+            &parsing_breaks_1[PAYLOAD_START..PAYLOAD_START + and_back.len()],
+            and_back
+        );
+
     }
 }
 

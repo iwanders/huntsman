@@ -202,10 +202,10 @@ impl FromBytes for MacroAction {
                 let mut arr: [u8; 4] = [0; 4];
                 // Now copy the correct number of bytes to the correct location
                 for i in 0..get_delay_byte_length {
-                    arr[i + get_delay_byte_length] = src[1 + i];
+                    arr[i] = src[get_delay_byte_length - i];
                 }
-                // Now, we interpret this as big endian.
-                *self = MacroAction::Delay(u32::from_be_bytes(arr));
+                // Now, we interpret this as little endian, since least significant is left.
+                *self = MacroAction::Delay(u32::from_le_bytes(arr));
                 return Ok(1 + get_delay_byte_length);
             }
             z => panic!("Unhandled macro code {:?}", z),
@@ -246,7 +246,7 @@ impl ToBytes for MacroAction {
                 } else if b[3] != 0
                 // 1 byte
                 {
-                    buff.push(MacroAction::KEYBOARD_DELAY_U16);
+                    buff.push(MacroAction::KEYBOARD_DELAY_U8);
                     buff.extend(b[3..].to_vec());
                 }
             }
