@@ -3,7 +3,9 @@
 This [Rust][rust] workspace allows interacting with the [Razer Huntsman Elite][kbd] keyboard. 
 
 Not all features of the keyboard are supported, neither do I intend to make this project feature
-complete, it's mostly my means of learning a bit of Rust.
+complete, it's mostly my means of learning a bit of Rust. Currently supported are the majority of
+the LED effects, setting overall brightness and setting a custom frame to the LEDs. For the effects
+some random color functionality is available that isn't available through the official ui.
 
 ## Architecture
 
@@ -37,6 +39,7 @@ ensure you can use HID to interact with the keyboard without requiring elevated 
 
 ### `./huntsman`
 After building the workspace you can run the `huntsman` binary (`cargo run --bin huntsman -- --help`).
+
 
 ### Wireshark dissector
 Modify the values at the bottom of the `lib.rs` file to match your Wireshark version. Then symlink 
