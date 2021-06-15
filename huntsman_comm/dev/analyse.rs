@@ -20,16 +20,18 @@ use serde_json::Value;
 // Making an error that takes a string is... more work than hoped.
 #[derive(Debug, Clone)]
 struct StrError {
-    details: String
+    details: String,
 }
 impl StrError {
     fn new(msg: &str) -> Box<StrError> {
-        Box::new(StrError{details: msg.to_string()})
+        Box::new(StrError {
+            details: msg.to_string(),
+        })
     }
 }
 impl std::fmt::Display for StrError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f,"{}",self.details)
+        write!(f, "{}", self.details)
     }
 }
 impl std::error::Error for StrError {
@@ -37,7 +39,6 @@ impl std::error::Error for StrError {
         &self.details
     }
 }
-
 
 #[derive(Debug, Default, Clone)]
 struct Frame {
@@ -146,11 +147,9 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
     }
 }
 
-fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>>
-{
+fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     let files: Vec<_> = matches.values_of("files").unwrap().collect();
-    for k in files.iter()
-    {
+    for k in files.iter() {
         println!("File: {:?}", k);
         let frames = obtain_frames(k)?;
 
@@ -158,14 +157,15 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
             let command = wire::Command::from_be_bytes(&f.data)?;
             let payload = payload_str(&command)?;
             let dir = if command.status == 0 { ">" } else { "<" };
-            if payload.len() == 0
-            {
+            if payload.len() == 0 {
                 continue;
             }
 
-            if command.cmd == GetStorageStatistics::CMD
-            {
-                println!("f.data: {:?}", to_wireshark_value(&f.data[WIRESHARK_PAYLOAD_START..30]));
+            if command.cmd == GetStorageStatistics::CMD {
+                println!(
+                    "f.data: {:?}",
+                    to_wireshark_value(&f.data[WIRESHARK_PAYLOAD_START..30])
+                );
             }
 
             println!(
@@ -173,19 +173,18 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload
             );
         }
-
     }
     Ok(())
 }
 
-
 // This tip from https://www.reddit.com/r/rust/comments/8ilg97/small_tip_on_new_main_result_behavior/
 // nice QOL
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = App::new("Huntsman pcapng analyse tool")
-        .subcommand(SubCommand::with_name("dump").about("run dump on all provided pcap files.").arg(Arg::with_name("files").multiple(true)))
-        
-        ;
+    let mut app = App::new("Huntsman pcapng analyse tool").subcommand(
+        SubCommand::with_name("dump")
+            .about("run dump on all provided pcap files.")
+            .arg(Arg::with_name("files").multiple(true)),
+    );
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
     match matches.subcommand() {
         (_something, Some(_subcmd)) => {}
@@ -195,7 +194,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(StrError::new("No subcommand given."));
         }
     }
-
 
     if let Some(matches) = matches.subcommand_matches("dump") {
         command_dump(matches)?;

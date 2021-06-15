@@ -482,7 +482,6 @@ impl MacroMetadata {
     };
 }
 
-
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
 pub struct ArbitraryCommand {
@@ -532,10 +531,7 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
             GetStorageStatistics::CMD,
             Box::new(wire::GetStorageStatistics::inspect),
         ),
-        (
-            MacroMetadata::CMD,
-            Box::new(wire::MacroMetadata::inspect),
-        )
+        (MacroMetadata::CMD, Box::new(wire::MacroMetadata::inspect)),
     ]
 }
 
@@ -552,11 +548,12 @@ pub fn parse_wireshark_value(z: &str) -> Vec<u8> {
     return r;
 }
 
-pub fn to_wireshark_value(v: &[u8]) -> String
-{
-    (v.clone()).iter().map(|x| format!("{:0>2x}", x))
-                    .collect::<Vec<String>>()
-                    .join(":")
+pub fn to_wireshark_value(v: &[u8]) -> String {
+    (v.clone())
+        .iter()
+        .map(|x| format!("{:0>2x}", x))
+        .collect::<Vec<String>>()
+        .join(":")
 }
 
 #[cfg(test)]
@@ -932,8 +929,8 @@ mod tests {
         );
 
         let parsing_breaks_1 = parse_wireshark_truncated("00:1f:00:00:00:18:06:09:3b:68:00:00:00:00:11:11:fa:01:05:13:01:d4:c0:02:05:12:13:88:01:04:02:04:00", 0x31);
-        let cmd =
-            wire::MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..]).expect("Should pass");
+        let cmd = wire::MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..])
+            .expect("Should pass");
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 24);
         assert_eq!(
@@ -941,16 +938,18 @@ mod tests {
             and_back
         );
 
-        let set_mouse_stroke_left = parse_wireshark_truncated("00:1f:00:00:00:0b:06:09:3b:68:00:00:00:00:04:08:01:08:00", 0x52);
-        let cmd =
-            wire::MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..]).expect("Should pass");
+        let set_mouse_stroke_left = parse_wireshark_truncated(
+            "00:1f:00:00:00:0b:06:09:3b:68:00:00:00:00:04:08:01:08:00",
+            0x52,
+        );
+        let cmd = wire::MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..])
+            .expect("Should pass");
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 11);
         assert_eq!(
             &set_mouse_stroke_left[PAYLOAD_START..PAYLOAD_START + and_back.len()],
             and_back
         );
-
     }
 }
 
