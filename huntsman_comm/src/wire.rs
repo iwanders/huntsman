@@ -162,6 +162,27 @@ pub enum MacroAction {
     None,
 }
 
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug)]
+#[repr(C, packed)]
+/// Struct definition to hold the actions that make up a macro.
+pub struct MacroActionsPayload {
+    pub macro_id: u16,
+    pub position: u32, // byte offset from start of macro actions
+    pub event_bytes_in_msg: u8,
+    #[inspect(dissect_additional_type = "bytes", dissection_hide = "true")]
+    pub events: [u8; 0x48],
+}
+impl Default for MacroActionsPayload {
+    fn default() -> MacroActionsPayload {
+        MacroActionsPayload {
+            events: [0; 0x48],
+            macro_id: 0,
+            position: 0,
+            event_bytes_in_msg: 0,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 /// Struct definition to hold the actions that make up a macro.
 pub struct MacroActions {
@@ -295,7 +316,8 @@ impl FromBytes for MacroActions {
         // let mut tmp: MacroActions = Default::default();
         self.macro_id.from_bytes(&src[0..2], endianness)?;
         self.position.from_bytes(&src[2..6], endianness)?;
-        self.event_length_in_bytes.from_bytes(&src[6..7], endianness)?;
+        self.event_length_in_bytes
+            .from_bytes(&src[6..7], endianness)?;
         self.events.clear();
         let mut offset = 6 + 1;
         let offset_max = offset + self.event_length_in_bytes as usize;
@@ -338,6 +360,6 @@ pub struct MacroMetadata {
     pub something_always_0x00fa: u16,
     pub uuid: Uuid,
     pub action_bytes: u32, // is this... another endianness!?!?
-    // pub name: [u8; 12],    // It can be longer....
+                           // pub name: [u8; 12],    // It can be longer....
                            // Lots of more stuff here, which looks... mostly like dirty memory
 }

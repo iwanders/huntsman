@@ -227,6 +227,7 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     "u8" => FieldDisplay::BASE_HEX,
                     "u16" => FieldDisplay::BASE_HEX,
                     "u32" => FieldDisplay::BASE_HEX,
+                    "bytes" => FieldDisplay::SEP_COLON,
                     _ => panic!(
                         "Unsupport type name \"{}\", add it in the dissector.",
                         x.type_name
@@ -244,6 +245,7 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     "u8" => FieldType::UINT8,
                     "u16" => FieldType::UINT16,
                     "u32" => FieldType::UINT32,
+                    "bytes" => FieldType::BYTES,
                     _ => panic!(
                         "Unsupport type name \"{}\", add it in the dissector.",
                         x.type_name

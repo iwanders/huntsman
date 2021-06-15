@@ -162,8 +162,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
             }
 
             if command.cmd == GetStorageStatistics::CMD {
-                if command.status != 2
-                {
+                if command.status != 2 {
                     continue;
                 }
                 print!("{:.3}", f.frame_time_epoch);

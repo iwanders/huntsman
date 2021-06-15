@@ -532,6 +532,10 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
             Box::new(wire::GetStorageStatistics::inspect),
         ),
         (MacroMetadata::CMD, Box::new(wire::MacroMetadata::inspect)),
+        (
+            MacroActions::CMD,
+            Box::new(wire::MacroActionsPayload::inspect),
+        ),
     ]
 }
 
