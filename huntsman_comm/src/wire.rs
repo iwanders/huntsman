@@ -166,8 +166,8 @@ pub enum MacroAction {
 /// Struct definition to hold the actions that make up a macro.
 pub struct MacroActions {
     pub macro_id: u16,
-    pub _pad: u8,
-    pub byte_count: u32,
+    pub position: u32, // byte offset from start of macro actions
+    pub event_length_in_bytes: u8,
     pub events: Vec<MacroAction>,
 }
 
@@ -294,10 +294,11 @@ impl FromBytes for MacroActions {
     fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String> {
         // let mut tmp: MacroActions = Default::default();
         self.macro_id.from_bytes(&src[0..2], endianness)?;
-        self.byte_count.from_bytes(&src[3..7], endianness)?;
+        self.position.from_bytes(&src[2..6], endianness)?;
+        self.event_length_in_bytes.from_bytes(&src[6..7], endianness)?;
         self.events.clear();
         let mut offset = 6 + 1;
-        let offset_max = offset + self.byte_count as usize;
+        let offset_max = offset + self.event_length_in_bytes as usize;
         while offset < offset_max {
             let mut action: MacroAction = Default::default();
             offset += action.from_bytes(&src[offset..], endianness)?;
@@ -312,8 +313,10 @@ impl ToBytes for MacroActions {
     fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String> {
         let mut buff: Vec<u8> = Vec::new();
         buff.extend(self.macro_id.to_bytes(endianness)?);
-        buff.push(0);
-        buff.extend(self.byte_count.to_bytes(endianness)?);
+        buff.extend(self.position.to_bytes(endianness)?);
+
+        buff.extend(self.event_length_in_bytes.to_bytes(endianness)?);
+
         for event in self.events.iter() {
             buff.extend(event.to_bytes(endianness)?);
         }
