@@ -150,6 +150,7 @@ pub enum MouseButton {
     Left = 1,
     Right = 2,
     Scroll = 4,
+    M4 = 8,
 }
 // What follows is _really_ ugly :(
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -225,6 +226,7 @@ impl FromBytes for MacroAction {
                     i if i == MouseButton::Left as u8 => MouseButton::Left,
                     i if i == MouseButton::Right as u8 => MouseButton::Right,
                     i if i == MouseButton::Scroll as u8 => MouseButton::Scroll,
+                    i if i == MouseButton::M4 as u8 => MouseButton::M4,
                     _ => panic!("Unhandled mouse code: {:?}, total: {:?}", key_code, src),
                 };
 
