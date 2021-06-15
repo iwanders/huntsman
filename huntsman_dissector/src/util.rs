@@ -204,8 +204,10 @@ fn get_name(v: &Vec<Prefix>) -> String {
         match last_element {
             Prefix::Label(s) => {
                 return s.clone();
-            }
-            _ => panic!("could not make name from prefix"),
+            },
+            Prefix::Index(_) => {
+                continue;
+            },
         }
     }
 }

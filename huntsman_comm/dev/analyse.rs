@@ -141,6 +141,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
         SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
         MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
+        MacroMetadata::CMD => Ok(payload_as::<wire::MacroMetadata>(p)),
         _ => Ok("".to_string()),
     }
 }
@@ -154,7 +155,6 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
         let frames = obtain_frames(k)?;
 
         for f in frames.iter() {
-            println!("f.data: {:?}", to_wireshark_value(&f.data));
             let command = wire::Command::from_be_bytes(&f.data)?;
             let payload = payload_str(&command)?;
             let dir = if command.status == 0 { ">" } else { "<" };
@@ -162,6 +162,12 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
             {
                 continue;
             }
+
+            if command.cmd == GetStorageStatistics::CMD
+            {
+                println!("f.data: {:?}", to_wireshark_value(&f.data[WIRESHARK_PAYLOAD_START..30]));
+            }
+
             println!(
                 "{:.3} {} {:0>2x} {:0>2x} {:?}",
                 f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload

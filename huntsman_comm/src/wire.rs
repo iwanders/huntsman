@@ -324,3 +324,23 @@ impl ToBytes for MacroActions {
         Ok(buff)
     }
 }
+
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct Uuid
+{
+    pub uuid: [u8; 16]
+}
+
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
+#[repr(C, packed)]
+pub struct MacroMetadata {
+    pub macro_id: u16,
+    pub page_offset: u16,
+    pub something_always_0x00fa: u16,
+    pub uuid: Uuid,
+    pub action_bytes: u32,  // is this... another endianness!?!?
+    pub name: [u8; 12], // It can be longer.... 
+    // Lots of more stuff here, which looks... mostly like dirty memory
+}
+

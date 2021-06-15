@@ -472,6 +472,16 @@ impl MacroActions {
     };
 }
 
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the memory storage statistics.
+pub struct MacroMetadata {}
+impl MacroMetadata {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x0c,
+    };
+}
+
 
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
@@ -522,6 +532,10 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
             GetStorageStatistics::CMD,
             Box::new(wire::GetStorageStatistics::inspect),
         ),
+        (
+            MacroMetadata::CMD,
+            Box::new(wire::MacroMetadata::inspect),
+        )
     ]
 }
 
@@ -538,7 +552,7 @@ pub fn parse_wireshark_value(z: &str) -> Vec<u8> {
     return r;
 }
 
-pub fn to_wireshark_value(v: &Vec<u8>) -> String
+pub fn to_wireshark_value(v: &[u8]) -> String
 {
     (v.clone()).iter().map(|x| format!("{:0>2x}", x))
                     .collect::<Vec<String>>()
