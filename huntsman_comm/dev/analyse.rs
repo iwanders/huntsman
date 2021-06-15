@@ -141,7 +141,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         SetLedBrightness::CMD => Ok(payload_as::<wire::SetLedBrightness>(p)),
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
         SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
-        // MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
+        MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
         MacroMetadata::CMD => Ok(payload_as::<wire::MacroMetadata>(p)),
         _ => Ok("".to_string()),
     }
