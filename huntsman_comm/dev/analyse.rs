@@ -141,7 +141,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         SetLedBrightness::CMD => Ok(payload_as::<wire::SetLedBrightness>(p)),
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
         SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
-        MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
+        // MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
         MacroMetadata::CMD => Ok(payload_as::<wire::MacroMetadata>(p)),
         _ => Ok("".to_string()),
     }
@@ -162,10 +162,16 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
             }
 
             if command.cmd == GetStorageStatistics::CMD {
-                println!(
+                if command.status != 2
+                {
+                    continue;
+                }
+                print!("{:.3}", f.frame_time_epoch);
+                print!(
                     "f.data: {:?}",
                     to_wireshark_value(&f.data[WIRESHARK_PAYLOAD_START..30])
                 );
+                println!(" {:?}", payload_as::<wire::GetStorageStatistics>(&command));
             }
 
             println!(
@@ -177,8 +183,6 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
-// This tip from https://www.reddit.com/r/rust/comments/8ilg97/small_tip_on_new_main_result_behavior/
-// nice QOL
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new("Huntsman pcapng analyse tool").subcommand(
         SubCommand::with_name("dump")
