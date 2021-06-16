@@ -141,7 +141,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         SetLedBrightness::CMD => Ok(payload_as::<wire::SetLedBrightness>(p)),
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
         SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
-        MacroActions::CMD => Ok(payload_as::<wire::MacroActions>(p)),
+        MacroActions::CMD => Ok(payload_as::<wire::MacroActionsPayload>(p)),
         MacroMetadata::CMD => Ok(payload_as::<wire::MacroMetadata>(p)),
         _ => Ok("".to_string()),
     }
@@ -150,7 +150,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
 fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     let files: Vec<_> = matches.values_of("files").unwrap().collect();
     for k in files.iter() {
-        println!("File: {:?}", k);
+        // println!("File: {:?}", k);
         let frames = obtain_frames(k)?;
 
         for f in frames.iter() {
@@ -161,7 +161,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 continue;
             }
 
-            if command.cmd == GetStorageStatistics::CMD {
+            if false && command.cmd == GetStorageStatistics::CMD {
                 if command.status != 2 {
                     continue;
                 }
@@ -171,6 +171,21 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                     to_wireshark_value(&f.data[WIRESHARK_PAYLOAD_START..30])
                 );
                 println!(" {:?}", payload_as::<wire::GetStorageStatistics>(&command));
+            }
+
+            if command.cmd == MacroMetadata::CMD
+            {
+                let parsed = wire::MacroMetadata::from_be_bytes(&command.payload).unwrap();
+                if command.status == 2 || parsed.page_offset != 0{
+                    continue;
+                }
+                let macro_id = parsed.macro_id;
+                println!("({:0>4x}, {:?}),", macro_id, parsed.uuid.uuid);
+                continue;
+            }
+            else
+            {
+                continue;
             }
 
             println!(
