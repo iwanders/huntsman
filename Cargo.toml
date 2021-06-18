@@ -6,4 +6,5 @@ members = [
     "huntsman_comm",
     "huntsman",
     "struct_helper",
+    "usb_hut",
 ]
