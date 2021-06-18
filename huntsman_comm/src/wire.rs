@@ -151,6 +151,7 @@ pub enum MouseButton {
     Right = 2,
     Scroll = 4,
     M4 = 8,
+    M5 = 16,
 }
 // What follows is _really_ ugly :(
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -159,6 +160,7 @@ pub enum MacroAction {
     KeyboardBreak(u8),
     Delay(u32),
     MouseClick(MouseButton),
+    MouseScroll(i8),
     None,
 }
 
@@ -202,6 +204,8 @@ impl MacroAction {
     const KEYBOARD_DELAY_U32: u8 = 0x14;
 
     const MOUSE_CLICK: u8 = 0x08;
+
+    const MOUSE_SCROLL: u8 = 0x0a;
 }
 
 impl FromBytes for MacroAction {
@@ -248,10 +252,17 @@ impl FromBytes for MacroAction {
                     i if i == MouseButton::Right as u8 => MouseButton::Right,
                     i if i == MouseButton::Scroll as u8 => MouseButton::Scroll,
                     i if i == MouseButton::M4 as u8 => MouseButton::M4,
+                    i if i == MouseButton::M5 as u8 => MouseButton::M5,
                     _ => panic!("Unhandled mouse code: {:?}, total: {:?}", key_code, src),
                 };
 
                 *self = MacroAction::MouseClick(button);
+                return Ok(2);
+            },
+            MacroAction::MOUSE_SCROLL => 
+            {
+                let arr: [u8; 1] = [src[1]];
+                *self = MacroAction::MouseScroll(i8::from_le_bytes(arr));
                 return Ok(2);
             }
             z => panic!("Unhandled macro code {:?}, total src: {:?}", z, src),
@@ -299,7 +310,11 @@ impl ToBytes for MacroAction {
             MacroAction::MouseClick(button) => {
                 buff.push(MacroAction::MOUSE_CLICK);
                 buff.push(*button as u8);
-            }
+            },
+            MacroAction::MouseScroll(value) => {
+                buff.push(MacroAction::MOUSE_SCROLL);
+                buff.push(i8::to_le_bytes(*value)[0]);
+            },
             z => panic!("Unhandled macro code {:?}", z),
         }
         Ok(buff)

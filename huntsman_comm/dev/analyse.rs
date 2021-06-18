@@ -180,7 +180,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                     continue;
                 }
                 let macro_id = parsed.macro_id;
-                println!("({:0>4x}, {:?}),", macro_id, parsed.uuid.uuid);
+                println!("((0x{:0>2x}, 0x{:0>2x}), {:?}),", macro_id / 256, macro_id & 0xFF, parsed.uuid.uuid);
                 continue;
             }
             else
