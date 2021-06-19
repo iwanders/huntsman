@@ -81,10 +81,10 @@
 4C Keyboard Delete Forward {7,8} Sel 76
 4D Keyboard End {7} Sel 81
 4E Keyboard PageDown Sel 86
-4F Keyboard RightArrow {7} Sel 89
-50 Keyboard LeftArrow Sel 79
-51 Keyboard DownArrow {7} Sel 84
-52 Keyboard UpArrow {7} Sel 83
+4F Keyboard Right Arrow {7} Sel 89
+50 Keyboard Left Arrow Sel 79
+51 Keyboard Down Arrow {7} Sel 84
+52 Keyboard Up Arrow {7} Sel 83
 53 Keypad Num Lock and Clear {6} Sel 90
 54 Keypad / {7} Sel 95
 55 Keypad * Sel 100
@@ -132,7 +132,7 @@
 7E Keyboard Find Sel
 7F Keyboard Mute Sel
 80 Keyboard Volume Up Sel
-81 Keyboard Volume Down
+81 Keyboard Volume Down Sel
 82 Keyboard Locking Caps Lock {12}  Sel
 83 Keyboard Locking Num Lock {12} Sel
 84 Keyboard Locking Scroll {12} Lock Sel
@@ -190,7 +190,7 @@ BF Keypad D Sel
 C0 Keypad E Sel
 C1 Keypad F Sel
 C2 Keypad XOR Sel
-C3 Keypad Sel
+C3 Keypad ^ Sel
 C4 Keypad % Sel
 C5 Keypad < Sel
 C6 Keypad > Sel
@@ -218,13 +218,13 @@ DB Keypad Octal Sel
 DC Keypad Decimal Sel
 DD Keypad Hexadecimal Sel
 DE-DF Reserved
-E0 Keyboard LeftControl DV 58
-E1 Keyboard LeftShift DV 44
-E2 Keyboard LeftAlt DV 60
+E0 Keyboard Left Control DV 58
+E1 Keyboard Left Shift DV 44
+E2 Keyboard Left Alt DV 60
 E3 Keyboard Left GUI {11,33} DV 127
-E4 Keyboard RightControl DV 64
-E5 Keyboard RightShift DV 57
-E6 Keyboard RightAlt DV 62
+E4 Keyboard Right Control DV 64
+E5 Keyboard Right Shift DV 57
+E6 Keyboard Right Alt DV 62
 E7 Keyboard Right GUI {11,34} DV 128
 E8-FFFF Reserved
 

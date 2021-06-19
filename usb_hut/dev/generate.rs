@@ -38,7 +38,7 @@ fn parse_file(fname: &str) -> Vec<Key>
         let first_space = first_space.unwrap();
 
         let DV = l.find("DV");
-        let Sel = l.find("Sel");
+        let Sel = l.rfind("Sel");
         if DV == None && Sel == None
         {
             continue;
@@ -58,8 +58,18 @@ fn parse_file(fname: &str) -> Vec<Key>
             hid = parsed.unwrap();
         }
 
-        let footnote = l.find("{");
-        let description_end = std::cmp::min(footnote.unwrap_or(l.len()), usage);
+        let footnote_s = l.find("{");
+        let footnote_e = l.find("}");
+        let description_end;
+        if footnote_s != None && footnote_e != None
+        {
+            description_end = std::cmp::min(footnote_s.unwrap_or(l.len()), usage);
+        }
+        else
+        {
+            description_end = usage;
+        }
+        
         let descr = &l[first_space+1..description_end - 1];
 
         // println!("{}", l);
@@ -75,10 +85,34 @@ fn parse_file(fname: &str) -> Vec<Key>
     return res;
 }
 
+fn desc_to_name(desc: &str) -> String
+{
+    let tokens = desc.split(" ").collect::<Vec<&str>>();
+    println!("{:?}", tokens);
+    if tokens.len() < 2
+    {
+        panic!("Not enough tokens: {}", desc);
+    }
+    use std::collections::HashMap;
+    let replaces: HashMap<&'static str, &'static str> = [("keyboard", "key"),
+     ("/", "slash"),
+     ("keypad", "kpd")].iter().cloned().collect();
+    "kldsjflksdjf".to_owned()
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let keys = parse_file(&std::env::args().nth(1).unwrap());
-    println!("{:#?}", keys);
+    // println!("{:#?}", keys);
+    for k in keys.iter()
+    {
+        if k.at101 == None
+        {
+            continue;
+        }
+        let n = desc_to_name(&k.desc);
+        println!("{}", n);
+    }
 
     Ok(())
 }
