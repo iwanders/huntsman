@@ -96,8 +96,31 @@ fn desc_to_name(desc: &str) -> String
     use std::collections::HashMap;
     let replaces: HashMap<&'static str, &'static str> = [("keyboard", "key"),
      ("/", "slash"),
+     (".", "dot"),
      ("keypad", "kpd")].iter().cloned().collect();
-    "kldsjflksdjf".to_owned()
+
+    let mut name_tokens: Vec<String> = Vec::new();
+    for i in 0..tokens.len()
+    {
+        let token = tokens[i];
+        let lowercase_token = token.to_ascii_lowercase();
+
+        if i == 2 && lowercase_token == "and"
+        {
+            break;
+        }
+
+        if let Some(r) = replaces.get(&lowercase_token.as_str())
+        {
+            name_tokens.push(r.to_string());
+        }
+        else
+        {
+            name_tokens.push(token.to_string());
+        }
+    }
+
+    name_tokens.join("_")
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
