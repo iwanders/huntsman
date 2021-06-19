@@ -510,9 +510,19 @@ fn _remove_macro() {
     });
 }
 
-pub fn dev_run_cmd() -> Box<dyn Command> {
+pub fn _dev_run_cmd_profiles() -> Box<dyn Command> {
     Box::new(GetActiveProfiles {
         ..Default::default()
+    })
+}
+pub fn dev_run_cmd() -> Box<dyn Command> {
+    // set right control back to right control.
+    Box::new(ArbitraryCommand {
+        register: Cmd {
+            major: 0x02,
+            minor: 0x0d,
+        },
+        payload: vec![0x01, 0x40, 0x00, 0x02, 0x02, 0x00, 0xe4],
     })
 }
 
