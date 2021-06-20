@@ -173,18 +173,20 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 println!(" {:?}", payload_as::<wire::GetStorageStatistics>(&command));
             }
 
-            if command.cmd == MacroMetadata::CMD
-            {
+            if command.cmd == MacroMetadata::CMD {
                 let parsed = wire::MacroMetadata::from_be_bytes(&command.payload).unwrap();
-                if command.status == 2 || parsed.page_offset != 0{
+                if command.status == 2 || parsed.page_offset != 0 {
                     continue;
                 }
                 let macro_id = parsed.macro_id;
-                println!("((0x{:0>2x}, 0x{:0>2x}), {:?}),", macro_id / 256, macro_id & 0xFF, parsed.uuid.uuid);
+                println!(
+                    "((0x{:0>2x}, 0x{:0>2x}), {:?}),",
+                    macro_id / 256,
+                    macro_id & 0xFF,
+                    parsed.uuid.uuid
+                );
                 continue;
-            }
-            else
-            {
+            } else {
                 continue;
             }
 

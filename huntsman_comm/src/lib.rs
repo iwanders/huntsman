@@ -964,19 +964,18 @@ mod tests {
             &set_mouse_stroke_left[PAYLOAD_START..PAYLOAD_START + and_back.len()],
             and_back
         );
-    
+
         let set_mouse_scroll_up = parse_wireshark_value("0a:01");
         let mouse_up = wire::MacroAction::from_le_bytes(&set_mouse_scroll_up).expect("success");
-        assert_eq!(mouse_up,wire::MacroAction::MouseScroll(1));
+        assert_eq!(mouse_up, wire::MacroAction::MouseScroll(1));
         let and_back = mouse_up.to_be_bytes().expect("Success");
-        assert_eq!(set_mouse_scroll_up,and_back);
+        assert_eq!(set_mouse_scroll_up, and_back);
 
         let set_mouse_scroll_down = parse_wireshark_value("0a:ff");
         let mouse_down = wire::MacroAction::from_le_bytes(&set_mouse_scroll_down).expect("success");
-        assert_eq!(mouse_down,wire::MacroAction::MouseScroll(-1));
+        assert_eq!(mouse_down, wire::MacroAction::MouseScroll(-1));
         let and_back = mouse_down.to_be_bytes().expect("Success");
-        assert_eq!(set_mouse_scroll_down,and_back);
-
+        assert_eq!(set_mouse_scroll_down, and_back);
     }
 }
 

@@ -258,9 +258,8 @@ impl FromBytes for MacroAction {
 
                 *self = MacroAction::MouseClick(button);
                 return Ok(2);
-            },
-            MacroAction::MOUSE_SCROLL => 
-            {
+            }
+            MacroAction::MOUSE_SCROLL => {
                 let arr: [u8; 1] = [src[1]];
                 *self = MacroAction::MouseScroll(i8::from_le_bytes(arr));
                 return Ok(2);
@@ -310,11 +309,11 @@ impl ToBytes for MacroAction {
             MacroAction::MouseClick(button) => {
                 buff.push(MacroAction::MOUSE_CLICK);
                 buff.push(*button as u8);
-            },
+            }
             MacroAction::MouseScroll(value) => {
                 buff.push(MacroAction::MOUSE_SCROLL);
                 buff.push(i8::to_le_bytes(*value)[0]);
-            },
+            }
             z => panic!("Unhandled macro code {:?}", z),
         }
         Ok(buff)
