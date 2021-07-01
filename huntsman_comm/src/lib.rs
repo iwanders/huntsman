@@ -976,6 +976,12 @@ mod tests {
         assert_eq!(mouse_down, wire::MacroAction::MouseScroll(-1));
         let and_back = mouse_down.to_be_bytes().expect("Success");
         assert_eq!(set_mouse_scroll_down, and_back);
+
+        let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
+        let mouse_move_action = wire::MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
+        assert_eq!(mouse_move_action, wire::MacroAction::MouseMove(1, -1));
+        let and_back = mouse_move_action.to_be_bytes().expect("Success");
+        assert_eq!(mouse_move_action_input, and_back);
     }
 }
 

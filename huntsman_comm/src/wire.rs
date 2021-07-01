@@ -161,6 +161,7 @@ pub enum MacroAction {
     Delay(u32),
     MouseClick(MouseButton),
     MouseScroll(i8),
+    MouseMove(i16, i16),
     None,
 }
 
@@ -202,6 +203,7 @@ impl MacroAction {
     const KEYBOARD_DELAY_U16: u8 = 0x12;
     const KEYBOARD_DELAY_U24: u8 = 0x13; // for real... :(
     const KEYBOARD_DELAY_U32: u8 = 0x14;
+    const MOUSE_MOVE: u8 = 0x15;
 
     const MOUSE_CLICK: u8 = 0x08;
 
@@ -264,6 +266,12 @@ impl FromBytes for MacroAction {
                 *self = MacroAction::MouseScroll(i8::from_le_bytes(arr));
                 return Ok(2);
             }
+            MacroAction::MOUSE_MOVE => {
+                let x: [u8; 2] = [src[1], src[2]];
+                let y: [u8; 2] = [src[3], src[4]];
+                *self = MacroAction::MouseMove(i16::from_be_bytes(x), i16::from_be_bytes(y));
+                return Ok(5);
+            }
             z => panic!("Unhandled macro code {:?}, total src: {:?}", z, src),
         }
     }
@@ -313,6 +321,11 @@ impl ToBytes for MacroAction {
             MacroAction::MouseScroll(value) => {
                 buff.push(MacroAction::MOUSE_SCROLL);
                 buff.push(i8::to_le_bytes(*value)[0]);
+            }
+            MacroAction::MouseMove(x, y) => {
+                buff.push(MacroAction::MOUSE_MOVE);
+                buff.extend(i16::to_be_bytes(*x).iter());
+                buff.extend(i16::to_be_bytes(*y).iter());
             }
             z => panic!("Unhandled macro code {:?}", z),
         }
