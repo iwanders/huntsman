@@ -214,7 +214,7 @@ fn get_name(v: &Vec<Prefix>) -> String {
 
 /// Function to conver the dissection field we use in this dissector to a packet field that's
 /// used by the Dissector object.
-pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketField> {
+pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<Box<dyn dissector::HeaderFieldInfo>> {
     v.iter()
         .map(|x| {
             let display_field;
@@ -234,7 +234,7 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     ),
                 };
             }
-            dissector::PacketField {
+            Box::new(dissector::BasicHeaderFieldInfo {
                 name: dissector::StringContainer::String(String::from(get_name(&x.abbrev))),
                 abbrev: dissector::StringContainer::String(String::from(make_field_abbrev(
                     &x.abbrev,
@@ -252,7 +252,8 @@ pub fn fields_to_dissector(v: &Vec<DissectionField>) -> Vec<dissector::PacketFie
                     ),
                 },
                 display: display_field,
-            }
+                ..Default::default()
+            }) as Box<dyn dissector::HeaderFieldInfo>
         })
         .collect()
 }

@@ -4,7 +4,7 @@
 
 extern crate wireshark_dissector_rs;
 
-use wireshark_dissector_rs::{dissector, dissector::PacketField, epan};
+use wireshark_dissector_rs::{dissector, dissector::{BasicHeaderFieldInfo, HeaderFieldInfo}, epan};
 
 // Lift these to make it less verbose.
 type FieldType = dissector::FieldType;
@@ -28,19 +28,19 @@ struct HuntsmanDissector {
     foldouts: Vec<String>,
 
     // Post setup lookups.
-    field_mapping: Vec<(PacketField, epan::proto::HFIndex)>,
+    field_mapping: Vec<(Box<dyn HeaderFieldInfo>, epan::proto::HFIndex)>,
     fold_mapping: HashMap<String, epan::proto::ETTIndex>,
 }
 
 impl HuntsmanDissector {
     // Two static entries, just for the fields we manually specify and always have available.
-    const ROOT: PacketField = PacketField::fixed(
+    const ROOT: BasicHeaderFieldInfo = BasicHeaderFieldInfo::simple(
         "Huntsman Protocol",
         "huntsman.proto",
         FieldType::PROTOCOL,
         FieldDisplay::BASE_NONE,
     );
-    const FULL_PAYLOAD: PacketField = PacketField::fixed(
+    const FULL_PAYLOAD: BasicHeaderFieldInfo = BasicHeaderFieldInfo::simple(
         "Payload",
         "huntsman.payload",
         FieldType::BYTES,
@@ -52,15 +52,15 @@ impl HuntsmanDissector {
 }
 
 impl HuntsmanDissector {
-    /// Retrieve the hf index for the provided PacketField, lookup by abbreviation.
-    fn get_id(self: &Self, desired_field: &dissector::PacketField) -> epan::proto::HFIndex {
-        self.get_id_by_abbrev(desired_field.abbrev.as_str())
+    /// Retrieve the hf index for the provided BasicHeaderFieldInfo, lookup by abbreviation.
+    fn get_id(self: &Self, desired_field: &dyn HeaderFieldInfo) -> epan::proto::HFIndex {
+        self.get_id_by_abbrev(desired_field.abbrev().as_str())
     }
 
     /// Retrieve the hf index based on the abbreviation.
     fn get_id_by_abbrev(&self, name: &str) -> epan::proto::HFIndex {
         for (field, index) in &self.field_mapping {
-            if field.abbrev == name {
+            if field.abbrev() == name {
                 return *index;
             }
         }
@@ -226,17 +226,17 @@ impl HuntsmanDissector {
 }
 
 impl dissector::Dissector for HuntsmanDissector {
-    fn get_fields(self: &Self) -> Vec<dissector::PacketField> {
+    fn get_fields(self: &Self) -> Vec<Box<dyn HeaderFieldInfo>> {
         let mut f = Vec::new();
-        f.push(HuntsmanDissector::ROOT);
-        f.push(HuntsmanDissector::FULL_PAYLOAD);
+        f.push(HuntsmanDissector::ROOT.as_boxed());
+        f.push(HuntsmanDissector::FULL_PAYLOAD.as_boxed());
         f.append(&mut fields_to_dissector(&self.dissection_fields));
         return f;
     }
 
     fn set_field_indices(
         self: &mut Self,
-        hfindices: Vec<(dissector::PacketField, epan::proto::HFIndex)>,
+        hfindices: Vec<(Box<dyn HeaderFieldInfo>, epan::proto::HFIndex)>,
     ) {
         self.field_mapping = hfindices;
     }
