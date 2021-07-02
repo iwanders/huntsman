@@ -7,4 +7,5 @@ members = [
     "huntsman",
     "struct_helper",
     "usb_hut",
+    "torch",
 ]
