@@ -57,10 +57,18 @@ pub trait Command: std::fmt::Debug {
     /// Processes the response and returns an any holding it.
     fn response(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
     {
-        let wire: wire::Command = wire::Command::from_le_bytes(data)?;
+        let mut wire: wire::Command = wire::Command::from_le_bytes(data)?;
+        let original_checksum = wire.checksum;
+        wire.update_checksum();
+        if original_checksum != wire.checksum
+        {
+            return Err(format!("Checksum did not pass, got {:?} expected {:?}", original_checksum, wire.checksum));
+        }
         self.response_payload(&wire.payload[..])
     }
 
+    /// If commands only care about the payload (most do), this method gets called from
+    /// the default implementation of [`response`] and passes just the payload slice.
     fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String>
     {
         Err("Not implemented".to_string())
