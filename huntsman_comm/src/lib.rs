@@ -57,11 +57,11 @@ pub trait Command: std::fmt::Debug {
     /// Processes the response and returns an any holding it.
     fn response(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
     {
-        let mut wire: wire::Command = wire::Command::from_le_bytes(data)?;
+        let wire: wire::Command = wire::Command::from_le_bytes(data)?;
         self.response_payload(&wire.payload[..])
     }
 
-    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
+    fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String>
     {
         Err("Not implemented".to_string())
     }
@@ -70,7 +70,7 @@ pub trait Command: std::fmt::Debug {
 #[derive(Default, Clone, Debug)]
 /// Retrieves the serial number
 pub struct GetSerialNumber {
-    serial: Option<String>,
+    pub serial: Option<String>,
 }
 impl GetSerialNumber {
     pub const CMD: Cmd = Cmd {

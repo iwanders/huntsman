@@ -106,21 +106,21 @@ impl Huntsman {
             leds.leds[l].g = color.g;
             leds.leds[l].b = color.b;
         }
-        return self.set_command(&leds).and_then(|v|{ Ok(()) });
+        return self.set_command(&leds).and_then(|_v|{ Ok(()) });
     }
 
     /// Set the brightness of the entire keyboard, specify as [0, 1.0].
     pub fn set_brightness(&mut self, value: f32) -> Result<(), String> {
         let mut cmd: huntsman_comm::SetLedBrightness = Default::default();
         cmd.value = value;
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Toggle game mode on or off.
     pub fn set_game_mode(&mut self, value: bool) -> Result<(), String> {
         let mut cmd: huntsman_comm::SetGameMode = Default::default();
         cmd.value = value;
-        let r = self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        let r = self.set_command(&cmd).and_then(|_v|{ Ok(()) });
         return r;
     }
 
@@ -129,18 +129,16 @@ impl Huntsman {
         self.set_print_comm(true);
         self.set_print_retrieve(true);
         let cmd = huntsman_comm::dev_run_cmd();
-        return self.set_command_box(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command_box(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Retrieve the serial number
     pub fn get_serial_number(&mut self) -> Result<(), String> {
-        self.set_print_comm(true);
-        self.set_print_retrieve(true);
         let cmd: huntsman_comm::GetSerialNumber = Default::default();
         let result = self.set_command(&cmd)?;
         let response = huntsman_comm::Command::response(&cmd, &result.unwrap())?;
         let response = response.downcast_ref::<huntsman_comm::GetSerialNumber>().unwrap();
-        println!("response: {:?}", response);
+        println!("{}", response.serial.as_ref().unwrap());
         Ok(())
     }
 
@@ -166,31 +164,31 @@ impl Huntsman {
     /// Disables led effects, turning off each led. See also [`huntsman_comm::SetLedEffect::off()`]
     pub fn effect_off(&mut self) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::off();
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Sets a fixed color on all leds. See also [`huntsman_comm::SetLedEffect::fixed()`]
     pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::fixed(&color);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Applies the breathing effect, fading colors in and out sequentially. See also [`huntsman_comm::SetLedEffect::breathing()`]
     pub fn effect_breathing(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::breathing(&colors);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Spectrum cycle, entire keyboard cycles the hue. See also [`huntsman_comm::SetLedEffect::spectrum()`]
     pub fn effect_spectrum(&mut self) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::spectrum();
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// A hue wave moved over the keyboard. See also [`huntsman_comm::SetLedEffect::wave()`]
     pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::wave(direction, delay);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Lights up keys after they are pressed. See also [`huntsman_comm::SetLedEffect::reactive()`]
@@ -201,14 +199,14 @@ impl Huntsman {
         colors: &Vec<RGB>,
     ) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::reactive(duration, colors);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Waves propagate outwards from pressed keys. See also [`huntsman_comm::SetLedEffect::ripple()`]
     /// Only takes a single color
     pub fn effect_ripple(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::ripple(&colors);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Keys light up randomly. See also [`huntsman_comm::SetLedEffect::starlight()`]
@@ -219,12 +217,12 @@ impl Huntsman {
         colors: &Vec<RGB>,
     ) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::starlight(duration, colors);
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 
     /// Display the custom frame. See also [`huntsman_comm::SetLedEffect::custom()`]
     pub fn effect_custom(&mut self) -> Result<(), String> {
         let cmd = huntsman_comm::SetLedEffect::custom();
-        return self.set_command(&cmd).and_then(|v|{ Ok(()) });
+        return self.set_command(&cmd).and_then(|_v|{ Ok(()) });
     }
 }
