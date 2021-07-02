@@ -2,7 +2,7 @@
 //! utility that makes use of this object.
 
 mod hid_hal;
-use huntsman_comm::RGB;
+pub use huntsman_comm::RGB;
 
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
@@ -105,6 +105,22 @@ impl Huntsman {
             leds.leds[l].r = color.r;
             leds.leds[l].g = color.g;
             leds.leds[l].b = color.b;
+        }
+        return self.set_command(&leds).and_then(|_v|{ Ok(()) });
+    }
+
+    pub fn set_color(
+        &mut self,
+        row: u8,
+        color: &[RGB],
+    ) -> Result<(), String> {
+        let mut leds: huntsman_comm::SetLedState = Default::default();
+        leds.count = color.len() as u8;
+        leds.id = row;
+        for l in 0..leds.count as usize {
+            leds.leds[l].r = color[l].r;
+            leds.leds[l].g = color[l].g;
+            leds.leds[l].b = color[l].b;
         }
         return self.set_command(&leds).and_then(|_v|{ Ok(()) });
     }

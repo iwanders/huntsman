@@ -278,24 +278,29 @@ impl Effect for AdditionEffect
 }
 
 #[derive(Debug)]
-pub struct HorizontalMovingRedPixel
+pub struct HorizontalMovingPixel
 {
     pub velocity: f64,  // in pixels.
     pub row: usize,
+    pub pixel: RGBA,
 }
-impl Effect for HorizontalMovingRedPixel
+impl Effect for HorizontalMovingPixel
 {
     fn update(&mut self, state: &mut dyn State) -> Canvas
     {
         let mut canvas = state.get_canvas();
         let t = state.get_time();
-        let p = (self.velocity * t) % ((canvas.width() - 1) as f64);
+        let mut p = (self.velocity * t).abs() % ((canvas.width() - 1) as f64);
+        if self.velocity < 0.0
+        {
+            p = ((canvas.width() - 1) as f64) - p;
+        }
         // Map float position to integers, always have two pixels illuminated with a ratio;
         let p0 = p.floor();
         let r = p - p0;
 
-        *canvas.pixel_as_mut(p0 as usize, self.row) = RGBA::red() * (1.0 - r);
-        *canvas.pixel_as_mut((p0 as usize) + 1, self.row) = RGBA::red() * (r);
+        *canvas.pixel_as_mut(p0 as usize, self.row) = self.pixel * (1.0 - r);
+        *canvas.pixel_as_mut((p0 as usize) + 1, self.row) = self.pixel * (r);
         canvas
     }
 }
