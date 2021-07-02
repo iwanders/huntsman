@@ -7,6 +7,8 @@ pub use struct_helper::FromBytes;
 pub use wire::Cmd;
 pub use wire::RGB;
 
+pub use std::any::Any;
+
 /*
 keyboard_sniffs$ ./dump.sh 2021 | sort | uniq > /tmp/sorted_all.txt
 Shows; 1f is not always 1f, sometimes it's 08
@@ -51,11 +53,25 @@ pub trait Command: std::fmt::Debug {
 
     /// Provides the payload definition that comes after the header.
     fn payload(&self) -> Vec<u8>;
+
+    /// Processes the response and returns an any holding it.
+    fn response(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
+    {
+        let mut wire: wire::Command = wire::Command::from_le_bytes(data)?;
+        self.response_payload(&wire.payload[..])
+    }
+
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
+    {
+        Err("Not implemented".to_string())
+    }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 /// Retrieves the serial number
-pub struct GetSerialNumber {}
+pub struct GetSerialNumber {
+    serial: Option<String>,
+}
 impl GetSerialNumber {
     pub const CMD: Cmd = Cmd {
         major: 0x00,
@@ -68,6 +84,24 @@ impl Command for GetSerialNumber {
     }
     fn payload(&self) -> Vec<u8> {
         vec![0; 0x16]
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
+    {
+        let end = data.iter().position(|&x| { x == 0 });
+        if end.is_none()
+        {
+            return Err("Couldn't find 0 termination.".to_string());
+        }
+        let end = end.unwrap();
+        match std::str::from_utf8(&data[..end])
+        {
+            Ok(v) => {
+                return Ok(Box::new(GetSerialNumber{serial: Some(v.to_string())}));
+            },
+            Err(v) => {
+                return Err(format!("{}", v));
+            }
+        }
     }
 }
 
@@ -90,6 +124,12 @@ impl SetLedEffect {
         major: 0x0f,
         minor: 0x02,
     };
+
+    /// Sets the profile to apply this led effect on.
+    pub fn set_profile(&mut self, profile: u8)
+    {
+        self.payload.profile = profile;
+    }
 
     /// Helper function to populate the payload with zero or more colors.
     fn set_colors(&mut self, colors: &Vec<RGB>) {
@@ -463,7 +503,7 @@ impl Command for GetStorageStatistics {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-/// Get the memory storage statistics.
+/// Holds the macro payload.
 pub struct MacroActions {}
 impl MacroActions {
     pub const CMD: Cmd = Cmd {
@@ -473,7 +513,7 @@ impl MacroActions {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-/// Get the memory storage statistics.
+/// Set the macro metadata
 pub struct MacroMetadata {}
 impl MacroMetadata {
     pub const CMD: Cmd = Cmd {

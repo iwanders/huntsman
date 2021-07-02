@@ -76,7 +76,7 @@ pub struct SetLedState {
     pub _p1: u8, // padding
     /// Seems to be specifying up to which column?
     pub count: u8,
-    pub leds: [RGB; 23], // 22 is the max seen?, corresponds with 0x16 in the count position.
+    pub leds: [RGB; 23],
 }
 
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
@@ -122,7 +122,7 @@ pub struct SetKeyOverride {
 #[repr(C)]
 /// Payload to set an led effect.
 pub struct SetLedEffect {
-    pub first: u8,
+    pub profile: u8,
     pub second: u8,
     pub effect: u8,
     pub direction: u8,
