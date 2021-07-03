@@ -4,7 +4,11 @@
 
 extern crate wireshark_dissector_rs;
 
-use wireshark_dissector_rs::{dissector, dissector::{BasicHeaderFieldInfo, HeaderFieldInfo}, epan};
+use wireshark_dissector_rs::{
+    dissector,
+    dissector::{BasicHeaderFieldInfo, HeaderFieldInfo},
+    epan,
+};
 
 // Lift these to make it less verbose.
 type FieldType = dissector::FieldType;

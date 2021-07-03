@@ -83,7 +83,7 @@ pub struct SetLedState {
 #[repr(C)]
 /// Payload for the SetLedBrightness command.
 pub struct SetLedBrightness {
-    pub first: u8,
+    pub profile: u8,
     pub _p0: u8, // padding
     pub value: u8,
 }

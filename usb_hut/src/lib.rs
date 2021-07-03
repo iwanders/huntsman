@@ -4,5 +4,4 @@ mod defs;
 
 pub use defs::*;
 mod generated;
-pub use generated::{keys, hid_keys};
-
+pub use generated::{hid_keys, keys};

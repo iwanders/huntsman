@@ -177,8 +177,7 @@ fn desc_to_name(desc: &str) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if std::env::args().len() < 2
-    {
+    if std::env::args().len() < 2 {
         println!("use like: cargo run --bin generate -- hut1_22_pdf_keyboard_page_0x07.txt src/generated.rs");
         std::process::exit(1);
     }

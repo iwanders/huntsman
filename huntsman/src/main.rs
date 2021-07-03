@@ -108,6 +108,13 @@ pub fn main() -> Result<(), String> {
                         .takes_value(true)
                         .required(true)
                         .help("The brightness to set as a float [0, 1.0] inclusive."),
+                )
+                .arg(
+                    Arg::with_name("profile")
+                        .short("p")
+                        .takes_value(true)
+                        .default_value("1")
+                        .help("The profile to use."),
                 ),
         )
         .subcommand(
@@ -122,7 +129,24 @@ pub fn main() -> Result<(), String> {
         )
         .subcommand(SubCommand::with_name("serial_number").about("Retrieves the serial number"))
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
-        .subcommand(SubCommand::with_name("dev_dump_keymaps").about("Dumps all keymappings."))
+        .subcommand(
+            SubCommand::with_name("dev_dump_keymaps")
+                .about("Dumps all keymappings.")
+                .arg(
+                    Arg::with_name("hypershift")
+                        .short("s")
+                        .takes_value(true)
+                        .default_value("false")
+                        .help("Retrieve hypershift commands or not."),
+                )
+                .arg(
+                    Arg::with_name("profile")
+                        .short("p")
+                        .takes_value(true)
+                        .default_value("1")
+                        .help("The profile id to retrieve."),
+                ),
+        )
         .subcommand(add_colors!(SubCommand::with_name("set_color")
             .about("Sets colors in the custom frame.")
             .arg(
@@ -206,8 +230,10 @@ pub fn main() -> Result<(), String> {
         h.dev_run()?;
     }
 
-    if let Some(_matches) = matches.subcommand_matches("dev_dump_keymaps") {
-        h.dev_dump_keymaps()?;
+    if let Some(matches) = matches.subcommand_matches("dev_dump_keymaps") {
+        let hypershift = get_value::<bool>(matches, "hypershift")?;
+        let profile = get_value::<u8>(matches, "profile")?;
+        h.dev_dump_keymaps(hypershift, profile)?;
     }
     if let Some(_matches) = matches.subcommand_matches("serial_number") {
         h.get_serial_number()?;
@@ -215,7 +241,8 @@ pub fn main() -> Result<(), String> {
 
     if let Some(matches) = matches.subcommand_matches("brightness") {
         let value = get_value::<f32>(matches, "value")?;
-        h.set_brightness(value)?;
+        let profile = get_value::<u8>(matches, "profile")?;
+        h.set_brightness(profile, value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("game_mode") {

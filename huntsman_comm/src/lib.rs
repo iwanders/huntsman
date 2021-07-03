@@ -55,22 +55,22 @@ pub trait Command: std::fmt::Debug {
     fn payload(&self) -> Vec<u8>;
 
     /// Processes the response and returns an any holding it.
-    fn response(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
-    {
+    fn response(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
         let mut wire: wire::Command = wire::Command::from_le_bytes(data)?;
         let original_checksum = wire.checksum;
         wire.update_checksum();
-        if original_checksum != wire.checksum
-        {
-            return Err(format!("Checksum did not pass, got {:?} expected {:?}", original_checksum, wire.checksum));
+        if original_checksum != wire.checksum {
+            return Err(format!(
+                "Checksum did not pass, got {:?} expected {:?}",
+                original_checksum, wire.checksum
+            ));
         }
         self.response_payload(&wire.payload[..])
     }
 
     /// If commands only care about the payload (most do), this method gets called from
     /// the default implementation of [`response`] and passes just the payload slice.
-    fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String>
-    {
+    fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String> {
         Err("Not implemented".to_string())
     }
 }
@@ -93,19 +93,18 @@ impl Command for GetSerialNumber {
     fn payload(&self) -> Vec<u8> {
         vec![0; 0x16]
     }
-    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String>
-    {
-        let end = data.iter().position(|&x| { x == 0 });
-        if end.is_none()
-        {
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let end = data.iter().position(|&x| x == 0);
+        if end.is_none() {
             return Err("Couldn't find 0 termination.".to_string());
         }
         let end = end.unwrap();
-        match std::str::from_utf8(&data[..end])
-        {
+        match std::str::from_utf8(&data[..end]) {
             Ok(v) => {
-                return Ok(Box::new(GetSerialNumber{serial: Some(v.to_string())}));
-            },
+                return Ok(Box::new(GetSerialNumber {
+                    serial: Some(v.to_string()),
+                }));
+            }
             Err(v) => {
                 return Err(format!("{}", v));
             }
@@ -134,8 +133,7 @@ impl SetLedEffect {
     };
 
     /// Sets the profile to apply this led effect on.
-    pub fn set_profile(&mut self, profile: u8)
-    {
+    pub fn set_profile(&mut self, profile: u8) {
         self.payload.profile = profile;
     }
 
@@ -401,7 +399,7 @@ impl Command for SetLedState {
 pub struct SetLedBrightness {
     /// The brightness to set, should be [0, 1].
     pub value: f32,
-    pub first: u8,
+    pub profile: u8,
 }
 impl SetLedBrightness {
     pub const CMD: Cmd = Cmd {
@@ -416,7 +414,7 @@ impl Command for SetLedBrightness {
     }
     fn payload(&self) -> Vec<u8> {
         let wire_setbrightness: wire::SetLedBrightness = wire::SetLedBrightness {
-            first: self.first, // 0x01 or 0x00, doesn't seem to matter much.
+            profile: self.profile, // 0x01 or 0x00, doesn't seem to matter much.
             value: (self.value * 255.0) as u8,
             ..Default::default()
         };
@@ -574,11 +572,22 @@ pub fn dev_run_cmd() -> Box<dyn Command> {
     })
 }
 
+fn make_read_command(cmd: Cmd) -> Cmd {
+    Cmd {
+        major: cmd.major,
+        minor: cmd.minor | 0x80,
+    }
+}
+
 /// Helper function for the dissector that provides the fields for the provided commands.
 pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::Inspectable>>)> {
     vec![
         (SetGameMode::CMD, Box::new(wire::SetGameMode::inspect)),
         (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::inspect)),
+        (
+            make_read_command(SetKeyOverride::CMD),
+            Box::new(wire::SetKeyOverride::inspect),
+        ),
         (SetLedEffect::CMD, Box::new(wire::SetLedEffect::inspect)),
         (SetLedState::CMD, Box::new(wire::SetLedState::inspect)),
         (
@@ -671,7 +680,7 @@ mod tests {
     fn test_set_brightness() {
         let expected_50_pct = parse_wireshark_truncated("00:1f:00:00:00:03:0f:04:01:00:7f", 0x76);
         let mut brightness: SetLedBrightness = SetLedBrightness {
-            first: 0x01,
+            profile: 0x01,
             ..Default::default()
         };
         brightness.value = 0.5;
@@ -899,6 +908,17 @@ mod tests {
         // NI; No idea; often same as CC, but not always
 
         // These keystrokes... they may be specified in the same way as the macros? Doesn't look like it...
+        // Mapping type 11 is indeed magical keys.
+        // Looks like I lost game mode toggling on 2 profiles somehow.
+        // Captured from working profile:
+        let f9_otf_macro =
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:78:01:11:01:04:00", 0xe0);
+        let f10_game_mode =
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:79:01:11:01:03:00", 0xe6);
+        let f11_brightness_down =
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7a:01:11:01:09:00", 0xef);
+        let f12_brightness_up =
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7b:01:11:01:08:00", 0xef);
     }
 
     #[test]
@@ -1026,7 +1046,8 @@ mod tests {
         assert_eq!(set_mouse_scroll_down, and_back);
 
         let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
-        let mouse_move_action = wire::MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
+        let mouse_move_action =
+            wire::MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
         assert_eq!(mouse_move_action, wire::MacroAction::MouseMove(1, -1));
         let and_back = mouse_move_action.to_be_bytes().expect("Success");
         assert_eq!(mouse_move_action_input, and_back);
