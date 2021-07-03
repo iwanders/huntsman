@@ -112,6 +112,17 @@ impl Command for GetSerialNumber {
     }
 }
 
+/*
+0x0004 firmware mode.
+// last command on exit, log reports setting to firmware mode.
+let cmd = huntsman_comm::ArbitraryCommand {
+            // register: huntsman_comm::Cmd{major: 0x00, minor: 0x04},
+            // payload: vec![0x00, 0x00], //
+// att start of synapse open we see 0x0004 0x03 0x00, corresponding to the log stating DRIVER mode.
+}
+*/
+
+
 // 1, short, 2 medium, 3 long, 3 values matches slider in ui.
 #[repr(u8)]
 /// Duration, short, medium or long, like the slider in the ui.
@@ -486,6 +497,9 @@ impl Command for GetActiveProfiles {
         vec![0; 0x41]
     }
 }
+// Allocate profile 0x0502, profile_id
+// Delete profile 0x0503, profile_id,
+// Set/Read profile metadata: 0x0508,....
 
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
@@ -900,12 +914,15 @@ mod tests {
         //                                  03 Macro, 'n' fire
         //                                  04 Macro, while pressed
         //                                  05 Macro, toggle
-        //                                  0a Multimedia (Consumer Page?)
-        //                                  0b Mouse, doubleclick
+        //                                  0a Multimedia (Consumer Page? 0x0c?)
+        //                                  0b Mouse, doubleclick (button page 0x09?)
         //                                  0e Mouse, left click with turbo
         //                                  0d Single Key Turbo.
         //                                  11 (Obtained through READ; magical keys?)
+        //
+        //                                  xx Expected; generic desktop page 0x01 for system sleep 0x82
         // NI; No idea; often same as CC, but not always
+        // NI is the number of bytes that follows to describe the instruction by the looks of it?
 
         // These keystrokes... they may be specified in the same way as the macros? Doesn't look like it...
         // Mapping type 11 is indeed magical keys.
@@ -1054,13 +1071,3 @@ mod tests {
     }
 }
 
-/*
-// last command on exit, log reports setting to firmware mode.
-let cmd = huntsman_comm::ArbitraryCommand {
-            // register: huntsman_comm::Cmd{major: 0x00, minor: 0x04},
-            // payload: vec![0x00, 0x00], //
-}
-
-
-
-*/
