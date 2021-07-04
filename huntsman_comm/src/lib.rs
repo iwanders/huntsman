@@ -697,7 +697,6 @@ mod tests {
         // It did disable my override on right control, which is sketchy...
     }
 
-
     #[test]
     fn test_profile_deletion() {
         // Also issued before we 'upload' a profile.

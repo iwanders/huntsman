@@ -2,17 +2,15 @@ use struct_helper::*;
 
 /// Struct to denote a physical key on the keyboard.
 #[derive(Debug, Clone, Copy)]
-pub struct Key
-{
+pub struct Key {
     /// The key's at101 code, or whatever the keyboard uses to denote it.
     pub scan_code: u8,
     /// Whether or not this is the hypershift binding of that key.
-    pub hypershift: bool
+    pub hypershift: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Modifiers
-{
+pub struct Modifiers {
     left_ctrl: bool,
     left_shift: bool,
     left_alt: bool,
@@ -24,7 +22,7 @@ pub struct Modifiers
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct KeyboardKey{
+pub struct KeyboardKey {
     pub usage_id: u8,
     pub modifiers: Modifiers,
 }
@@ -33,12 +31,11 @@ pub type MacroId = u16;
 
 /// Represent particular mapping for a physical key on the keyboard.
 #[derive(Debug, Clone, Copy)]
-pub enum KeyMapping
-{
+pub enum KeyMapping {
     /// Key is inactive
     Disabled,
     /// Mouse click
-    Mouse,// takes an argument, obviously, need to consolidate with the macro's Mousebuttons, different integer here.
+    Mouse, // takes an argument, obviously, need to consolidate with the macro's Mousebuttons, different integer here.
     /// This is a standard keyboard key, emitting a HID Keyboard Page (0x07) event.
     Key(KeyboardKey),
     /// Macro 'n' repeat.
@@ -54,10 +51,9 @@ pub enum KeyMapping
     /// Repeats mouse clicks using the provided interval.
     TurboMouse(u8 /* mouse button */, u16 /* interval delay */),
     /// Repeats keys using the provided interval.
-    TurboKey(KeyboardKey, u16 /* delay */),  // can also use modifiers.
+    TurboKey(KeyboardKey, u16 /* delay */), // can also use modifiers.
     /// Magical special keys, led brightness, game mode etc.
     Special(u8),
-    
 }
 
 #[cfg(test)]

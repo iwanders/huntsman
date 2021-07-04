@@ -1,4 +1,4 @@
-pub use crate::base::{Canvas, RGBA, State};
+pub use crate::base::{Canvas, State, RGBA};
 
 pub trait Effect: std::fmt::Debug {
     fn get_name(&self) -> String {
@@ -11,8 +11,6 @@ pub trait Effect: std::fmt::Debug {
 
     fn update(&mut self, state: &mut dyn State) -> Canvas;
 }
-
-
 
 #[derive(Debug)]
 pub struct Add {
@@ -100,8 +98,7 @@ pub struct Retrieve {
 impl Effect for Retrieve {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let res = state.get_stored(&self.name);
-        if res.is_none()
-        {
+        if res.is_none() {
             return state.get_canvas();
         }
         res.unwrap()
@@ -124,7 +121,6 @@ impl Effect for Store {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Static {
     pub color: RGBA,
@@ -132,14 +128,12 @@ pub struct Static {
 impl Effect for Static {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = state.get_canvas();
-        for p in canvas.iter_mut()
-        {
+        for p in canvas.iter_mut() {
             *p = self.color;
         }
         canvas
     }
 }
-
 
 #[derive(Debug)]
 pub struct SetAlpha {
@@ -149,8 +143,7 @@ pub struct SetAlpha {
 impl Effect for SetAlpha {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = self.child.as_mut().unwrap().update(state);
-        for p in canvas.iter_mut()
-        {
+        for p in canvas.iter_mut() {
             p.set_alpha(self.value);
         }
         canvas
@@ -159,4 +152,3 @@ impl Effect for SetAlpha {
         self.child = Some(effect);
     }
 }
-

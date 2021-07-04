@@ -39,8 +39,7 @@ impl RGBA {
             a: 1.0,
         }
     }
-    pub fn transparent() -> RGBA
-    {
+    pub fn transparent() -> RGBA {
         RGBA {
             r: 0.0,
             g: 0.0,
@@ -48,8 +47,7 @@ impl RGBA {
             a: 0.0,
         }
     }
-    pub fn opaque() -> RGBA
-    {
+    pub fn opaque() -> RGBA {
         RGBA {
             r: 0.0,
             g: 0.0,
@@ -78,13 +76,16 @@ impl RGBA {
         (self.a * 255.0).round() as u8
     }
 
-    pub fn with_alpha(&self, v: f64) -> RGBA
-    {
-        RGBA {a: v.clamp(0.0, 1.0), r: self.r, g: self.g, b: self.b}
+    pub fn with_alpha(&self, v: f64) -> RGBA {
+        RGBA {
+            a: v.clamp(0.0, 1.0),
+            r: self.r,
+            g: self.g,
+            b: self.b,
+        }
     }
 
-    pub fn set_alpha(&mut self, v: f64)
-    {
+    pub fn set_alpha(&mut self, v: f64) {
         self.a = v.clamp(0.0, 1.0);
     }
 }
@@ -101,7 +102,6 @@ impl ops::Add<RGBA> for RGBA {
         out
     }
 }
-
 
 impl ops::Sub<RGBA> for RGBA {
     type Output = RGBA;
@@ -216,7 +216,6 @@ impl ops::Add<Canvas> for Canvas {
     }
 }
 
-
 impl ops::Sub<Canvas> for Canvas {
     type Output = Canvas;
     fn sub(self, rhs: Canvas) -> Canvas {
@@ -233,9 +232,6 @@ impl ops::Sub<Canvas> for Canvas {
         res
     }
 }
-
-
-
 
 /// Holder object for state that we want to share, like time.
 pub trait State {
@@ -254,13 +250,8 @@ pub trait State {
     fn get_elapsed(&self) -> f64;
 
     /// Method to tell the state a new update cycle is starting.
-    fn start_update(&mut self) -> ()
-    {
-    }
+    fn start_update(&mut self) -> () {}
 
     /// Function to tell the state an update cycle has finished
-    fn finish_update(&mut self) -> ()
-    {
-    }
+    fn finish_update(&mut self) -> () {}
 }
-

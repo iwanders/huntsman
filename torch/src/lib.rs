@@ -1,8 +1,8 @@
 mod base;
 pub mod effects;
 
-use effects::{Effect};
 pub use base::{Canvas, State, RGBA};
+use effects::Effect;
 
 use std::collections::HashMap;
 
@@ -14,7 +14,6 @@ pub struct BasicState {
 }
 
 impl State for BasicState {
-
     fn get_stored(&self, name: &str) -> Option<Canvas> {
         self.stored.get(name).cloned()
     }
@@ -36,14 +35,12 @@ impl State for BasicState {
     }
 
     /// Retrieve the time elapsed since last update cycle.
-    fn get_elapsed(&self) -> f64
-    {
+    fn get_elapsed(&self) -> f64 {
         self.get_time() - self.last_update_cycle
     }
 
     /// Function to tell the state a new update cycle has started.
-    fn finish_update(&mut self)
-    {
+    fn finish_update(&mut self) {
         self.last_update_cycle = self.get_time();
     }
 }
