@@ -150,7 +150,6 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
 fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     let files: Vec<_> = matches.values_of("files").unwrap().collect();
     for k in files.iter() {
-        // println!("File: {:?}", k);
         let frames = obtain_frames(k)?;
 
         for f in frames.iter() {
@@ -161,7 +160,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 continue;
             }
 
-            if false && command.cmd == GetStorageStatistics::CMD {
+            if matches.occurrences_of("storage") != 0 && command.cmd == GetStorageStatistics::CMD {
                 if command.status != 2 {
                     continue;
                 }
@@ -173,7 +172,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 println!(" {:?}", payload_as::<wire::GetStorageStatistics>(&command));
             }
 
-            if command.cmd == MacroMetadata::CMD {
+            if matches.occurrences_of("macro_id") != 0 && command.cmd == MacroMetadata::CMD {
                 let parsed = wire::MacroMetadata::from_be_bytes(&command.payload).unwrap();
                 if command.status == 2 || parsed.page_offset != 0 {
                     continue;
@@ -186,14 +185,15 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                     parsed.uuid.uuid
                 );
                 continue;
-            } else {
-                continue;
             }
 
-            println!(
-                "{:.3} {} {:0>2x} {:0>2x} {:?}",
-                f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload
-            );
+            if matches.occurrences_of("dump_all") != 0
+            {
+                println!(
+                    "{:.3} {} {:0>2x} {:0>2x} {:?}",
+                    f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload
+                );
+            }
         }
     }
     Ok(())
@@ -203,6 +203,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new("Huntsman pcapng analyse tool").subcommand(
         SubCommand::with_name("dump")
             .about("run dump on all provided pcap files.")
+            .arg(Arg::with_name("macro_id").short("-m").help("print macro ids"))
+            .arg(Arg::with_name("storage").short("-s").help("print storage retrievals"))
+            .arg(Arg::with_name("dump_all").short("-d").help("dump all commands"))
             .arg(Arg::with_name("files").multiple(true)),
     );
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self

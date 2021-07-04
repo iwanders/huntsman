@@ -26,6 +26,15 @@ Shows; 1f is not always 1f, sometimes it's 08
       ^^ -- register?
       8   = 1 << 7, msb write / read flag?
         ^^ is part of the payload? But we only ever see 00, 01, 03 going to the device, see ff coming back rarely. <-0 this is '_first' in most commands.
+
+On profiles:
+0x00 is current? Seems volatile?
+0x01 seems to be the boot state?
+0x02 red
+0x03 green
+0x04 blue
+0x05 cyan
+
 */
 
 /// Represents a command that can be sent over USB.
@@ -380,7 +389,7 @@ pub struct SetLedState {
     pub count: u8,
 
     /// The actual values of the leds here.
-    pub leds: [RGB; 23], // 22 is max seen used, but 23 matches size from length field.
+    pub leds: [RGB; 23],
 }
 impl SetLedState {
     pub const CMD: Cmd = Cmd {
@@ -425,7 +434,7 @@ impl Command for SetLedBrightness {
     }
     fn payload(&self) -> Vec<u8> {
         let wire_setbrightness: wire::SetLedBrightness = wire::SetLedBrightness {
-            profile: self.profile, // 0x01 or 0x00, doesn't seem to matter much.
+            profile: self.profile,
             value: (self.value * 255.0) as u8,
             ..Default::default()
         };
@@ -990,13 +999,11 @@ mod tests {
         // returns status 02 if exists, 03 if it doesnt
 
         // 0x06, 0x08; add macro (by id? Or memory address??)
-
-        // 00:1f:00:00:00:06:06:08:3b:02:00:00:00:04:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:35:00
     }
 
     #[test]
     fn test_macro_events() {
-        // This is the actual macro payload, not the metadata.
+        // This is the actual macro payload, not the metadata, it is chunked in blocks.
         let shift_b = parse_wireshark_truncated(
             "00:1f:00:00:00:0f:06:09:3b:68:00:00:00:00:08:01:e1:01:05:02:05:02:e1",
             0x5b,

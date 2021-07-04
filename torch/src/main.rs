@@ -86,14 +86,16 @@ pub fn main() -> Result<(), String> {
 
     use std::{thread, time};
 
-    let mut h = huntsman::Huntsman::new()?;
-    h.effect_custom()?;
+    
+
+    // let mut h = huntsman::Huntsman::new()?;
+    // h.effect_custom()?;
 
     let ten_millis = time::Duration::from_millis(50);
     while (true) {
         let res = add.update(&mut mystate);
         println!("{}", res.to_string());
-        set_canvas(&mut h, &res);
+        // set_canvas(&mut h, &res);
         thread::sleep(ten_millis);
     }
     Ok(())
