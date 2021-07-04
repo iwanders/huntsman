@@ -91,6 +91,19 @@ pub enum MouseButton {
     M4 = 4,
     M5 = 5,
 }
+impl From<u8> for MouseButton {
+    fn from(encoded: u8) -> Self {
+        match encoded
+        {
+            _z if (encoded == MouseButton::Left as u8 ) => MouseButton::Left,
+            _z if (encoded == MouseButton::Right as u8 ) => MouseButton::Right,
+            _z if (encoded == MouseButton::Scroll as u8 ) => MouseButton::Scroll,
+            _z if (encoded == MouseButton::M4 as u8 ) => MouseButton::M4,
+            _z if (encoded == MouseButton::M5 as u8 ) => MouseButton::M5,
+            _ => panic!("couldn't convert mouse button")
+        }
+    }
+}
 
 pub type MacroId = u16;
 
@@ -121,6 +134,7 @@ pub enum KeyMapping {
     Special(u8),
 }
 
+#[allow(dead_code)]
 impl KeyMapping {
     const MAP_DISABLED: u8 = 0x00;
     const MAP_MOUSE: u8 = 0x01;
@@ -165,6 +179,15 @@ impl FromBytes for KeyMapping {
                 
                 return Ok(4);
             }
+            KeyMapping::MAP_MOUSE => {
+                if len_byte != 1
+                {
+                    return Err(format!("Length didn't match, expected {}, got {}", 1, len_byte));
+                }
+                *self = KeyMapping::Mouse(src[2].into());
+                
+                return Ok(3);
+            }
             z => panic!("Unhandled keymap code {:?}, total src: {:?}", z, src),
         }
     }
@@ -183,6 +206,11 @@ impl ToBytes for KeyMapping {
                 buff.push(2); // 2 bytes follow
                 buff.push(v.modifiers.into());
                 buff.push(v.id);
+            }
+            KeyMapping::Mouse(button) => {
+                buff.push(KeyMapping::MAP_MOUSE);
+                buff.push(1);
+                buff.push(*button as u8);
             }
             z => panic!("Unhandled keymap code {:?}", z),
         }
@@ -228,8 +256,7 @@ impl ToBytes for KeyMap {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::helpers::{parse_wireshark_truncated, parse_wireshark_value, PAYLOAD_START};
-    use crate::wire;
+    use crate::helpers::{parse_wireshark_truncated, PAYLOAD_START};
 
     #[test]
     fn overrides_for_keys() {
@@ -253,6 +280,16 @@ mod tests {
         fn expect_key(k: KeyMap) -> KeyboardKey
         {
             if let KeyMapping::Key(v) = k.mapping
+            {
+                return v;
+            }
+            assert_eq!(true, false);
+            panic!("cant reach this");
+        }
+
+        fn expect_mouse(k: KeyMap) -> MouseButton
+        {
+            if let KeyMapping::Mouse(v) = k.mapping
             {
                 return v;
             }
@@ -287,6 +324,24 @@ mod tests {
         let right_ctrl_alphanumeric_right_shift = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:20:04", 0x60);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_right_shift));
         assert_eq!(v.modifiers.right_shift, true);
+
+
+
+        // 2021_06_05_23_24_set_right_ctrl_right_click.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00:00:00:00
+        let right_ctrl_right_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_right_click));
+        assert_eq!(v, MouseButton::Right);
+
+        let right_ctrl_scroll_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00", 0x47);
+        let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_scroll_click));
+        assert_eq!(v, MouseButton::Scroll);
+        // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
+        // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:04:00:00:00:00:00
+        // 2021_06_05_23_26_set_right_ctrl_button_5.pcapng
+        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00
 
 
         // Right shift to k, top two entries seem to be THE thing.
@@ -372,14 +427,6 @@ mod tests {
         // 2021_06_05_23_22_set_right_ctrl_left_click_turbo_7_per_s.pcapng
         // 00:1f:00:00:00:0a:02:0d:03:40:00:0e:03:01:00:8e:00:00:00
 
-        // 2021_06_05_23_24_set_right_ctrl_right_click.pcapng
-        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00:00:00:00
-        // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
-        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
-        // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
-        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:04:00:00:00:00:00
-        // 2021_06_05_23_26_set_right_ctrl_button_5.pcapng
-        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00
 
         // 2021_06_05_23_26_set_right_ctrl_dbl_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00
@@ -468,13 +515,13 @@ mod tests {
         // Mapping type 11 is indeed magical keys.
         // Looks like I lost game mode toggling on 2 profiles somehow.
         // Captured from working profile:
-        let f9_otf_macro =
+        let _f9_otf_macro =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:78:01:11:01:04:00", 0xe0);
-        let f10_game_mode =
+        let _f10_game_mode =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:79:01:11:01:03:00", 0xe6);
-        let f11_brightness_down =
+        let _f11_brightness_down =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7a:01:11:01:09:00", 0xef);
-        let f12_brightness_up =
+        let _f12_brightness_up =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7b:01:11:01:08:00", 0xef);
     }
 }
