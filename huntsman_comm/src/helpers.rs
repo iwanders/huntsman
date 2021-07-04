@@ -19,6 +19,7 @@ pub fn to_wireshark_value(v: &[u8]) -> String {
         .join(":")
 }
 
+#[allow(dead_code)]
 pub const PAYLOAD_START: usize = WIRESHARK_PAYLOAD_START;
 /// Parses a wireshark value, but assumes null bytes for the remainder, does calculate
 /// and compare the checksum against the provided check u8, asserts if this fails.

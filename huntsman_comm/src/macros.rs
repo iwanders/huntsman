@@ -221,7 +221,6 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     use crate::helpers::{parse_wireshark_truncated, parse_wireshark_value, PAYLOAD_START};
-    use crate::wire;
 
     #[test]
     fn test_macro_events() {
