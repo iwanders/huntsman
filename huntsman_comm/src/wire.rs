@@ -165,7 +165,6 @@ impl Default for MacroActionsPayload {
     }
 }
 
-
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Uuid {

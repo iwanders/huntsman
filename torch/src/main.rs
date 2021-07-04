@@ -86,8 +86,6 @@ pub fn main() -> Result<(), String> {
 
     use std::{thread, time};
 
-    
-
     // let mut h = huntsman::Huntsman::new()?;
     // h.effect_custom()?;
 

@@ -7,6 +7,8 @@ pub use struct_helper::FromBytes;
 pub use wire::Cmd;
 pub use wire::RGB;
 
+pub mod macros;
+
 pub use std::any::Any;
 
 /*
@@ -78,7 +80,7 @@ pub trait Command: std::fmt::Debug {
     }
 
     /// If commands only care about the payload (most do), this method gets called from
-    /// the default implementation of [`response`] and passes just the payload slice.
+    /// the default implementation of [`self.response()`] and passes just the payload slice.
     fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String> {
         Err("Not implemented".to_string())
     }
@@ -130,7 +132,6 @@ let cmd = huntsman_comm::ArbitraryCommand {
 // att start of synapse open we see 0x0004 0x03 0x00, corresponding to the log stating DRIVER mode.
 }
 */
-
 
 // 1, short, 2 medium, 3 long, 3 values matches slider in ui.
 #[repr(u8)]
@@ -359,6 +360,10 @@ impl Command for SetLedEffect {
         return SetLedEffect::CMD;
     }
     fn payload(&self) -> Vec<u8> {
+        // Notice we don't care about the length here, it doesn't seem to be checked by the firmware
+        // and it makes our life much easier if we can use the same payload struct for all effects.
+
+        // The second byte in the payload seems to be some kind of response, it is 5 in most cases.
         self.payload.to_le_bytes().expect("Should succeed")
     }
 }
@@ -630,25 +635,15 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
 }
 
 mod helpers;
-pub use helpers::{WIRESHARK_PAYLOAD_START, parse_wireshark_value, to_wireshark_value, parse_wireshark_truncated};
+pub use helpers::{
+    parse_wireshark_truncated, parse_wireshark_value, to_wireshark_value, WIRESHARK_PAYLOAD_START,
+};
 
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use helpers::{PAYLOAD_START, parse_wireshark_truncated};
-    #[test]
-    fn test_helper() {
-        let real = parse_wireshark_value("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:f8:00");
-        let truncated = parse_wireshark_truncated(
-            "02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78",
-            0xf8,
-        );
-        assert_eq!(real, truncated);
-        let real = parse_wireshark_value("00:1f:00:00:00:03:0f:04:01:00:7f:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:76:00");
-        let truncated = parse_wireshark_truncated("00:1f:00:00:00:03:0f:04:01:00:7f", 0x76);
-        assert_eq!(real, truncated);
-    }
+    use helpers::{parse_wireshark_truncated, PAYLOAD_START};
 
     #[test]
     fn test_set_led_state() {
@@ -699,23 +694,6 @@ mod tests {
         // 00:1f:00:00:00:03:03:00:00:18:00:00:00...
         // What does this 18 mean!? Seems to toggle the volume led!? O_o
         // It did disable my override on right control, which is sketchy...
-    }
-
-    #[test]
-    fn test_effects() {
-        // Failing the length here, lets not worry about that as it doesn't seem checked in the firmware
-        // and it makes our handling much easier if we can use the same payload struct for one entity.
-
-        // the second byte in the payload seems to be some kind of response, it holds 5 in most cases.
-
-        // Seen messages;
-        // let spectrum_expect = parse_wireshark_value("00:1f:00:00:00:06:0f:02:01:00:03:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:09:00");
-        // let mut spectrum: SetLedEffect = SetLedEffect::spectrum();
-        // spectrum.payload.first = 0x01;
-        // assert_eq!(spectrum.serialize(), spectrum_expect);
-
-        // We've seen this; but it doesn't seem to do anything atm?
-        // 00:1f:00:00:00:06:0f:02:00:00:08:01:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:03:00
     }
 
     #[test]
@@ -966,6 +944,4 @@ mod tests {
 
         // 0x06, 0x08; add macro (by id? Or memory address??)
     }
-
 }
-

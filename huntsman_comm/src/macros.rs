@@ -11,17 +11,23 @@ pub enum MouseButton {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+/// Enum to represent an action in a macro.
 pub enum MacroAction {
+    /// HID key id.
     KeyboardMake(u8),
+    /// HID key id.
     KeyboardBreak(u8),
+    /// Delay in milliseconds.
     Delay(u32),
+    /// Sets the mouse click state (bitmask), use again with 0 to release
     MouseClick(MouseButton),
+    /// scroll with the mouse
     MouseScroll(i8),
+    /// move mouse relative, with x and y values.
     MouseMove(i16, i16),
+    /// No action.
     None,
 }
-
-
 
 impl MacroAction {
     const KEYBOARD_MAKE: u8 = 0x01;
@@ -166,8 +172,6 @@ impl Default for MacroAction {
     }
 }
 
-
-
 #[derive(Clone, Debug, Default)]
 /// Struct definition to hold the actions that make up a macro, only works for macro's that
 /// fit within one chunk, mostly used for the unit tests that follow below.
@@ -212,15 +216,12 @@ impl ToBytes for MacroActions {
     }
 }
 
-
-mod helpers;
-pub use helpers::{WIRESHARK_PAYLOAD_START, parse_wireshark_value, to_wireshark_value, parse_wireshark_truncated};
-
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use helpers::{PAYLOAD_START, parse_wireshark_truncated};
+    use crate::helpers::{parse_wireshark_truncated, parse_wireshark_value, PAYLOAD_START};
+    use crate::wire;
 
     #[test]
     fn test_macro_events() {
@@ -229,8 +230,7 @@ mod tests {
             "00:1f:00:00:00:0f:06:09:3b:68:00:00:00:00:08:01:e1:01:05:02:05:02:e1",
             0x5b,
         );
-        let cmd =
-            wire::MacroActions::from_be_bytes(&shift_b[PAYLOAD_START..]).expect("Should pass");
+        let cmd = MacroActions::from_be_bytes(&shift_b[PAYLOAD_START..]).expect("Should pass");
         println!("{:?}", cmd);
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 15);
@@ -244,8 +244,7 @@ mod tests {
             "00:1f:00:00:00:12:06:09:3b:68:00:00:00:00:0b:12:03:e8:01:05:02:05:01:04:02:04",
             0xbc,
         );
-        let cmd =
-            wire::MacroActions::from_be_bytes(&delay_b_a[PAYLOAD_START..]).expect("Should pass");
+        let cmd = MacroActions::from_be_bytes(&delay_b_a[PAYLOAD_START..]).expect("Should pass");
         println!("{:?}", cmd);
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 18);
@@ -256,8 +255,8 @@ mod tests {
         );
 
         let parsing_breaks_1 = parse_wireshark_truncated("00:1f:00:00:00:18:06:09:3b:68:00:00:00:00:11:11:fa:01:05:13:01:d4:c0:02:05:12:13:88:01:04:02:04:00", 0x31);
-        let cmd = wire::MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..])
-            .expect("Should pass");
+        let cmd =
+            MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..]).expect("Should pass");
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 24);
         assert_eq!(
@@ -269,7 +268,7 @@ mod tests {
             "00:1f:00:00:00:0b:06:09:3b:68:00:00:00:00:04:08:01:08:00",
             0x52,
         );
-        let cmd = wire::MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..])
+        let cmd = MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..])
             .expect("Should pass");
         let and_back = cmd.to_be_bytes().expect("Success");
         assert_eq!(and_back.len(), 11);
@@ -279,21 +278,21 @@ mod tests {
         );
 
         let set_mouse_scroll_up = parse_wireshark_value("0a:01");
-        let mouse_up = wire::MacroAction::from_le_bytes(&set_mouse_scroll_up).expect("success");
-        assert_eq!(mouse_up, wire::MacroAction::MouseScroll(1));
+        let mouse_up = MacroAction::from_le_bytes(&set_mouse_scroll_up).expect("success");
+        assert_eq!(mouse_up, MacroAction::MouseScroll(1));
         let and_back = mouse_up.to_be_bytes().expect("Success");
         assert_eq!(set_mouse_scroll_up, and_back);
 
         let set_mouse_scroll_down = parse_wireshark_value("0a:ff");
-        let mouse_down = wire::MacroAction::from_le_bytes(&set_mouse_scroll_down).expect("success");
-        assert_eq!(mouse_down, wire::MacroAction::MouseScroll(-1));
+        let mouse_down = MacroAction::from_le_bytes(&set_mouse_scroll_down).expect("success");
+        assert_eq!(mouse_down, MacroAction::MouseScroll(-1));
         let and_back = mouse_down.to_be_bytes().expect("Success");
         assert_eq!(set_mouse_scroll_down, and_back);
 
         let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
         let mouse_move_action =
-            wire::MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
-        assert_eq!(mouse_move_action, wire::MacroAction::MouseMove(1, -1));
+            MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
+        assert_eq!(mouse_move_action, MacroAction::MouseMove(1, -1));
         let and_back = mouse_move_action.to_be_bytes().expect("Success");
         assert_eq!(mouse_move_action_input, and_back);
     }
