@@ -629,48 +629,14 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
     ]
 }
 
-pub const WIRESHARK_PAYLOAD_START: usize = 8;
-pub fn parse_wireshark_value(z: &str) -> Vec<u8> {
-    let mut r: Vec<u8> = Vec::new();
-    let bytes = z.split(":");
-    for b in bytes {
-        match u8::from_str_radix(b, 16) {
-            Ok(number) => r.push(number),
-            Err(e) => panic!("{}; {:?} (full: {:?})", e, b, z),
-        };
-    }
-    return r;
-}
-
-pub fn to_wireshark_value(v: &[u8]) -> String {
-    (v.clone())
-        .iter()
-        .map(|x| format!("{:0>2x}", x))
-        .collect::<Vec<String>>()
-        .join(":")
-}
+mod helpers;
+pub use helpers::{WIRESHARK_PAYLOAD_START, parse_wireshark_value, to_wireshark_value, parse_wireshark_truncated};
 
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    const PAYLOAD_START: usize = WIRESHARK_PAYLOAD_START;
-    /// Parses a wireshark value, but assumes null bytes for the remainder, does calculate
-    /// and compare the checksum against the provided check u8, asserts if this fails.
-    fn parse_wireshark_truncated(z: &str, check: u8) -> Vec<u8> {
-        let mut v = parse_wireshark_value(z);
-        const LENGTH: usize = 90;
-        while v.len() != LENGTH {
-            v.push(0);
-        }
-        let mut checksum: u8 = 0;
-        for i in 2..LENGTH {
-            checksum ^= v[i];
-        }
-        assert_eq!(check, checksum);
-        v[LENGTH - 2] = checksum;
-        v
-    }
+    use helpers::{PAYLOAD_START, parse_wireshark_truncated};
     #[test]
     fn test_helper() {
         let real = parse_wireshark_value("02:1f:00:00:00:0e:06:8e:ff:ff:00:01:8f:f0:00:01:8a:78:00:01:8a:78:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:f8:00");
@@ -1001,80 +967,5 @@ mod tests {
         // 0x06, 0x08; add macro (by id? Or memory address??)
     }
 
-    #[test]
-    fn test_macro_events() {
-        // This is the actual macro payload, not the metadata, it is chunked in blocks.
-        let shift_b = parse_wireshark_truncated(
-            "00:1f:00:00:00:0f:06:09:3b:68:00:00:00:00:08:01:e1:01:05:02:05:02:e1",
-            0x5b,
-        );
-        let cmd =
-            wire::MacroActions::from_be_bytes(&shift_b[PAYLOAD_START..]).expect("Should pass");
-        println!("{:?}", cmd);
-        let and_back = cmd.to_be_bytes().expect("Success");
-        assert_eq!(and_back.len(), 15);
-        println!("{:?}", and_back);
-        assert_eq!(
-            &shift_b[PAYLOAD_START..PAYLOAD_START + and_back.len()],
-            and_back
-        );
-
-        let delay_b_a = parse_wireshark_truncated(
-            "00:1f:00:00:00:12:06:09:3b:68:00:00:00:00:0b:12:03:e8:01:05:02:05:01:04:02:04",
-            0xbc,
-        );
-        let cmd =
-            wire::MacroActions::from_be_bytes(&delay_b_a[PAYLOAD_START..]).expect("Should pass");
-        println!("{:?}", cmd);
-        let and_back = cmd.to_be_bytes().expect("Success");
-        assert_eq!(and_back.len(), 18);
-        println!("{:?}", and_back);
-        assert_eq!(
-            &delay_b_a[PAYLOAD_START..PAYLOAD_START + and_back.len()],
-            and_back
-        );
-
-        let parsing_breaks_1 = parse_wireshark_truncated("00:1f:00:00:00:18:06:09:3b:68:00:00:00:00:11:11:fa:01:05:13:01:d4:c0:02:05:12:13:88:01:04:02:04:00", 0x31);
-        let cmd = wire::MacroActions::from_be_bytes(&parsing_breaks_1[PAYLOAD_START..])
-            .expect("Should pass");
-        let and_back = cmd.to_be_bytes().expect("Success");
-        assert_eq!(and_back.len(), 24);
-        assert_eq!(
-            &parsing_breaks_1[PAYLOAD_START..PAYLOAD_START + and_back.len()],
-            and_back
-        );
-
-        let set_mouse_stroke_left = parse_wireshark_truncated(
-            "00:1f:00:00:00:0b:06:09:3b:68:00:00:00:00:04:08:01:08:00",
-            0x52,
-        );
-        let cmd = wire::MacroActions::from_be_bytes(&set_mouse_stroke_left[PAYLOAD_START..])
-            .expect("Should pass");
-        let and_back = cmd.to_be_bytes().expect("Success");
-        assert_eq!(and_back.len(), 11);
-        assert_eq!(
-            &set_mouse_stroke_left[PAYLOAD_START..PAYLOAD_START + and_back.len()],
-            and_back
-        );
-
-        let set_mouse_scroll_up = parse_wireshark_value("0a:01");
-        let mouse_up = wire::MacroAction::from_le_bytes(&set_mouse_scroll_up).expect("success");
-        assert_eq!(mouse_up, wire::MacroAction::MouseScroll(1));
-        let and_back = mouse_up.to_be_bytes().expect("Success");
-        assert_eq!(set_mouse_scroll_up, and_back);
-
-        let set_mouse_scroll_down = parse_wireshark_value("0a:ff");
-        let mouse_down = wire::MacroAction::from_le_bytes(&set_mouse_scroll_down).expect("success");
-        assert_eq!(mouse_down, wire::MacroAction::MouseScroll(-1));
-        let and_back = mouse_down.to_be_bytes().expect("Success");
-        assert_eq!(set_mouse_scroll_down, and_back);
-
-        let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
-        let mouse_move_action =
-            wire::MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
-        assert_eq!(mouse_move_action, wire::MacroAction::MouseMove(1, -1));
-        let and_back = mouse_move_action.to_be_bytes().expect("Success");
-        assert_eq!(mouse_move_action_input, and_back);
-    }
 }
 
