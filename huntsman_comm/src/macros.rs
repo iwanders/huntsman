@@ -1,7 +1,7 @@
 use struct_helper::*;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum MouseButton {
+pub enum MouseState {
     None = 0,
     Left = 1,
     Right = 2,
@@ -20,7 +20,7 @@ pub enum MacroAction {
     /// Delay in milliseconds.
     Delay(u32),
     /// Sets the mouse click state (bitmask), use again with 0 to release
-    MouseClick(MouseButton),
+    MouseClick(MouseState),
     /// scroll with the mouse
     MouseScroll(i8),
     /// move mouse relative, with x and y values.
@@ -83,12 +83,12 @@ impl FromBytes for MacroAction {
             MacroAction::MOUSE_CLICK => {
                 let key_code = src[1];
                 let button = match key_code {
-                    i if i == MouseButton::None as u8 => MouseButton::None,
-                    i if i == MouseButton::Left as u8 => MouseButton::Left,
-                    i if i == MouseButton::Right as u8 => MouseButton::Right,
-                    i if i == MouseButton::Scroll as u8 => MouseButton::Scroll,
-                    i if i == MouseButton::M4 as u8 => MouseButton::M4,
-                    i if i == MouseButton::M5 as u8 => MouseButton::M5,
+                    i if i == MouseState::None as u8 => MouseState::None,
+                    i if i == MouseState::Left as u8 => MouseState::Left,
+                    i if i == MouseState::Right as u8 => MouseState::Right,
+                    i if i == MouseState::Scroll as u8 => MouseState::Scroll,
+                    i if i == MouseState::M4 as u8 => MouseState::M4,
+                    i if i == MouseState::M5 as u8 => MouseState::M5,
                     _ => panic!("Unhandled mouse code: {:?}, total: {:?}", key_code, src),
                 };
 

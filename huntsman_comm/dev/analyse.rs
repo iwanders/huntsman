@@ -187,6 +187,19 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 continue;
             }
 
+            if matches.occurrences_of("mappings") != 0 && command.cmd == SetKeyOverride::CMD {
+                let parsed = wire::SetKeyOverride::from_be_bytes(&command.payload).unwrap();
+                if command.status == 2{
+                    continue;
+                }
+                println!(
+                    "{:.3} {} {:0>2x} {:0>2x} {:?} {}",
+                    f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload,
+                    f.data.iter().map(|x| {format!("{:0>2x}", x)}).collect::<Vec<String>>().join(":")
+                );
+                continue;
+            }
+
             if matches.occurrences_of("dump_all") != 0 {
                 println!(
                     "{:.3} {} {:0>2x} {:0>2x} {:?}",
@@ -211,6 +224,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Arg::with_name("storage")
                     .short("-s")
                     .help("print storage retrievals"),
+            )
+            .arg(
+                Arg::with_name("mappings")
+                    .short("-k")
+                    .help("print mappings"),
             )
             .arg(
                 Arg::with_name("dump_all")
