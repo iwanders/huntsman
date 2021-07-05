@@ -1,4 +1,5 @@
 mod base;
+pub mod loader;
 pub mod effects;
 
 pub use base::{Canvas, State, RGBA};

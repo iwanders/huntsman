@@ -1,0 +1,10 @@
+effects:
+  -
+    effect: "Add"
+    name: "add_thing"
+    config:
+      SetAlpha:
+        value: 0.5
+    children: ["foo","bar"]
+
+

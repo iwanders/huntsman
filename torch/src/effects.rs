@@ -1,5 +1,11 @@
 pub use crate::base::{Canvas, State, RGBA};
 
+use serde::{Serialize, Deserialize};
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NoConfig {}
+
 pub trait Effect: std::fmt::Debug {
     fn get_name(&self) -> String {
         "Unnamed".to_owned()
@@ -134,12 +140,20 @@ impl Effect for Static {
         canvas
     }
 }
+pub type StaticConfig = NoConfig;
 
 #[derive(Debug)]
 pub struct SetAlpha {
     pub child: Option<Box<dyn Effect>>,
     pub value: f64,
 }
+// https://github.com/rust-lang/rust/issues/8995
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SetAlphaConfig
+{
+    pub value: f32,
+}
+
 impl Effect for SetAlpha {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = self.child.as_mut().unwrap().update(state);

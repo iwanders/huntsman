@@ -1,6 +1,7 @@
 use torch::effects::{Add, Effect, HorizontalMovingPixel, Retrieve, SetAlpha, Static, Store, Sub};
 use torch::{BasicState, Canvas, RGBA};
 
+
 use huntsman::RGB;
 
 fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
@@ -16,7 +17,19 @@ fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
     Ok(())
 }
 
-pub fn main() -> Result<(), String> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    //pub fn load_effects(filename: &str) -> Result<EffectStorage, Box<dyn std::error::Error>>
+    // let config = torch::loader::load_effects("./cfg/test_moving_pixels.json")?;
+    // println!("pixels: {:?}", config);
+    let config = torch::loader::load_effects("./cfg/test_moving_pixels.yaml")?;
+    println!("yaml {:?}", config);
+
+    let eff = torch::loader::make_effects_simple(&config.effects[..])?;
+
+    torch::loader::z();
+    return Ok(());
+
     let mut c1 = Canvas::new(10, 10);
     *c1.pixel_as_mut(0, 0) = RGBA::red();
     let mut c2 = Canvas::new(10, 10);
