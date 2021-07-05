@@ -1,9 +1,8 @@
-use torch::effects::{Add, Effect, HorizontalMovingPixel, Retrieve, SetAlpha, Static, Store, Sub};
-use torch::{BasicState, Canvas, RGBA};
-
+use torch::{BasicState, Canvas, State};
 
 use huntsman::RGB;
 
+#[allow(dead_code)]
 fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
     let mut rgb_buff: Vec<RGB> = vec![Default::default(); c.width()];
     for y in 0..c.height() {
@@ -18,11 +17,6 @@ fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
 }
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-    torch::loader::z();
-    //pub fn load_effects(filename: &str) -> Result<EffectStorage, Box<dyn std::error::Error>>
-    // let config = torch::loader::load_effects("./cfg/test_moving_pixels.json")?;
-    // println!("pixels: {:?}", config);
     let config = torch::loader::load_effects("./cfg/test_moving_pixels.yaml")?;
     println!("yaml {:?}", config);
 
@@ -30,17 +24,19 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // return Ok(());
 
-
-
     let mut mystate: BasicState = BasicState {
         stored: Default::default(),
         base_canvas: Canvas::transparent(23, 9),
         last_update_cycle: 0.0,
     };
+    mystate.start_update();
+    mystate.finish_update();
     let ten_millis = std::time::Duration::from_millis(50);
     // while (true) {
-    for i in 0..100 {
+    for _i in 0..100 {
+        mystate.start_update();
         let res = eff[0].borrow_mut().update(&mut mystate);
+        mystate.finish_update();
         println!("{}", res.to_string());
         // set_canvas(&mut h, &res);
         std::thread::sleep(ten_millis);

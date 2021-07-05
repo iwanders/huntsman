@@ -21,8 +21,7 @@ pub struct Modifiers {
     // Maybe right meta?
 }
 impl Modifiers {
-    pub fn any(&self) -> bool
-    {
+    pub fn any(&self) -> bool {
         u8::from(*self) != 0
     }
 }
@@ -31,7 +30,6 @@ impl Modifiers {
 //  ^ Left modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
 impl From<u8> for Modifiers {
     fn from(encoded: u8) -> Self {
-
         Modifiers {
             left_ctrl: (encoded & 0x01) != 0,
             left_shift: (encoded & 0x02) != 0,
@@ -44,27 +42,22 @@ impl From<u8> for Modifiers {
 }
 impl From<Modifiers> for u8 {
     fn from(item: Modifiers) -> Self {
-        ((item.left_ctrl as u8) << 0)|
-        ((item.left_shift as u8) << 1)|
-        ((item.left_alt as u8) << 2)|
-
-        ((item.right_ctrl as u8) << (0 + 4))|
-        ((item.right_shift as u8) << (1 + 4))|
-        ((item.right_alt as u8) <<  (2 + 4))
+        ((item.left_ctrl as u8) << 0)
+            | ((item.left_shift as u8) << 1)
+            | ((item.left_alt as u8) << 2)
+            | ((item.right_ctrl as u8) << (0 + 4))
+            | ((item.right_shift as u8) << (1 + 4))
+            | ((item.right_alt as u8) << (2 + 4))
     }
 }
-
 
 impl std::fmt::Debug for Modifiers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let enc: u8 = (*self).into();
         write!(f, "[")?;
-        for (side_i, side) in ["left", "right"].iter().enumerate()
-        {
-            for (p, which) in ["ctrl", "shift", "alt"].iter().enumerate()
-            {
-                if (enc & ((1 << p) << (4 * side_i))) != 0
-                {
+        for (side_i, side) in ["left", "right"].iter().enumerate() {
+            for (p, which) in ["ctrl", "shift", "alt"].iter().enumerate() {
+                if (enc & ((1 << p) << (4 * side_i))) != 0 {
                     write!(f, "{}_{}", side, which)?
                 }
             }
@@ -74,14 +67,11 @@ impl std::fmt::Debug for Modifiers {
     }
 }
 
-
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct KeyboardKey {
     pub id: u8,
     pub modifiers: Modifiers,
 }
-
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MouseButton {
@@ -93,14 +83,13 @@ pub enum MouseButton {
 }
 impl From<u8> for MouseButton {
     fn from(encoded: u8) -> Self {
-        match encoded
-        {
-            _z if (encoded == MouseButton::Left as u8 ) => MouseButton::Left,
-            _z if (encoded == MouseButton::Right as u8 ) => MouseButton::Right,
-            _z if (encoded == MouseButton::Scroll as u8 ) => MouseButton::Scroll,
-            _z if (encoded == MouseButton::M4 as u8 ) => MouseButton::M4,
-            _z if (encoded == MouseButton::M5 as u8 ) => MouseButton::M5,
-            _ => panic!("couldn't convert mouse button")
+        match encoded {
+            _z if (encoded == MouseButton::Left as u8) => MouseButton::Left,
+            _z if (encoded == MouseButton::Right as u8) => MouseButton::Right,
+            _z if (encoded == MouseButton::Scroll as u8) => MouseButton::Scroll,
+            _z if (encoded == MouseButton::M4 as u8) => MouseButton::M4,
+            _z if (encoded == MouseButton::M5 as u8) => MouseButton::M5,
+            _ => panic!("couldn't convert mouse button"),
         }
     }
 }
@@ -144,7 +133,6 @@ impl KeyMapping {
     const MAP_MACRO_REPEAT: u8 = 0x04;
     const MAP_MACRO_TOGGLE: u8 = 0x05;
 
-
     const MAP_MULTI_MEDIA: u8 = 0x0a;
 
     const MAP_BUTTON_PAGE: u8 = 0x0b;
@@ -153,10 +141,7 @@ impl KeyMapping {
     const MAP_TURBO_KEY: u8 = 0x0d;
 
     const MAP_SPECIAL: u8 = 0x11;
-
-    
 }
-
 
 impl FromBytes for KeyMapping {
     fn from_bytes(&mut self, src: &[u8], _endianness: Endianness) -> Result<usize, String>
@@ -171,21 +156,28 @@ impl FromBytes for KeyMapping {
                 return Ok(2);
             }
             KeyMapping::MAP_KEY => {
-                if len_byte != 2
-                {
-                    return Err(format!("Length didn't match, expected {}, got {}", 2, len_byte));
+                if len_byte != 2 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        2, len_byte
+                    ));
                 }
-                *self = KeyMapping::Key(KeyboardKey{id: src[3], modifiers: src[2].into()});
-                
+                *self = KeyMapping::Key(KeyboardKey {
+                    id: src[3],
+                    modifiers: src[2].into(),
+                });
+
                 return Ok(4);
             }
             KeyMapping::MAP_MOUSE => {
-                if len_byte != 1
-                {
-                    return Err(format!("Length didn't match, expected {}, got {}", 1, len_byte));
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
                 }
                 *self = KeyMapping::Mouse(src[2].into());
-                
+
                 return Ok(3);
             }
             z => panic!("Unhandled keymap code {:?}, total src: {:?}", z, src),
@@ -228,7 +220,7 @@ impl Default for KeyMapping {
 struct KeyMap {
     pub profile: u8,
     pub key: Key,
-    pub mapping: KeyMapping
+    pub mapping: KeyMapping,
 }
 impl FromBytes for KeyMap {
     fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String> {
@@ -242,15 +234,13 @@ impl FromBytes for KeyMap {
 
 impl ToBytes for KeyMap {
     fn to_bytes(&self, endianness: Endianness) -> Result<Vec<u8>, String> {
-        let mut buff: Vec<u8> = vec!();
+        let mut buff: Vec<u8> = vec![];
         buff.extend(self.profile.to_bytes(endianness)?);
         buff.extend(self.key.to_bytes(endianness)?);
         buff.extend(self.mapping.to_bytes(endianness)?);
         Ok(buff)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -264,8 +254,7 @@ mod tests {
         // 'Typical AT-101' column holds the scancode in decimal
         // Usage ID is the.
 
-        fn test_keymap_roundtrip(buf: &Vec<u8>) -> KeyMap
-        {
+        fn test_keymap_roundtrip(buf: &Vec<u8>) -> KeyMap {
             let cmd = KeyMap::from_be_bytes(&buf[PAYLOAD_START..]).expect("Should pass");
             println!("{:?}", cmd);
             let and_back = cmd.to_be_bytes().expect("Success");
@@ -277,63 +266,67 @@ mod tests {
             cmd
         }
 
-        fn expect_key(k: KeyMap) -> KeyboardKey
-        {
-            if let KeyMapping::Key(v) = k.mapping
-            {
+        fn expect_key(k: KeyMap) -> KeyboardKey {
+            if let KeyMapping::Key(v) = k.mapping {
                 return v;
             }
             assert_eq!(true, false);
             panic!("cant reach this");
         }
 
-        fn expect_mouse(k: KeyMap) -> MouseButton
-        {
-            if let KeyMapping::Mouse(v) = k.mapping
-            {
+        fn expect_mouse(k: KeyMap) -> MouseButton {
+            if let KeyMapping::Mouse(v) = k.mapping {
                 return v;
             }
             assert_eq!(true, false);
             panic!("cant reach this");
         }
 
-        let disable_key_62 = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00", 0x3a);
+        let disable_key_62 =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00", 0x3a);
         let x = test_keymap_roundtrip(&disable_key_62);
         assert_eq!(x.key.scan_code, 62);
 
         // Test the key modifiers.
-        let right_shift_to_right_shift = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00", 0xd8);
+        let right_shift_to_right_shift =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00", 0xd8);
         let x = test_keymap_roundtrip(&right_shift_to_right_shift);
-        assert_eq!(x.key.scan_code, 57);  // at101 for right shift.
+        assert_eq!(x.key.scan_code, 57); // at101 for right shift.
         let v = expect_key(x);
         assert_eq!(v.modifiers.any(), false);
         assert_eq!(v.id, 0xe5);
 
-        let right_ctrl_alphanumeric_left_shift = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:02:04:00", 0x42);
+        let right_ctrl_alphanumeric_left_shift =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:02:04:00", 0x42);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_left_shift));
         assert_eq!(v.modifiers.left_shift, true);
 
-        let right_ctrl_alphanumeric_left_alt = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:04:04", 0x44);
+        let right_ctrl_alphanumeric_left_alt =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:04:04", 0x44);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_left_alt));
         assert_eq!(v.modifiers.left_alt, true);
 
-        let right_ctrl_alphanumeric_right_control = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:10:04:00", 0x50);
-        let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_right_control));
+        let right_ctrl_alphanumeric_right_control =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:10:04:00", 0x50);
+        let v = expect_key(test_keymap_roundtrip(
+            &right_ctrl_alphanumeric_right_control,
+        ));
         assert_eq!(v.modifiers.right_ctrl, true);
 
-        let right_ctrl_alphanumeric_right_shift = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:20:04", 0x60);
+        let right_ctrl_alphanumeric_right_shift =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:20:04", 0x60);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_right_shift));
         assert_eq!(v.modifiers.right_shift, true);
 
-
-
         // 2021_06_05_23_24_set_right_ctrl_right_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00:00:00:00
-        let right_ctrl_right_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let right_ctrl_right_click =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
         let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_right_click));
         assert_eq!(v, MouseButton::Right);
 
-        let right_ctrl_scroll_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00", 0x47);
+        let right_ctrl_scroll_click =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00", 0x47);
         let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_scroll_click));
         assert_eq!(v, MouseButton::Scroll);
         // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
@@ -342,7 +335,6 @@ mod tests {
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:04:00:00:00:00:00
         // 2021_06_05_23_26_set_right_ctrl_button_5.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:05:00:00:00:00:00
-
 
         // Right shift to k, top two entries seem to be THE thing.
         // TSetMapping MOD: 0x00000000	MAP: MAPPING_SINGLEKEY Key: MC=0x25, EX=0x00, Mods=0x00000000
@@ -426,7 +418,6 @@ mod tests {
 
         // 2021_06_05_23_22_set_right_ctrl_left_click_turbo_7_per_s.pcapng
         // 00:1f:00:00:00:0a:02:0d:03:40:00:0e:03:01:00:8e:00:00:00
-
 
         // 2021_06_05_23_26_set_right_ctrl_dbl_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00:00:00:00:00

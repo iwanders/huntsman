@@ -1,6 +1,6 @@
 pub use crate::base::{Canvas, State, RGBA};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,17 +14,15 @@ pub trait Effect: std::fmt::Debug {
         "Unnamed".to_owned()
     }
 
-    fn add_child(&mut self, effect: EffectPtr) {
+    fn add_child(&mut self, _effect: EffectPtr) {
         panic!("No add child functionality for this effect.");
     }
 
     fn update(&mut self, state: &mut dyn State) -> Canvas;
 }
-pub fn make_effect<T: 'static + Effect + Sized>(v: T) -> EffectPtr
-{
+pub fn make_effect<T: 'static + Effect + Sized>(v: T) -> EffectPtr {
     Rc::new(RefCell::new(v))
 }
-
 
 #[derive(Debug)]
 pub struct Add {
@@ -53,14 +51,11 @@ impl Effect for Add {
         out
     }
 }
-impl Add
-{
-    pub fn new() -> EffectPtr
-    {
-        make_effect(Add{children:vec!()})
+impl Add {
+    pub fn new() -> EffectPtr {
+        make_effect(Add { children: vec![] })
     }
 }
-
 
 #[derive(Debug)]
 pub struct Sub {
@@ -88,11 +83,9 @@ impl Effect for Sub {
         out
     }
 }
-impl Sub
-{
-    pub fn new() -> EffectPtr
-    {
-        make_effect(Sub{children:vec!()})
+impl Sub {
+    pub fn new() -> EffectPtr {
+        make_effect(Sub { children: vec![] })
     }
 }
 
@@ -154,12 +147,33 @@ impl Effect for Store {
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Static {
     pub color: RGBA,
+
+    #[serde(default)]
+    /// Scale the static value such that in 1 time unit it would accumulate to the requested value.
+    pub scale_by_time: bool,
+
+    #[serde(default)]
+    /// If this is true, alpha is also scaled, otherwise this is kept at the original value.
+    pub scale_alpha: bool,
 }
 impl Effect for Static {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = state.get_canvas();
+        println!("Elapsed: {} t: {}", state.get_elapsed(), self.scale_by_time);
+        let scale_factor = if self.scale_by_time {
+            state.get_elapsed()
+        } else {
+            1.0
+        };
+
+        let alpha_factor = if (self.scale_by_time && self.scale_alpha) {
+            state.get_elapsed()
+        } else {
+            self.color.a
+        };
+
         for p in canvas.iter_mut() {
-            *p = self.color;
+            *p = (self.color * scale_factor).with_alpha(alpha_factor);
         }
         canvas
     }
@@ -170,12 +184,6 @@ pub struct SetAlpha {
     #[serde(skip)]
     pub child: Option<EffectPtr>,
     pub value: f64,
-}
-// https://github.com/rust-lang/rust/issues/8995
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SetAlphaConfig
-{
-    pub value: f32,
 }
 
 impl Effect for SetAlpha {

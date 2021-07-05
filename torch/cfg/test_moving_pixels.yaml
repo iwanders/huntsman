@@ -21,7 +21,9 @@ effects:
     
   -
     name: sub_amount
-    Static: {color: {r: 0.0, g: 0.0, b: 0.01, a: 1.0}}
+    Static:
+      color: {r: 0.0, g: 0.0, b: 1.0, a: 1.0}
+      scale_by_time: true
 
   -
     name: retrieved_opaque
@@ -35,7 +37,7 @@ effects:
   -
     name: "moving"
     HorizontalMovingPixel:
-      velocity: 1.0
+      velocity: 10.0
       row: 3
       pixel: {r: 0, g: 0, b: 1.0, a: 1.0}
 

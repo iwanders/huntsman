@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::ops;
-use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct RGBA {
     pub r: f64, // 0 is no red component, 1.0 is satured red component.

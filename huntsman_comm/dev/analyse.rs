@@ -189,13 +189,21 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
 
             if matches.occurrences_of("mappings") != 0 && command.cmd == SetKeyOverride::CMD {
                 let parsed = wire::SetKeyOverride::from_be_bytes(&command.payload).unwrap();
-                if command.status == 2{
+                if command.status == 2 {
                     continue;
                 }
                 println!(
                     "{:.3} {} {:0>2x} {:0>2x} {:?} {}",
-                    f.frame_time_epoch, dir, command.cmd.major, command.cmd.minor, payload,
-                    f.data.iter().map(|x| {format!("{:0>2x}", x)}).collect::<Vec<String>>().join(":")
+                    f.frame_time_epoch,
+                    dir,
+                    command.cmd.major,
+                    command.cmd.minor,
+                    payload,
+                    f.data
+                        .iter()
+                        .map(|x| { format!("{:0>2x}", x) })
+                        .collect::<Vec<String>>()
+                        .join(":")
                 );
                 continue;
             }

@@ -1,9 +1,8 @@
 mod base;
-pub mod loader;
 pub mod effects;
+pub mod loader;
 
 pub use base::{Canvas, State, RGBA};
-use effects::Effect;
 
 use std::collections::HashMap;
 
@@ -43,24 +42,5 @@ impl State for BasicState {
     /// Function to tell the state a new update cycle has started.
     fn finish_update(&mut self) {
         self.last_update_cycle = self.get_time();
-    }
-}
-
-pub struct Torch {
-    //huntsman: huntsman::Huntsman,
-    state: Box<dyn State>,
-    effects: Vec<(String, Box<dyn Effect>)>,
-}
-
-impl Torch {
-    pub fn update(&mut self) {
-        let mut mystate: BasicState = BasicState {
-            stored: Default::default(),
-            base_canvas: Canvas::new(10, 10),
-            last_update_cycle: 0.0,
-        };
-        for (name, effect) in self.effects.iter_mut() {
-            effect.update(&mut mystate);
-        }
     }
 }
