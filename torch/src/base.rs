@@ -184,8 +184,7 @@ impl Canvas {
         &mut self.pixels[(height - y - 1) * width + x]
     }
 
-    pub fn within(&self, x: usize, y: usize) -> bool
-    {
+    pub fn within(&self, x: usize, y: usize) -> bool {
         x < self.width() && y < self.height()
     }
 
@@ -214,16 +213,14 @@ impl Canvas {
                 out += "\u{2588}\u{2588}"; // full block unicode character x 2
                 out += "\x1b[0m"; // reset the color
             }
-            if y != 0
-            {
+            if y != 0 {
                 out += "\n";
             }
         }
         out
     }
 
-    pub fn apply_onto(&self, base: &Canvas, x: f64, y: f64) -> Canvas
-    {
+    pub fn apply_onto(&self, base: &Canvas, x: f64, y: f64) -> Canvas {
         let mut res = self.clone();
 
         // Each pixel maps to 4 other pixels, this is always true.
@@ -239,37 +236,33 @@ impl Canvas {
         //          +----+----+
         // *: (x0 + 1, y0 + 1)
 
-        for ky in (0..base.height()).rev()
-        {
-            for kx in (0..base.width()).rev()
-            {
+        for ky in (0..base.height()).rev() {
+            for kx in (0..base.width()).rev() {
                 let base_val = *base.pixel(kx, ky);
-                if res.within(x_0 + kx + 1, y_0 + ky + 1)
-                {
+                if res.within(x_0 + kx + 1, y_0 + ky + 1) {
                     let current = *res.pixel(x_0 + kx + 1, y_0 + ky + 1);
-                    *res.pixel_as_mut(x_0 + kx + 1, y_0  + ky+ 1) = current + base_val.scaled_alpha((x_r) * (y_r));
+                    *res.pixel_as_mut(x_0 + kx + 1, y_0 + ky + 1) =
+                        current + base_val.scaled_alpha((x_r) * (y_r));
                 }
-                if res.within(x_0 + kx  + 0, y_0 + ky + 1)
-                {
+                if res.within(x_0 + kx + 0, y_0 + ky + 1) {
                     let current = *res.pixel(x_0 + kx + 0, y_0 + ky + 1);
-                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 1) = current + base_val.scaled_alpha((1.0 - x_r) * (y_r));
+                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 1) =
+                        current + base_val.scaled_alpha((1.0 - x_r) * (y_r));
                 }
-                if res.within(x_0 + kx  + 1, y_0 + ky + 0)
-                {
+                if res.within(x_0 + kx + 1, y_0 + ky + 0) {
                     let current = *res.pixel(x_0 + kx + 1, y_0 + ky + 0);
-                    *res.pixel_as_mut(x_0 + kx + 1, y_0 + ky+ 0) = current + base_val.scaled_alpha((x_r) * (1.0 - y_r));
+                    *res.pixel_as_mut(x_0 + kx + 1, y_0 + ky + 0) =
+                        current + base_val.scaled_alpha((x_r) * (1.0 - y_r));
                 }
-                if res.within(x_0 + kx  + 0, y_0 + ky + 0)
-                {
-                    let current = *res.pixel(x_0 + kx + 0, y_0  + ky+ 0);
-                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 0) = current + base_val.scaled_alpha((1.0 - x_r) * (1.0 - y_r));
+                if res.within(x_0 + kx + 0, y_0 + ky + 0) {
+                    let current = *res.pixel(x_0 + kx + 0, y_0 + ky + 0);
+                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 0) =
+                        current + base_val.scaled_alpha((1.0 - x_r) * (1.0 - y_r));
                 }
             }
         }
         res
     }
-
-
 }
 
 impl ops::Add<Canvas> for Canvas {

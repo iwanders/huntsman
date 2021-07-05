@@ -91,7 +91,6 @@ pub struct HorizontalMovingPixel {
     pub velocity: f64, // in pixels.
     pub row: usize,
     pub color: RGBA,
-
     // #[serde(default)]
     // pub position: f64,
 }
@@ -99,7 +98,7 @@ impl Effect for HorizontalMovingPixel {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = state.get_canvas();
 
-        let mut kernel = Canvas::new(1,1);
+        let mut kernel = Canvas::new(1, 1);
         *kernel.pixel_as_mut(0, 0) = self.color;
 
         let t = state.get_time();
@@ -202,50 +201,47 @@ impl Effect for SetAlpha {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    struct DummyState
-    {
+    struct DummyState {
         pub time: f64,
         pub elapsed: f64,
         pub canvas: Canvas,
     }
-    impl State for DummyState
-    {
-        fn get_stored(&self, _name: &str) -> Option<Canvas>      
-        {
+    impl State for DummyState {
+        fn get_stored(&self, _name: &str) -> Option<Canvas> {
             None
         }
 
-        fn set_stored(&mut self, _name: &str, _canvas: Canvas)
-        {
-        }
-        
+        fn set_stored(&mut self, _name: &str, _canvas: Canvas) {}
 
-        fn get_time(&self) -> f64
-        {
+        fn get_time(&self) -> f64 {
             self.time
         }
 
-        fn get_canvas(&self) -> Canvas
-        {
+        fn get_canvas(&self) -> Canvas {
             self.canvas.clone()
         }
 
-        fn get_elapsed(&self) -> f64
-        {
+        fn get_elapsed(&self) -> f64 {
             self.elapsed
         }
-
     }
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     #[test]
     fn test_moving_pixel() {
-        let mut state: DummyState = DummyState{time: 1.0 , elapsed: 0.0, canvas: Canvas::new(10,1)};
-        let mut eff: HorizontalMovingPixel = HorizontalMovingPixel{color: RGBA::red(), velocity: 1.0,  row: 0};
+        let mut state: DummyState = DummyState {
+            time: 1.0,
+            elapsed: 0.0,
+            canvas: Canvas::new(10, 1),
+        };
+        let mut eff: HorizontalMovingPixel = HorizontalMovingPixel {
+            color: RGBA::red(),
+            velocity: 1.0,
+            row: 0,
+        };
 
         println!("\n{}", eff.update(&mut state).to_string());
         state.time += 0.5;
@@ -258,30 +254,24 @@ mod tests {
 
     #[test]
     fn test_kernel_blend_single() {
-        let mut out = Canvas::new(5,5);
-        let mut kernel = Canvas::new(1,1);
+        let out = Canvas::new(5, 5);
+        let mut kernel = Canvas::new(1, 1);
         kernel.pixel_as_mut(0, 0).r = 1.0;
         kernel.pixel_as_mut(0, 0).a = 1.0;
         println!("kernel: \n{}", kernel.to_string());
 
-        let r = out.apply_onto(&kernel, 0.0, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 1.0, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.0, 1.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 1.0, 1.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.5, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.5, 0.5);
-        println!("{}", r.to_string());
+        println!("{}", out.apply_onto(&kernel, 0.0, 0.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 1.0, 0.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.0, 1.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 1.0, 1.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.5, 0.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.5, 0.5).to_string());
     }
 
     #[test]
     fn test_kernel_blend_square() {
-        let mut out = Canvas::new(5,5);
-        let mut kernel = Canvas::new(2,2);
+        let out = Canvas::new(5, 5);
+        let mut kernel = Canvas::new(2, 2);
         *kernel.pixel_as_mut(0, 0) = RGBA::green();
         *kernel.pixel_as_mut(1, 1) = RGBA::green();
         *kernel.pixel_as_mut(0, 1) = RGBA::green();
@@ -289,18 +279,11 @@ mod tests {
 
         println!("kernel: \n{}", kernel.to_string());
 
-        let r = out.apply_onto(&kernel, 0.0, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 1.0, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.0, 1.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 1.0, 1.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.5, 0.0);
-        println!("{}", r.to_string());
-        let r = out.apply_onto(&kernel, 0.5, 0.5);
-        println!("{}", r.to_string());
+        println!("{}", out.apply_onto(&kernel, 0.5, 0.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.0, 0.5).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.75, 0.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 0.0, 0.75).to_string());
+        println!("{}", out.apply_onto(&kernel, 1.0, 1.0).to_string());
+        println!("{}", out.apply_onto(&kernel, 3.5, 3.5).to_string());
     }
-    
 }
