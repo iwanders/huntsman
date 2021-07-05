@@ -157,8 +157,6 @@ impl Effect for MovingKernel {
         self.x += self.vx * state.get_elapsed();
         self.y += self.vy * state.get_elapsed();
 
-        println!("Border: {:?}", self.border);
-
         if self.border == MovingBorderInteraction::Wrap {
             if self.x < 0.0 {
                 self.x = canvas.width() as f64;
@@ -258,7 +256,6 @@ pub struct Static {
 impl Effect for Static {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
         let mut canvas = state.get_canvas();
-        println!("Elapsed: {} t: {}", state.get_elapsed(), self.scale_by_time);
         let scale_factor = if self.scale_by_time {
             state.get_elapsed()
         } else {
