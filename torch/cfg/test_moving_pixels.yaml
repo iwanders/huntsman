@@ -7,8 +7,24 @@ effects:
   -
     effect: "Add"
     name: "add_thing"
-    children: ["retrieved_opaque", "moving"]
+    children: [decayed_alpha_set, "moving"]
     config: {"None": null}
+
+  -
+    effect: SetAlpha
+    name: decayed_alpha_set
+    children: [subtract_decay]
+    config: {SetAlpha: { value: 1.0 }}
+    
+  - 
+    effect: Sub
+    name: subtract_decay
+    children: [retrieved_opaque, sub_amount]
+    config: {"None": null}
+    
+  - effect: Static
+    name: sub_amount
+    config: {Static: {color: {r: 0.0, g: 0.0, b: 0.01, a: 1.0}}}
 
   - effect: SetAlpha
     name: retrieved_opaque
