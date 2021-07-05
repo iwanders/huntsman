@@ -90,7 +90,7 @@ impl Sub {
 pub struct HorizontalMovingPixel {
     pub velocity: f64, // in pixels.
     pub row: usize,
-    pub pixel: RGBA,
+    pub color: RGBA,
 }
 impl Effect for HorizontalMovingPixel {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
@@ -104,8 +104,8 @@ impl Effect for HorizontalMovingPixel {
         let p0 = p.floor();
         let r = p - p0;
 
-        *canvas.pixel_as_mut(p0 as usize, self.row) = self.pixel.with_alpha(1.0 - r);
-        *canvas.pixel_as_mut((p0 as usize) + 1, self.row) = self.pixel.with_alpha(r);
+        *canvas.pixel_as_mut(p0 as usize, self.row) = self.color.with_alpha(1.0 - r);
+        *canvas.pixel_as_mut((p0 as usize) + 1, self.row) = self.color.with_alpha(r);
         canvas
     }
 }
@@ -198,4 +198,129 @@ impl Effect for SetAlpha {
     fn add_child(&mut self, effect: EffectPtr) {
         self.child = Some(effect);
     }
+}
+
+
+fn position_kernel(kernel: &Canvas, x: f64, y: f64, onto: &Canvas) -> Canvas
+{
+    let mut res = onto.clone();
+
+    // Each pixel maps to 4 other pixels, this is always true.
+    let x_0: usize = x.floor() as usize;
+    let x_r: f64 = x - x_0 as f64;
+    let y_0: usize = y.floor() as usize;
+    let y_r: f64 = y - y_0 as f64;
+    //  (x0, y0)     (x0+1, y0)
+    //          +----+----+
+    //          |    |    |
+    //          +----*----+
+    //          |    |    |
+    //          +----+----+
+    // *: (x0 + 1, y0 + 1)
+
+    for ky in 0..kernel.height()
+    {
+        for kx in 0..kernel.width()
+        {
+            let current = *kernel.pixel(kx, ky);
+            if res.within(x_0 + 0, y_0 + 0)
+            {
+                *res.pixel_as_mut(x_0 + 0, y_0 + 0) = current * (1.0 - x_r) * (1.0 - y_r);
+            }
+            if res.within(x_0 + 1, y_0 + 0)
+            {
+                *res.pixel_as_mut(x_0 + 1, y_0 + 0) = current * (x_r) * (1.0 - y_r);
+            }
+            if res.within(x_0 + 0, y_0 + 1)
+            {
+                *res.pixel_as_mut(x_0 + 0, y_0 + 1) = current * (1.0 - x_r) * (y_r);
+            }
+            if res.within(x_0 + 1, y_0 + 1)
+            {
+                *res.pixel_as_mut(x_0 + 1, y_0 + 1) = current * (x_r) * (y_r);
+            }
+        }
+    }
+
+
+    res
+}
+
+#[cfg(test)]
+mod tests {
+    struct DummyState
+    {
+        pub time: f64,
+        pub elapsed: f64,
+        pub canvas: Canvas,
+    }
+    impl State for DummyState
+    {
+        fn get_stored(&self, _name: &str) -> Option<Canvas>      
+        {
+            None
+        }
+
+        fn set_stored(&mut self, _name: &str, _canvas: Canvas)
+        {
+        }
+        
+
+        fn get_time(&self) -> f64
+        {
+            self.time
+        }
+
+        fn get_canvas(&self) -> Canvas
+        {
+            self.canvas.clone()
+        }
+
+        fn get_elapsed(&self) -> f64
+        {
+            self.elapsed
+        }
+
+    }
+
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    #[test]
+    fn test_moving_pixel() {
+        let mut state: DummyState = DummyState{time: 1.0 , elapsed: 0.0, canvas: Canvas::new(10,1)};
+        let mut eff: HorizontalMovingPixel = HorizontalMovingPixel{color: RGBA::red(), velocity: 1.0,  row: 0};
+
+        let res = eff.update(&mut state);
+        println!("{}", res.to_string());
+        state.time += 0.5;
+        let res = eff.update(&mut state);
+        println!("{}", res.to_string());
+        state.time += 0.5;
+        let res = eff.update(&mut state);
+        println!("{}", res.to_string());
+    }
+
+    #[test]
+    fn test_kernel_blend() {
+        let mut out = Canvas::new(5,5);
+        let mut kernel = Canvas::new(1,1);
+        kernel.pixel_as_mut(0, 0).r = 1.0;
+        kernel.pixel_as_mut(0, 0).a = 1.0;
+        println!("kernel: \n{}", kernel.to_string());
+
+        let r = position_kernel(&kernel, 0.0, 0.0, &out);
+        println!("{}", r.to_string());
+        let r = position_kernel(&kernel, 1.0, 0.0, &out);
+        println!("{}", r.to_string());
+        let r = position_kernel(&kernel, 0.0, 1.0, &out);
+        println!("{}", r.to_string());
+        let r = position_kernel(&kernel, 1.0, 1.0, &out);
+        println!("{}", r.to_string());
+        let r = position_kernel(&kernel, 0.5, 0.0, &out);
+        println!("{}", r.to_string());
+        let r = position_kernel(&kernel, 0.5, 0.5, &out);
+        println!("{}", r.to_string());
+
+    }
+    
 }

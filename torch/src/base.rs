@@ -135,7 +135,8 @@ impl ops::Mul<f64> for RGBA {
 }
 
 #[derive(Clone, Debug)]
-/// A rectangular grid of pixels makes up a canvas.
+/// A rectangular grid of pixels makes up a canvas. Canvas coordinate system is y positive is up,
+/// x positive is to the right. So 0,0 is the bottom left corner.
 pub struct Canvas {
     canvas_width: usize,
     canvas_height: usize,
@@ -167,11 +168,17 @@ impl Canvas {
     }
 
     pub fn pixel(&self, x: usize, y: usize) -> &RGBA {
-        &self.pixels[y * self.width() + x]
+        &self.pixels[(self.height() - y - 1) * self.width() + x]
     }
     pub fn pixel_as_mut(&mut self, x: usize, y: usize) -> &mut RGBA {
         let width = self.width();
-        &mut self.pixels[y * width + x]
+        let height = self.height();
+        &mut self.pixels[(height - y - 1) * width + x]
+    }
+
+    pub fn within(&self, x: usize, y: usize) -> bool
+    {
+        x < self.width() && y < self.height()
     }
 
     pub fn width(&self) -> usize {
@@ -191,7 +198,7 @@ impl Canvas {
         //:~$ printf "\x1b[38;2;0;255;255mTRUECOLOR\x1b[0m\n"
         // https://stackoverflow.com/a/26665998h
         let mut out = String::new();
-        for y in 0..self.height() {
+        for y in (0..self.height()).rev() {
             for x in 0..self.width() {
                 let pix = &self.pixel(x, y);
                 // make the color.
