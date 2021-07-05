@@ -38,6 +38,8 @@ impl std::error::Error for LoaderError {
 pub enum EffectConfig
 {
     None,
+    Add,
+    Sub,
     SetAlpha(SetAlpha),
     HorizontalMovingPixel(HorizontalMovingPixel),
     Static(Static),
@@ -48,8 +50,10 @@ pub enum EffectConfig
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EffectSpecification {
-    effect: String,
+    // effect: String,
     name: String,
+    
+    #[serde(flatten)]
     config: EffectConfig,
     children: Option<Vec<String>>,
 
@@ -61,12 +65,12 @@ pub struct EffectSpecification {
 
 pub fn z()
 {
-    let t = EffectSpecification{effect: "Add".to_string(), name: "add_thing".to_string(), config:EffectConfig::SetAlpha(SetAlpha{value: 0.5, child:None}), children: Some(vec!("foo".to_string(), "bar".to_string())), root: false};
-    let serialized = serde_json::to_string(&t).unwrap();
-    println!("serialized = {}", serialized);
+    // let t = EffectSpecification{effect: "Add".to_string(), name: "add_thing".to_string(), config:EffectConfig::SetAlpha(SetAlpha{value: 0.5, child:None}), children: Some(vec!("foo".to_string(), "bar".to_string())), root: false};
+    // let serialized = serde_json::to_string(&t).unwrap();
+    // println!("serialized = {}", serialized);
 
-    let deserialized: EffectSpecification = serde_json::from_str(&serialized).unwrap();
-    println!("deserialized = {:?}", deserialized);
+    // let deserialized: EffectSpecification = serde_json::from_str(&serialized).unwrap();
+    // println!("deserialized = {:?}", deserialized);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -106,69 +110,30 @@ pub fn make_effects_simple(specs: &[EffectSpecification]) -> Result<Vec<EffectPt
     for spec in specs.iter()
     {
         let new_effect : EffectPtr;
-        match spec.effect.as_str()
+        match &spec.config
         {
-            "Add" => {
+            EffectConfig::Add => {
                 new_effect = Add::new()
             },
-            "Sub" => {
+            EffectConfig::Sub => {
                 new_effect = Sub::new()
             },
-            "SetAlpha" => {
-                if let EffectConfig::SetAlpha(v) = &spec.config
-                {
-                    new_effect = make_effect(v.clone());
-                }
-                else
-                {
-                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
-                }
+            EffectConfig::SetAlpha(v) => {
+                new_effect = make_effect(v.clone());
             },
-            "HorizontalMovingPixel" => {
-                if let EffectConfig::HorizontalMovingPixel(v) = &spec.config
-                {
-                    new_effect = make_effect(v.clone());
-                }
-                else
-                {
-                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
-                }
+            EffectConfig::HorizontalMovingPixel(v) => {
+                new_effect = make_effect(v.clone());
             },
-
-
-            "Static" => {
-                if let EffectConfig::Static(v) = &spec.config
-                {
-                    new_effect = make_effect(v.clone());
-                }
-                else
-                {
-                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
-                }
+            EffectConfig::Store(v) => {
+                new_effect = make_effect(v.clone());
             },
-
-            "Store" => {
-                if let EffectConfig::Store(v) = &spec.config
-                {
-                    new_effect = make_effect(v.clone());
-                }
-                else
-                {
-                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
-                }
+            EffectConfig::Retrieve(v) => {
+                new_effect = make_effect(v.clone());
             },
-
-            "Retrieve" => {
-                if let EffectConfig::Retrieve(v) = &spec.config
-                {
-                    new_effect = make_effect(v.clone());
-                }
-                else
-                {
-                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
-                }
+            EffectConfig::Static(v) => {
+                new_effect = make_effect(v.clone());
             },
-            _ => {return Err(Box::new(LoaderError::new(&format!("Effect {} not supported", spec.effect))))},
+            _ => {return Err(Box::new(LoaderError::new(&format!("Effect {:?} not supported", spec.config))))},
         }
         
         let had_old = effects_map.insert(spec.name.clone(), new_effect);

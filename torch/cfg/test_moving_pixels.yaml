@@ -1,47 +1,42 @@
 effects:
-  - effect: Store
+  -
     name: store_moving
     children: ["add_thing"]
-    config: {Store: {name: "stored_moving"}}
     root: true
+    Store: {name: "stored_moving"}
   -
-    effect: "Add"
     name: "add_thing"
     children: [decayed_alpha_set, "moving"]
-    config: {"None": null}
+    Add: null
 
   -
-    effect: SetAlpha
     name: decayed_alpha_set
     children: [subtract_decay]
-    config: {SetAlpha: { value: 1.0 }}
+    SetAlpha: { value: 1.0 }
     
   - 
-    effect: Sub
     name: subtract_decay
     children: [retrieved_opaque, sub_amount]
-    config: {"None": null}
+    Sub: null
     
-  - effect: Static
+  -
     name: sub_amount
-    config: {Static: {color: {r: 0.0, g: 0.0, b: 0.01, a: 1.0}}}
-
-  - effect: SetAlpha
-    name: retrieved_opaque
-    children: [retrieved]
-    config: {SetAlpha: { value: 1.0 }}
-
-  - effect: Retrieve
-    name: retrieved
-    config: {Retrieve: {name: "stored_moving"}}
+    Static: {color: {r: 0.0, g: 0.0, b: 0.01, a: 1.0}}
 
   -
-    effect: "HorizontalMovingPixel"
+    name: retrieved_opaque
+    children: [retrieved]
+    SetAlpha: { value: 1.0 }
+
+  -
+    name: retrieved
+    Retrieve: {name: "stored_moving"}
+
+  -
     name: "moving"
-    config:
-      HorizontalMovingPixel:
-        velocity: 1.0
-        row: 3
-        pixel: {r: 0, g: 0, b: 1.0, a: 1.0}
+    HorizontalMovingPixel:
+      velocity: 1.0
+      row: 3
+      pixel: {r: 0, g: 0, b: 1.0, a: 1.0}
 
 
