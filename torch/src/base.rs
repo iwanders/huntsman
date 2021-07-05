@@ -89,6 +89,14 @@ impl RGBA {
             b: self.b,
         }
     }
+    pub fn scaled_alpha(&self, v: f64) -> RGBA {
+        RGBA {
+            a: self.a * v.clamp(0.0, 1.0),
+            r: self.r,
+            g: self.g,
+            b: self.b,
+        }
+    }
 
     pub fn set_alpha(&mut self, v: f64) {
         self.a = v.clamp(0.0, 1.0);
@@ -206,10 +214,62 @@ impl Canvas {
                 out += "\u{2588}\u{2588}"; // full block unicode character x 2
                 out += "\x1b[0m"; // reset the color
             }
-            out += "\n";
+            if y != 0
+            {
+                out += "\n";
+            }
         }
         out
     }
+
+    pub fn apply_onto(&self, base: &Canvas, x: f64, y: f64) -> Canvas
+    {
+        let mut res = self.clone();
+
+        // Each pixel maps to 4 other pixels, this is always true.
+        let x_0: usize = x.floor() as usize;
+        let x_r: f64 = x - x_0 as f64;
+        let y_0: usize = y.floor() as usize;
+        let y_r: f64 = y - y_0 as f64;
+        //  (x0, y0)     (x0+1, y0)
+        //          +----+----+
+        //          |    |    |
+        //          +----*----+
+        //          |    |    |
+        //          +----+----+
+        // *: (x0 + 1, y0 + 1)
+
+        for ky in (0..base.height()).rev()
+        {
+            for kx in (0..base.width()).rev()
+            {
+                let base_val = *base.pixel(kx, ky);
+                if res.within(x_0 + kx + 1, y_0 + ky + 1)
+                {
+                    let current = *res.pixel(x_0 + kx + 1, y_0 + ky + 1);
+                    *res.pixel_as_mut(x_0 + kx + 1, y_0  + ky+ 1) = current + base_val.scaled_alpha((x_r) * (y_r));
+                }
+                if res.within(x_0 + kx  + 0, y_0 + ky + 1)
+                {
+                    let current = *res.pixel(x_0 + kx + 0, y_0 + ky + 1);
+                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 1) = current + base_val.scaled_alpha((1.0 - x_r) * (y_r));
+                }
+                if res.within(x_0 + kx  + 1, y_0 + ky + 0)
+                {
+                    let current = *res.pixel(x_0 + kx + 1, y_0 + ky + 0);
+                    *res.pixel_as_mut(x_0 + kx + 1, y_0 + ky+ 0) = current + base_val.scaled_alpha((x_r) * (1.0 - y_r));
+                }
+                if res.within(x_0 + kx  + 0, y_0 + ky + 0)
+                {
+                    let current = *res.pixel(x_0 + kx + 0, y_0  + ky+ 0);
+                    *res.pixel_as_mut(x_0 + kx + 0, y_0 + ky + 0) = current + base_val.scaled_alpha((1.0 - x_r) * (1.0 - y_r));
+                }
+            }
+        }
+        res
+    }
+
+
 }
 
 impl ops::Add<Canvas> for Canvas {
