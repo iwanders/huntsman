@@ -1,14 +1,10 @@
-pub use crate::base::{Canvas, State, RGBA};
-
+use crate::base::{Canvas, State, RGBA};
 use serde::{Deserialize, Serialize};
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct NoConfig {}
-
 pub type EffectPtr = Rc<RefCell<dyn Effect>>;
+/// Effect trait that can manipulate colors and output a canvas.
 pub trait Effect: std::fmt::Debug {
     fn get_name(&self) -> String {
         "Unnamed".to_owned()
@@ -25,6 +21,7 @@ pub fn make_effect<T: 'static + Effect + Sized>(v: T) -> EffectPtr {
 }
 
 #[derive(Debug)]
+/// Addition operation, adds any children together.
 pub struct Add {
     pub children: Vec<EffectPtr>,
 }
@@ -34,7 +31,6 @@ impl Effect for Add {
     }
 
     fn update(&mut self, state: &mut dyn State) -> Canvas {
-        // first, retrieve all child updates.
         let mut child_states = self
             .children
             .iter_mut()
@@ -58,6 +54,7 @@ impl Add {
 }
 
 #[derive(Debug)]
+/// Subtraction operation, takes the first child and removes all others from it.
 pub struct Sub {
     pub children: Vec<EffectPtr>,
 }
@@ -67,7 +64,6 @@ impl Effect for Sub {
     }
 
     fn update(&mut self, state: &mut dyn State) -> Canvas {
-        // first, retrieve all child updates.
         let mut child_states = self
             .children
             .iter_mut()
@@ -90,6 +86,7 @@ impl Sub {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+/// Makes a moving horizontal pixel.
 pub struct HorizontalMovingPixel {
     pub velocity: f64, // in pixels.
     pub row: usize,
@@ -114,6 +111,7 @@ impl Effect for HorizontalMovingPixel {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Retrieves a canvas by name from the state's storage.
 pub struct Retrieve {
     pub name: String,
 }
@@ -128,6 +126,7 @@ impl Effect for Retrieve {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Stores the retrieved canvas of the only child, returns stored value.
 pub struct Store {
     pub name: String,
     #[serde(skip)]
@@ -145,6 +144,7 @@ impl Effect for Store {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+/// Fill a canvas with a static value.
 pub struct Static {
     pub color: RGBA,
 
@@ -166,7 +166,7 @@ impl Effect for Static {
             1.0
         };
 
-        let alpha_factor = if (self.scale_by_time && self.scale_alpha) {
+        let alpha_factor = if self.scale_by_time && self.scale_alpha {
             state.get_elapsed()
         } else {
             self.color.a
@@ -180,6 +180,7 @@ impl Effect for Static {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Set the alpha of the child canvas that's retrieved.
 pub struct SetAlpha {
     #[serde(skip)]
     pub child: Option<EffectPtr>,

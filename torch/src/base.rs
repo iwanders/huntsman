@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::ops;
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
+
+/// Representation of a pixel with an alpha channel.
 pub struct RGBA {
-    pub r: f64, // 0 is no red component, 1.0 is satured red component.
+    /// Red component, 0 is no contribution, 1.0 is saturated red.
+    pub r: f64,
     pub g: f64,
     pub b: f64,
-    pub a: f64, // 1 is completely visible, 0 is fully transparent
+    /// Alpha component, 1 is completely visible, 0 is fully transparent
+    pub a: f64,
 }
 impl RGBA {
     pub fn red() -> RGBA {
@@ -131,6 +135,7 @@ impl ops::Mul<f64> for RGBA {
 }
 
 #[derive(Clone, Debug)]
+/// A rectangular grid of pixels makes up a canvas.
 pub struct Canvas {
     canvas_width: usize,
     canvas_height: usize,
