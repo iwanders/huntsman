@@ -1,0 +1,51 @@
+effects:
+  -
+    name: store_moving
+    children: ["add_thing"]
+    root: true
+    Store: {name: "stored_moving"}
+  -
+    name: "add_thing"
+    children: [decayed_alpha_set, "moving"]
+    Add: null
+
+  -
+    name: decayed_alpha_set
+    children: [subtract_decay]
+    SetAlpha: { value: 1.0 }
+    
+  - 
+    name: subtract_decay
+    children: [retrieved_opaque, sub_amount]
+    Sub: null
+    
+  -
+    name: sub_amount
+    Static:
+      color: {r: 1.0, g: 1.0, b: 1.0, a: 0.5}
+      scale_by_time: true
+
+  -
+    name: retrieved_opaque
+    children: [retrieved]
+    SetAlpha: { value: 1.0 }
+
+  -
+    name: retrieved
+    Retrieve: {name: "stored_moving"}
+
+  -
+    name: "moving"
+    MovingKernel:
+      vx: 5.0
+      y: 0
+      border: Reflect
+    children: [moving_thing]
+
+  - name: moving_thing
+    Rectangle:
+      width: 1
+      height: 9
+      color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+
+

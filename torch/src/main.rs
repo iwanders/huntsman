@@ -1,6 +1,5 @@
-use torch::{BasicState, Canvas, State};
-
 use huntsman::RGB;
+use torch::{BasicState, Canvas, State};
 
 #[allow(dead_code)]
 fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
@@ -16,8 +15,10 @@ fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(unreachable_code)]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = torch::loader::load_effects("./cfg/test_moving_pixels.yaml")?;
+    let args: Vec<String> = std::env::args().collect();
+    let config = torch::loader::load_effects(&args[1])?;
     println!("yaml {:?}", config);
 
     let eff = torch::loader::make_effects_simple(&config.effects[..])?;
@@ -32,13 +33,16 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     mystate.start_update();
     mystate.finish_update();
     let ten_millis = std::time::Duration::from_millis(50);
-    // while (true) {
-    for _i in 0..100 {
+
+    let mut h = huntsman::Huntsman::new()?;
+    h.effect_custom()?;
+    loop {
+        // for _i in 0..100 {
         mystate.start_update();
         let res = eff[0].borrow_mut().update(&mut mystate);
         mystate.finish_update();
         println!("{}", res.to_string());
-        // set_canvas(&mut h, &res);
+        set_canvas(&mut h, &res)?;
         std::thread::sleep(ten_millis);
     }
     Ok(())

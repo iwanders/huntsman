@@ -2,6 +2,7 @@ use crate::effects::{make_effect, EffectPtr};
 
 use crate::effects::{Add, Retrieve, Store, Sub};
 use crate::effects::{HorizontalMovingPixel, SetAlpha, Static};
+use crate::effects::{MovingKernel, Rectangle};
 
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
@@ -42,6 +43,8 @@ pub enum EffectConfig {
     Static(Static),
     Store(Store),
     Retrieve(Retrieve),
+    Rectangle(Rectangle),
+    MovingKernel(MovingKernel),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -119,6 +122,12 @@ pub fn make_effects_simple(
                 new_effect = make_effect(v.clone());
             }
             EffectConfig::Static(v) => {
+                new_effect = make_effect(v.clone());
+            }
+            EffectConfig::Rectangle(v) => {
+                new_effect = make_effect(v.clone());
+            }
+            EffectConfig::MovingKernel(v) => {
                 new_effect = make_effect(v.clone());
             }
             _ => {

@@ -167,10 +167,14 @@ impl Canvas {
     }
 
     pub fn wipe(&mut self) {
+        self.fill(&Default::default())
+    }
+
+    pub fn fill(&mut self, color: &RGBA) {
         self.pixels
             .iter_mut()
             .map(|x| {
-                *x = Default::default();
+                *x = *color;
             })
             .collect()
     }
@@ -236,8 +240,8 @@ impl Canvas {
         //          +----+----+
         // *: (x0 + 1, y0 + 1)
 
-        for ky in (0..base.height()).rev() {
-            for kx in (0..base.width()).rev() {
+        for ky in 0..base.height() {
+            for kx in 0..base.width() {
                 let base_val = *base.pixel(kx, ky);
                 if res.within(x_0 + kx + 1, y_0 + ky + 1) {
                     let current = *res.pixel(x_0 + kx + 1, y_0 + ky + 1);

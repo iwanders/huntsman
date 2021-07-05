@@ -96,7 +96,7 @@ pub struct HorizontalMovingPixel {
 }
 impl Effect for HorizontalMovingPixel {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
-        let mut canvas = state.get_canvas();
+        let canvas = state.get_canvas();
 
         let mut kernel = Canvas::new(1, 1);
         *kernel.pixel_as_mut(0, 0) = self.color;
@@ -107,7 +107,105 @@ impl Effect for HorizontalMovingPixel {
             p = ((canvas.width() - 1) as f64) - p;
         }
 
-        canvas.apply_onto(&kernel, p, 0.0)
+        canvas.apply_onto(&kernel, p, self.row as f64)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
+/// Enum to configure interaction with the border of the canvas.
+pub enum MovingBorderInteraction {
+    /// Wrap around if the position exceeds the canvas.
+    Wrap,
+    /// Start moving into the other direction the moment the position exceeds the canvas.
+    Reflect,
+}
+impl Default for MovingBorderInteraction {
+    fn default() -> Self {
+        MovingBorderInteraction::Wrap
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+/// Moves the first child (the kernel) over the second child or state's base canvas.
+pub struct MovingKernel {
+    pub vx: f64,
+    pub vy: f64,
+
+    pub x: f64,
+    pub y: f64,
+
+    // something with the border style... pass through, or reflect?
+    #[serde(default)]
+    pub border: MovingBorderInteraction,
+
+    #[serde(skip)]
+    children: Vec<EffectPtr>,
+}
+impl Effect for MovingKernel {
+    fn update(&mut self, state: &mut dyn State) -> Canvas {
+        // let mut canvas = state.get_canvas();
+
+        let kernel = self.children[0].borrow_mut().update(state);
+        let canvas: Canvas;
+        if self.children.len() == 2 {
+            canvas = self.children[1].borrow_mut().update(state);
+        } else {
+            canvas = state.get_canvas();
+        }
+
+        self.x += self.vx * state.get_elapsed();
+        self.y += self.vy * state.get_elapsed();
+
+        println!("Border: {:?}", self.border);
+
+        if self.border == MovingBorderInteraction::Wrap {
+            if self.x < 0.0 {
+                self.x = canvas.width() as f64;
+            }
+            if self.x > canvas.width() as f64 {
+                self.x = 0.0
+            }
+
+            if self.y < 0.0 {
+                self.y = canvas.height() as f64;
+            }
+            if self.y > canvas.height() as f64 {
+                self.y = 0.0
+            }
+        }
+
+        if self.border == MovingBorderInteraction::Reflect {
+            if self.x < 0.0 || self.x > canvas.width() as f64 {
+                self.vx *= -1.0
+            }
+            if self.y < 0.0 || self.y > canvas.width() as f64 {
+                self.vy *= -1.0
+            }
+        }
+        self.x = self.x.clamp(0.0, canvas.width() as f64);
+        self.y = self.y.clamp(0.0, canvas.width() as f64);
+
+        canvas.apply_onto(&kernel, self.x, self.y)
+    }
+    fn add_child(&mut self, effect: EffectPtr) {
+        self.children.push(effect);
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Makes a canvas that is the size of the specified rectangle, filled with the specified color.
+pub struct Rectangle {
+    pub width: usize,
+    pub height: usize,
+
+    pub color: RGBA,
+}
+impl Effect for Rectangle {
+    fn update(&mut self, _state: &mut dyn State) -> Canvas {
+        let mut out = Canvas::new(self.width, self.height);
+        out.fill(&self.color);
+        out
     }
 }
 
