@@ -1,6 +1,12 @@
-use crate::effects::{Add, Effect, HorizontalMovingPixel, Retrieve, SetAlpha, SetAlphaConfig, Static, Store, Sub};
+use crate::effects::{Effect, EffectPtr, make_effect};
+use crate::effects::{Sub, Add};
+use crate::effects::{HorizontalMovingPixel};
+use crate::effects::{SetAlpha, SetAlphaConfig};
+use crate::effects::{Static};
+use crate::effects::{Store, Retrieve};
 
-
+use serde::{Serialize, Deserialize};
+use std::rc::Rc;
 
 #[derive(Debug)]
 struct LoaderError {
@@ -28,13 +34,15 @@ impl std::error::Error for LoaderError {
 }
 
 
-use serde::{Serialize, Deserialize};
-
 #[derive(Serialize, Deserialize, Debug)]
 pub enum EffectConfig
 {
     None,
-    SetAlpha(SetAlphaConfig),
+    SetAlpha(SetAlpha),
+    HorizontalMovingPixel(HorizontalMovingPixel),
+    Static(Static),
+    Store(Store),
+    Retrieve(Retrieve),
     
 }
 
@@ -43,7 +51,7 @@ pub struct EffectSpecification {
     effect: String,
     name: String,
     config: EffectConfig,
-    children: Vec<String>,
+    children: Option<Vec<String>>,
 
     #[serde(default)]
     root: bool,
@@ -53,7 +61,7 @@ pub struct EffectSpecification {
 
 pub fn z()
 {
-    let t = EffectSpecification{effect: "Add".to_string(), name: "add_thing".to_string(), config:EffectConfig::SetAlpha(SetAlphaConfig{value: 0.5}), children: vec!("foo".to_string(), "bar".to_string()), root: false};
+    let t = EffectSpecification{effect: "Add".to_string(), name: "add_thing".to_string(), config:EffectConfig::SetAlpha(SetAlpha{value: 0.5, child:None}), children: Some(vec!("foo".to_string(), "bar".to_string())), root: false};
     let serialized = serde_json::to_string(&t).unwrap();
     println!("serialized = {}", serialized);
 
@@ -86,22 +94,79 @@ pub fn load_effects(filename: &str) -> Result<EffectStorage, Box<dyn std::error:
     Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Format not understood")))
 }
 
-pub fn make_effects_simple(specs: &[EffectSpecification]) -> Result<Vec<Box<dyn Effect>>, Box<dyn std::error::Error>>
+pub fn make_effects_simple(specs: &[EffectSpecification]) -> Result<Vec<EffectPtr>, Box<dyn std::error::Error>>
 {
-
     // need two passes, first to set up the elements
     // second to connect all the childs
     // then, convert it back to the vector we need, holding only the root elements.
-    let mut effects: Vec<Box<dyn Effect>> = Vec::new();
-    let mut effects_map: std::collections::HashMap<String, Box<dyn Effect>> = Default::default();
+    let mut effects: Vec<EffectPtr> = Vec::new();
+    let mut effects_map: std::collections::HashMap<String, EffectPtr> = Default::default();
 
+    // First pass, create our effects
     for spec in specs.iter()
     {
-        let new_effect : Box<dyn Effect>;
+        let new_effect : EffectPtr;
         match spec.effect.as_str()
         {
             "Add" => {
-                new_effect = Box::new(Add { children: vec![] });
+                new_effect = Add::new()
+            },
+            "Sub" => {
+                new_effect = Sub::new()
+            },
+            "SetAlpha" => {
+                if let EffectConfig::SetAlpha(v) = &spec.config
+                {
+                    new_effect = make_effect(v.clone());
+                }
+                else
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
+                }
+            },
+            "HorizontalMovingPixel" => {
+                if let EffectConfig::HorizontalMovingPixel(v) = &spec.config
+                {
+                    new_effect = make_effect(v.clone());
+                }
+                else
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
+                }
+            },
+
+
+            "Static" => {
+                if let EffectConfig::Static(v) = &spec.config
+                {
+                    new_effect = make_effect(v.clone());
+                }
+                else
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
+                }
+            },
+
+            "Store" => {
+                if let EffectConfig::Store(v) = &spec.config
+                {
+                    new_effect = make_effect(v.clone());
+                }
+                else
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
+                }
+            },
+
+            "Retrieve" => {
+                if let EffectConfig::Retrieve(v) = &spec.config
+                {
+                    new_effect = make_effect(v.clone());
+                }
+                else
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Incorrect config type for {}.", spec.name))));
+                }
             },
             _ => {return Err(Box::new(LoaderError::new(&format!("Effect {} not supported", spec.effect))))},
         }
@@ -114,15 +179,27 @@ pub fn make_effects_simple(specs: &[EffectSpecification]) -> Result<Vec<Box<dyn 
     }
 
     // That was the first pass that created all the elements, now we do the second pass to connect them all.
-    for i in 0..100
+    for spec in specs.iter()
     {
-        for spec in specs.iter()
+        let our_effect = effects_map.get(&spec.name).unwrap();  // must be present from above loop.
+        if let Some(children) = &spec.children
         {
-            let our_effect = effects_map.get(&spec.name).unwrap();  // must be present from above loop.
-            for child in spec.children.iter()
+            for child in children.iter()
             {
-                
+                // add all the childs to our effect.
+                // look up our child in the list of effects.
+                let child_effect = effects_map.get(child);
+                if child_effect.is_none()
+                {
+                    return Err(Box::new(LoaderError::new(&format!("Child named {} was not present", child))));
+                }
+                let child_effect = child_effect.unwrap();
+                our_effect.borrow_mut().add_child(Rc::clone(child_effect));
             }
+        }
+        if spec.root
+        {
+            effects.push(Rc::clone(our_effect))
         }
     }
     

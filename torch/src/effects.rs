@@ -2,28 +2,36 @@ pub use crate::base::{Canvas, State, RGBA};
 
 use serde::{Serialize, Deserialize};
 
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NoConfig {}
 
+pub type EffectPtr = Rc<RefCell<dyn Effect>>;
 pub trait Effect: std::fmt::Debug {
     fn get_name(&self) -> String {
         "Unnamed".to_owned()
     }
 
-    fn add_child(&mut self, effect: Box<dyn Effect>) {
+    fn add_child(&mut self, effect: EffectPtr) {
         panic!("No add child functionality for this effect.");
     }
 
     fn update(&mut self, state: &mut dyn State) -> Canvas;
 }
+pub fn make_effect<T: 'static + Effect + Sized>(v: T) -> EffectPtr
+{
+    Rc::new(RefCell::new(v))
+}
+
 
 #[derive(Debug)]
 pub struct Add {
-    pub children: Vec<Box<dyn Effect>>,
+    pub children: Vec<EffectPtr>,
 }
 impl Effect for Add {
-    fn add_child(&mut self, effect: Box<dyn Effect>) {
+    fn add_child(&mut self, effect: EffectPtr) {
         self.children.push(effect);
     }
 
@@ -32,7 +40,7 @@ impl Effect for Add {
         let mut child_states = self
             .children
             .iter_mut()
-            .map(|x| x.update(state))
+            .map(|x| x.borrow_mut().update(state))
             .collect::<Vec<Canvas>>();
         let out = child_states.pop();
         if out.is_none() {
@@ -45,13 +53,21 @@ impl Effect for Add {
         out
     }
 }
+impl Add
+{
+    pub fn new() -> EffectPtr
+    {
+        make_effect(Add{children:vec!()})
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Sub {
-    pub children: Vec<Box<dyn Effect>>,
+    pub children: Vec<EffectPtr>,
 }
 impl Effect for Sub {
-    fn add_child(&mut self, effect: Box<dyn Effect>) {
+    fn add_child(&mut self, effect: EffectPtr) {
         self.children.push(effect);
     }
 
@@ -60,7 +76,7 @@ impl Effect for Sub {
         let mut child_states = self
             .children
             .iter_mut()
-            .map(|x| x.update(state))
+            .map(|x| x.borrow_mut().update(state))
             .collect::<Vec<Canvas>>();
         if child_states.len() == 0 {
             panic!("Addition with no children.");
@@ -72,8 +88,15 @@ impl Effect for Sub {
         out
     }
 }
+impl Sub
+{
+    pub fn new() -> EffectPtr
+    {
+        make_effect(Sub{children:vec!()})
+    }
+}
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct HorizontalMovingPixel {
     pub velocity: f64, // in pixels.
     pub row: usize,
@@ -97,7 +120,7 @@ impl Effect for HorizontalMovingPixel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Retrieve {
     pub name: String,
 }
@@ -111,23 +134,24 @@ impl Effect for Retrieve {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Store {
     pub name: String,
-    pub child: Option<Box<dyn Effect>>,
+    #[serde(skip)]
+    pub child: Option<EffectPtr>,
 }
 impl Effect for Store {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
-        let canvas = self.child.as_mut().unwrap().update(state);
+        let canvas = self.child.as_mut().unwrap().borrow_mut().update(state);
         state.set_stored(&self.name, canvas.clone());
         canvas
     }
-    fn add_child(&mut self, effect: Box<dyn Effect>) {
+    fn add_child(&mut self, effect: EffectPtr) {
         self.child = Some(effect);
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Static {
     pub color: RGBA,
 }
@@ -140,11 +164,11 @@ impl Effect for Static {
         canvas
     }
 }
-pub type StaticConfig = NoConfig;
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SetAlpha {
-    pub child: Option<Box<dyn Effect>>,
+    #[serde(skip)]
+    pub child: Option<EffectPtr>,
     pub value: f64,
 }
 // https://github.com/rust-lang/rust/issues/8995
@@ -156,13 +180,13 @@ pub struct SetAlphaConfig
 
 impl Effect for SetAlpha {
     fn update(&mut self, state: &mut dyn State) -> Canvas {
-        let mut canvas = self.child.as_mut().unwrap().update(state);
+        let mut canvas = self.child.as_mut().unwrap().borrow_mut().update(state);
         for p in canvas.iter_mut() {
             p.set_alpha(self.value);
         }
         canvas
     }
-    fn add_child(&mut self, effect: Box<dyn Effect>) {
+    fn add_child(&mut self, effect: EffectPtr) {
         self.child = Some(effect);
     }
 }

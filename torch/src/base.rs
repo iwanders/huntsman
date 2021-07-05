@@ -1,5 +1,6 @@
 use std::ops;
-#[derive(Clone, Copy, Debug, Default)]
+use serde::{Serialize, Deserialize};
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct RGBA {
     pub r: f64, // 0 is no red component, 1.0 is satured red component.
     pub g: f64,
@@ -64,16 +65,16 @@ impl RGBA {
     }
 
     pub fn r_u8(&self) -> u8 {
-        (self.r * 255.0).round() as u8
+        (self.r * self.a * 255.0).round() as u8
     }
     pub fn g_u8(&self) -> u8 {
-        (self.g * 255.0).round() as u8
+        (self.g * self.a * 255.0).round() as u8
     }
     pub fn b_u8(&self) -> u8 {
-        (self.b * 255.0).round() as u8
+        (self.b * self.a * 255.0).round() as u8
     }
     pub fn a_u8(&self) -> u8 {
-        (self.a * 255.0).round() as u8
+        (self.a * self.a * 255.0).round() as u8
     }
 
     pub fn with_alpha(&self, v: f64) -> RGBA {

@@ -1,10 +1,31 @@
 effects:
+  - effect: Store
+    name: store_moving
+    children: ["add_thing"]
+    config: {Store: {name: "stored_moving"}}
+    root: true
   -
     effect: "Add"
     name: "add_thing"
+    children: ["retrieved_opaque", "moving"]
+    config: {"None": null}
+
+  - effect: SetAlpha
+    name: retrieved_opaque
+    children: [retrieved]
+    config: {SetAlpha: { value: 1.0 }}
+
+  - effect: Retrieve
+    name: retrieved
+    config: {Retrieve: {name: "stored_moving"}}
+
+  -
+    effect: "HorizontalMovingPixel"
+    name: "moving"
     config:
-      SetAlpha:
-        value: 0.5
-    children: ["foo","bar"]
+      HorizontalMovingPixel:
+        velocity: 1.0
+        row: 3
+        pixel: {r: 0, g: 0, b: 1.0, a: 1.0}
 
 
