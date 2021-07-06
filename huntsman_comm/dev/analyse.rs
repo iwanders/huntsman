@@ -151,9 +151,12 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
     let files: Vec<_> = matches.values_of("files").unwrap().collect();
     for k in files.iter() {
         let frames = obtain_frames(k);
-        if frames.is_err()
-        {
-            println!("Failed to parse {}, because of {}, continuing", k, frames.expect_err("failed"));
+        if frames.is_err() {
+            println!(
+                "Failed to parse {}, because of {}, continuing",
+                k,
+                frames.expect_err("failed")
+            );
             continue;
         }
         let frames = frames?;

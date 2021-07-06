@@ -1,7 +1,6 @@
 use huntsman::RGB;
 use torch::{BasicState, Canvas, State};
 
-
 fn get_time() -> f64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     let start = SystemTime::now();
@@ -9,7 +8,6 @@ fn get_time() -> f64 {
     return (since_the_epoch.as_secs() as f64)
         + (since_the_epoch.subsec_nanos() as f64 / 1_000_000_000.0);
 }
-
 
 #[allow(dead_code)]
 fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {

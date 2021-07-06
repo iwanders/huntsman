@@ -112,11 +112,11 @@ pub enum KeyMapping {
     /// Macro toggle.
     MacroToggle(MacroId),
     /// Emits a multimedia hid code (Consumer Page 0x0c?)
-    MultiMedia(u8),
+    MultiMedia(u16),
     /// Emits from button page 0x09? Only seen for doubleclick.
     ButtonPage(u8),
     /// Repeats mouse clicks using the provided interval.
-    TurboMouse(u8 /* mouse button */, u16 /* interval delay */),
+    TurboMouse(MouseButton, u16 /* interval delay */),
     /// Repeats keys using the provided interval.
     TurboKey(KeyboardKey, u16 /* delay */), // can also use modifiers.
     /// Magical special keys, led brightness, game mode etc.
@@ -180,6 +180,114 @@ impl FromBytes for KeyMapping {
 
                 return Ok(3);
             }
+            KeyMapping::MAP_MACRO => {
+                if len_byte != 3 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        3, len_byte
+                    ));
+                }
+                let x: [u8; 2] = [src[3], src[2]];
+                let macro_id = u16::from_le_bytes(x);
+                let count = src[4];
+                *self = KeyMapping::Macro(macro_id.into(), count);
+
+                return Ok(5);
+            }
+            KeyMapping::MAP_MACRO_REPEAT => {
+                if len_byte != 2 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        2, len_byte
+                    ));
+                }
+                let x: [u8; 2] = [src[3], src[2]];
+                let macro_id = u16::from_le_bytes(x);
+                *self = KeyMapping::MacroRepeat(macro_id.into());
+
+                return Ok(5);
+            }
+            KeyMapping::MAP_MACRO_TOGGLE => {
+                if len_byte != 2 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        2, len_byte
+                    ));
+                }
+                let x: [u8; 2] = [src[3], src[2]];
+                let macro_id = u16::from_le_bytes(x);
+                *self = KeyMapping::MacroToggle(macro_id.into());
+
+                return Ok(5);
+            }
+            KeyMapping::MAP_MULTI_MEDIA => {
+                if len_byte != 2 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                let x: [u8; 2] = [src[3], src[2]];
+                let hid_id = u16::from_le_bytes(x);
+                *self = KeyMapping::MultiMedia(hid_id);
+
+                return Ok(4);
+            }
+            KeyMapping::MAP_BUTTON_PAGE => {
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                *self = KeyMapping::ButtonPage(src[2].into());
+
+                return Ok(3);
+            }
+            KeyMapping::MAP_TURBO_MOUSE => {
+                if len_byte != 3 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        3, len_byte
+                    ));
+                }
+                let x: [u8; 2] = [src[4], src[3]];
+                let repeat_interval = u16::from_le_bytes(x);
+                *self = KeyMapping::TurboMouse(src[2].into(), repeat_interval);
+
+                return Ok(5);
+            }
+            KeyMapping::MAP_TURBO_KEY => {
+                if len_byte != 4 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        4, len_byte
+                    ));
+                }
+
+                let x: [u8; 2] = [src[5], src[4]];
+                let repeat_interval = u16::from_le_bytes(x);
+                *self = KeyMapping::TurboKey(
+                    KeyboardKey {
+                        id: src[3],
+                        modifiers: src[2].into(),
+                    },
+                    repeat_interval,
+                );
+
+                return Ok(6);
+            }
+            KeyMapping::MAP_SPECIAL => {
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                *self = KeyMapping::Special(src[2].into());
+
+                return Ok(3);
+            }
             z => panic!("Unhandled keymap code {:?}, total src: {:?}", z, src),
         }
     }
@@ -204,7 +312,62 @@ impl ToBytes for KeyMapping {
                 buff.push(1);
                 buff.push(*button as u8);
             }
-            z => panic!("Unhandled keymap code {:?}", z),
+            KeyMapping::Macro(macro_id, count) => {
+                buff.push(KeyMapping::MAP_MACRO);
+                buff.push(3);
+                let id = macro_id.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+                buff.push(*count);
+            }
+            KeyMapping::MacroRepeat(macro_id) => {
+                buff.push(KeyMapping::MAP_MACRO_REPEAT);
+                buff.push(2);
+                let id = macro_id.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+            }
+            KeyMapping::MacroToggle(macro_id) => {
+                buff.push(KeyMapping::MAP_MACRO_TOGGLE);
+                buff.push(2);
+                let id = macro_id.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+            }
+            KeyMapping::MultiMedia(hid_id) => {
+                buff.push(KeyMapping::MAP_MULTI_MEDIA);
+                buff.push(2);
+                let id = hid_id.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+            }
+            KeyMapping::ButtonPage(v) => {
+                buff.push(KeyMapping::MAP_BUTTON_PAGE);
+                buff.push(1);
+                buff.push(*v);
+            }
+            KeyMapping::TurboMouse(button, interval) => {
+                buff.push(KeyMapping::MAP_TURBO_MOUSE);
+                buff.push(3);
+                buff.push(*button as u8);
+                let id = interval.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+            }
+            KeyMapping::TurboKey(button, interval) => {
+                buff.push(KeyMapping::MAP_TURBO_KEY);
+                buff.push(4);
+                buff.push(button.modifiers.into());
+                buff.push(button.id);
+                let id = interval.to_le_bytes()?;
+                buff.push(id[1]);
+                buff.push(id[0]);
+            }
+            KeyMapping::Special(id) => {
+                buff.push(KeyMapping::MAP_SPECIAL);
+                buff.push(1);
+                buff.push(*id as u8);
+            }
         }
         Ok(buff)
     }
@@ -282,6 +445,7 @@ mod tests {
             panic!("cant reach this");
         }
 
+        // disable
         let disable_key_62 =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00", 0x3a);
         let x = test_keymap_roundtrip(&disable_key_62);
@@ -318,8 +482,7 @@ mod tests {
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_right_shift));
         assert_eq!(v.modifiers.right_shift, true);
 
-        // 2021_06_05_23_24_set_right_ctrl_right_click.pcapng
-        // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00:00:00:00:00
+        // mouse button;
         let right_ctrl_right_click =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
         let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_right_click));
@@ -329,6 +492,106 @@ mod tests {
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00", 0x47);
         let v = expect_mouse(test_keymap_roundtrip(&right_ctrl_scroll_click));
         assert_eq!(v, MouseButton::Scroll);
+
+        // macro 'n' fire; n = 1
+        let right_control_macro_single =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:01:00", 0x16);
+        let res = test_keymap_roundtrip(&right_control_macro_single);
+        if let KeyMapping::Macro(macro_id, count) = res.mapping {
+            assert_eq!(macro_id, 0x3b68);
+            assert_eq!(count, 0x01);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // macro 'n' fire; n = 2
+        let right_control_macro_double =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:02:00", 0x15);
+        let res = test_keymap_roundtrip(&right_control_macro_double);
+        if let KeyMapping::Macro(macro_id, count) = res.mapping {
+            assert_eq!(macro_id, 0x3b68);
+            assert_eq!(count, 0x02);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // macro while pressed;
+        let right_control_macro_repeat =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:04:02:3b:68:00", 0x11);
+        let res = test_keymap_roundtrip(&right_control_macro_repeat);
+        if let KeyMapping::MacroRepeat(macro_id) = res.mapping {
+            assert_eq!(macro_id, 0x3b68);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // macro toggle
+        let right_control_macro_toggle =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:05:02:3b:68:00", 0x10);
+        let res = test_keymap_roundtrip(&right_control_macro_toggle);
+        if let KeyMapping::MacroToggle(macro_id) = res.mapping {
+            assert_eq!(macro_id, 0x3b68);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // multimedia page
+        let right_control_volume_mute =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:0a:02:00:e2:00", 0xae);
+        let res = test_keymap_roundtrip(&right_control_volume_mute);
+        if let KeyMapping::MultiMedia(hid_id) = res.mapping {
+            assert_eq!(hid_id, 0x00e2);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // button page
+        let right_control_double_click =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:0b:01:01:00", 0x4f);
+        let res = test_keymap_roundtrip(&right_control_double_click);
+        if let KeyMapping::ButtonPage(hid_id) = res.mapping {
+            assert_eq!(hid_id, 0x01);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // turbo mouse...
+        let right_control_turbo_left_click_7_per_s =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:03:40:00:0e:03:01:00:8e:00", 0xc4);
+        let res = test_keymap_roundtrip(&right_control_turbo_left_click_7_per_s);
+        if let KeyMapping::TurboMouse(button, repeat_interval) = res.mapping {
+            assert_eq!(button, MouseButton::Left);
+            assert_eq!(repeat_interval, (1000.0f64 / 7.0).floor() as u16);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // turbo keyboard.
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
+        let right_ctrl_alphanumeric_mod_right_alt_and_20_per_s = parse_wireshark_truncated(
+            "00:1f:00:00:00:0a:02:0d:01:40:00:0d:04:40:04:00:32:00",
+            0x3b,
+        );
+        let res = test_keymap_roundtrip(&right_ctrl_alphanumeric_mod_right_alt_and_20_per_s);
+        if let KeyMapping::TurboKey(button, repeat_interval) = res.mapping {
+            assert_eq!(button.id, 0x04);
+            assert_eq!(button.modifiers.right_alt, true);
+            assert_eq!(repeat_interval, (1000.0f64 / 20.0).floor() as u16);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // special
+        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
+        let f9_otf_macro =
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:78:01:11:01:04:00", 0xe0);
+        let res = test_keymap_roundtrip(&f9_otf_macro);
+        if let KeyMapping::Special(id) = res.mapping {
+            assert_eq!(id, 0x04);
+        } else {
+            assert_eq!(true, false);
+        }
+
         // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
         // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
