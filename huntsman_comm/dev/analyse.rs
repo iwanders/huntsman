@@ -150,7 +150,13 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
 fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     let files: Vec<_> = matches.values_of("files").unwrap().collect();
     for k in files.iter() {
-        let frames = obtain_frames(k)?;
+        let frames = obtain_frames(k);
+        if frames.is_err()
+        {
+            println!("Failed to parse {}, because of {}, continuing", k, frames.expect_err("failed"));
+            continue;
+        }
+        let frames = frames?;
 
         for f in frames.iter() {
             let command = wire::Command::from_be_bytes(&f.data)?;
@@ -190,7 +196,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
             if matches.occurrences_of("mappings") != 0 && command.cmd == SetKeyOverride::CMD {
                 let parsed = wire::SetKeyOverride::from_be_bytes(&command.payload).unwrap();
                 if command.status == 2 {
-                    continue;
+                    // continue;
                 }
                 println!(
                     "{:.3} {} {:0>2x} {:0>2x} {:?} {}",
