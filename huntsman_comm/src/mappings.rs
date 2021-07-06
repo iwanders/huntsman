@@ -121,6 +121,10 @@ pub enum KeyMapping {
     TurboKey(KeyboardKey, u16 /* delay */), // can also use modifiers.
     /// Magical special keys, led brightness, game mode etc.
     Special(u8),
+    /// Generic desktop page 0x01 (System Sleep)
+    GenericDesktop(u8),
+    /// Profile instruction? Seen once in hypershift + application profile cycle (0x04)
+    ProfileInstruction(u8),
 }
 
 #[allow(dead_code)]
@@ -141,6 +145,10 @@ impl KeyMapping {
     const MAP_TURBO_KEY: u8 = 0x0d;
 
     const MAP_SPECIAL: u8 = 0x11;
+
+    const MAP_GENERIC_DESKTOP: u8 = 0x09;
+
+    const MAP_PROFILE_INSTRUCTION: u8 = 0x07;
 }
 
 impl FromBytes for KeyMapping {
@@ -288,6 +296,28 @@ impl FromBytes for KeyMapping {
 
                 return Ok(3);
             }
+            KeyMapping::MAP_GENERIC_DESKTOP => {
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                *self = KeyMapping::GenericDesktop(src[2].into());
+
+                return Ok(3);
+            }
+            KeyMapping::MAP_PROFILE_INSTRUCTION => {
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                *self = KeyMapping::ProfileInstruction(src[2].into());
+
+                return Ok(3);
+            }
             z => panic!("Unhandled keymap code {:?}, total src: {:?}", z, src),
         }
     }
@@ -365,6 +395,16 @@ impl ToBytes for KeyMapping {
             }
             KeyMapping::Special(id) => {
                 buff.push(KeyMapping::MAP_SPECIAL);
+                buff.push(1);
+                buff.push(*id as u8);
+            }
+            KeyMapping::GenericDesktop(id) => {
+                buff.push(KeyMapping::MAP_GENERIC_DESKTOP);
+                buff.push(1);
+                buff.push(*id as u8);
+            }
+            KeyMapping::ProfileInstruction(id) => {
+                buff.push(KeyMapping::MAP_PROFILE_INSTRUCTION);
                 buff.push(1);
                 buff.push(*id as u8);
             }
@@ -592,6 +632,26 @@ mod tests {
             assert_eq!(true, false);
         }
 
+        // Generic Desktop page, 0x82 corresponds to System Sleep
+        let pause_sleep = 
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7e:01:09:01:82:00", 0x78);
+        let res = test_keymap_roundtrip(&pause_sleep);
+        if let KeyMapping::GenericDesktop(id) = res.mapping {
+            assert_eq!(id, 0x82);
+        } else {
+            assert_eq!(true, false);
+        }
+
+        // More special sauce... profile cycle;
+        let hypershift_application_cycle_profile = 
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:01:81:01:07:01:04:00", 0x0a);
+        let res = test_keymap_roundtrip(&hypershift_application_cycle_profile);
+        if let KeyMapping::ProfileInstruction(id) = res.mapping {
+            assert_eq!(id, 0x04);
+        } else {
+            assert_eq!(true, false);
+        }
+
         // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
         // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
@@ -777,5 +837,13 @@ mod tests {
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7a:01:11:01:09:00", 0xef);
         let _f12_brightness_up =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7b:01:11:01:08:00", 0xef);
+        // Other special keys, seen once class identifiers.
+
+        // This is the Generic Desktop Page
+        let _pause_sleep = 
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7e:01:09:01:82:00", 0x78);
+        // This is the profile cycle shortcut, the hardware-enabled profile cycle....
+        let _hypershift_application = 
+            parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:01:81:01:07:01:04:00", 0x0a);
     }
 }
