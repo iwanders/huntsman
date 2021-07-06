@@ -68,12 +68,14 @@ impl std::fmt::Debug for Modifiers {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
+/// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     pub id: u8,
     pub modifiers: Modifiers,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+/// Represents a particular mouse button for mouse clicks.
 pub enum MouseButton {
     Left = 1,
     Right = 2,
@@ -96,7 +98,8 @@ impl From<u8> for MouseButton {
 
 pub type MacroId = u16;
 
-/// Represent particular mapping for a physical key on the keyboard.
+/// Represent particular mapping for a physical key on the keyboard to produce any of the outputs
+/// from this enum.
 #[derive(Debug, Clone, Copy)]
 pub enum KeyMapping {
     /// Key is inactive
@@ -118,7 +121,7 @@ pub enum KeyMapping {
     /// Repeats mouse clicks using the provided interval.
     TurboMouse(MouseButton, u16 /* interval delay */),
     /// Repeats keys using the provided interval.
-    TurboKey(KeyboardKey, u16 /* delay */), // can also use modifiers.
+    TurboKey(KeyboardKey, u16 /* interval delay */),
     /// Magical special keys, led brightness, game mode etc.
     Special(u8),
     /// Generic desktop page 0x01 (System Sleep)
@@ -127,29 +130,30 @@ pub enum KeyMapping {
     ProfileInstruction(u8),
 }
 
-#[allow(dead_code)]
 impl KeyMapping {
     const MAP_DISABLED: u8 = 0x00;
     const MAP_MOUSE: u8 = 0x01;
-    const MAP_KEY: u8 = 0x02;
-
+    const MAP_KEY: u8 = 0x02; // HID page 0x07
     const MAP_MACRO: u8 = 0x03;
     const MAP_MACRO_REPEAT: u8 = 0x04;
     const MAP_MACRO_TOGGLE: u8 = 0x05;
 
-    const MAP_MULTI_MEDIA: u8 = 0x0a;
+    const MAP_PROFILE_INSTRUCTION: u8 = 0x07;
 
-    const MAP_BUTTON_PAGE: u8 = 0x0b;
+    const MAP_GENERIC_DESKTOP: u8 = 0x09; // HID page 0x01
+    const MAP_MULTI_MEDIA: u8 = 0x0a; // HID page 0x0c
+    const MAP_BUTTON_PAGE: u8 = 0x0b; // HID page 0x09
 
-    const MAP_TURBO_MOUSE: u8 = 0x0e;
     const MAP_TURBO_KEY: u8 = 0x0d;
+    const MAP_TURBO_MOUSE: u8 = 0x0e;
 
     const MAP_SPECIAL: u8 = 0x11;
-
-    const MAP_GENERIC_DESKTOP: u8 = 0x09;
-
-    const MAP_PROFILE_INSTRUCTION: u8 = 0x07;
 }
+/*
+These would also seem... potentially useful when making a gaming keyboard?
+    Game Controls Page (0x05)
+    Unicode Page (0x10)
+*/
 
 impl FromBytes for KeyMapping {
     fn from_bytes(&mut self, src: &[u8], _endianness: Endianness) -> Result<usize, String>
@@ -633,7 +637,7 @@ mod tests {
         }
 
         // Generic Desktop page, 0x82 corresponds to System Sleep
-        let pause_sleep = 
+        let pause_sleep =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7e:01:09:01:82:00", 0x78);
         let res = test_keymap_roundtrip(&pause_sleep);
         if let KeyMapping::GenericDesktop(id) = res.mapping {
@@ -643,7 +647,7 @@ mod tests {
         }
 
         // More special sauce... profile cycle;
-        let hypershift_application_cycle_profile = 
+        let hypershift_application_cycle_profile =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:01:81:01:07:01:04:00", 0x0a);
         let res = test_keymap_roundtrip(&hypershift_application_cycle_profile);
         if let KeyMapping::ProfileInstruction(id) = res.mapping {
@@ -837,13 +841,13 @@ mod tests {
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7a:01:11:01:09:00", 0xef);
         let _f12_brightness_up =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7b:01:11:01:08:00", 0xef);
-        // Other special keys, seen once class identifiers.
 
+        // Other special keys, seen once class identifiers.
         // This is the Generic Desktop Page
-        let _pause_sleep = 
+        let _pause_sleep =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:7e:01:09:01:82:00", 0x78);
         // This is the profile cycle shortcut, the hardware-enabled profile cycle....
-        let _hypershift_application = 
+        let _hypershift_application =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:01:81:01:07:01:04:00", 0x0a);
     }
 }
