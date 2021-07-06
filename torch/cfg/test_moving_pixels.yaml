@@ -36,9 +36,15 @@ effects:
 
   -
     name: "moving"
-    HorizontalMovingPixel:
-      velocity: 10.0
-      row: 3
-      color: {r: 0, g: 0, b: 1.0, a: 1.0}
+    MovingKernel:
+      vx: 10.0
+      y: 3
+      border: Wrap
+    children: [moving_thing]
 
+  - name: moving_thing
+    Rectangle:
+      width: 1
+      height: 1
+      color: {r: 0.0, g: 0.0, b: 1.0, a: 1.0}
 

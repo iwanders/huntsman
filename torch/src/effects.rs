@@ -85,32 +85,6 @@ impl Sub {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-/// Makes a moving horizontal pixel.
-pub struct HorizontalMovingPixel {
-    pub velocity: f64, // in pixels.
-    pub row: usize,
-    pub color: RGBA,
-    // #[serde(default)]
-    // pub position: f64,
-}
-impl Effect for HorizontalMovingPixel {
-    fn update(&mut self, state: &mut dyn State) -> Canvas {
-        let canvas = state.get_canvas();
-
-        let mut kernel = Canvas::new(1, 1);
-        *kernel.pixel_as_mut(0, 0) = self.color;
-
-        let t = state.get_time();
-        let mut p = (self.velocity * t).abs() % ((canvas.width() - 1) as f64);
-        if self.velocity < 0.0 {
-            p = ((canvas.width() - 1) as f64) - p;
-        }
-
-        canvas.apply_onto(&kernel, p, self.row as f64)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 /// Enum to configure interaction with the border of the canvas.
 pub enum MovingBorderInteraction {

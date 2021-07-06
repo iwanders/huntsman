@@ -1,7 +1,7 @@
 use crate::effects::{make_effect, EffectPtr};
 
 use crate::effects::{Add, Retrieve, Store, Sub};
-use crate::effects::{HorizontalMovingPixel, SetAlpha, Static};
+use crate::effects::{SetAlpha, Static};
 use crate::effects::{MovingKernel, Rectangle};
 
 use serde::{Deserialize, Serialize};
@@ -35,11 +35,9 @@ impl std::error::Error for LoaderError {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum EffectConfig {
-    None,
     Add,
     Sub,
     SetAlpha(SetAlpha),
-    HorizontalMovingPixel(HorizontalMovingPixel),
     Static(Static),
     Store(Store),
     Retrieve(Retrieve),
@@ -112,9 +110,6 @@ pub fn make_effects_simple(
             EffectConfig::SetAlpha(v) => {
                 new_effect = make_effect(v.clone());
             }
-            EffectConfig::HorizontalMovingPixel(v) => {
-                new_effect = make_effect(v.clone());
-            }
             EffectConfig::Store(v) => {
                 new_effect = make_effect(v.clone());
             }
@@ -129,12 +124,6 @@ pub fn make_effects_simple(
             }
             EffectConfig::MovingKernel(v) => {
                 new_effect = make_effect(v.clone());
-            }
-            _ => {
-                return Err(Box::new(LoaderError::new(&format!(
-                    "Effect {:?} not supported",
-                    spec.config
-                ))))
             }
         }
 
