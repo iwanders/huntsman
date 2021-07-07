@@ -4,7 +4,7 @@
 mod hid_hal;
 pub use huntsman_comm::RGB;
 
-mod configurations;
+mod configuration;
 
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
