@@ -98,7 +98,12 @@ pub fn main() -> Result<(), String> {
         .arg(
             Arg::with_name("r")
                 .short("r")
-                .help("Specifies whether to retrieve the report after sending any command.."),
+                .help("Specifies whether to retrieve the report after sending any command."),
+        )
+        .arg(
+            Arg::with_name("d")
+                .short("d")
+                .help("Dry run, don't actually connect to the device, echo all commands."),
         )
         .subcommand(
             SubCommand::with_name("brightness")
@@ -108,6 +113,23 @@ pub fn main() -> Result<(), String> {
                         .takes_value(true)
                         .required(true)
                         .help("The brightness to set as a float [0, 1.0] inclusive."),
+                )
+                .arg(
+                    Arg::with_name("profile")
+                        .short("p")
+                        .takes_value(true)
+                        .default_value("1")
+                        .help("The profile to use."),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("mapping")
+                .about("Set mapping(s)")
+                .arg(
+                    Arg::with_name("file")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The filename to read the mappings from."),
                 )
                 .arg(
                     Arg::with_name("profile")
@@ -217,8 +239,20 @@ pub fn main() -> Result<(), String> {
         }
     }
 
-    // We have a subcommand, try to make the Huntsman object.
-    let mut h = huntsman::Huntsman::new()?;
+    
+    let dry_run = matches.occurrences_of("d") == 1;
+
+    let mut h: huntsman::Huntsman;
+    if dry_run
+    {
+        h = huntsman::Huntsman::dry_new()?;
+        // h = huntsman::Huntsman::new()?;
+    }
+    else
+    {
+        // We have a subcommand, try to make the Huntsman object.
+        h = huntsman::Huntsman::new()?;
+    }
 
     // Set the print communication flag.
     h.set_print_comm(matches.occurrences_of("c") == 1);
@@ -243,6 +277,14 @@ pub fn main() -> Result<(), String> {
         let value = get_value::<f32>(matches, "value")?;
         let profile = get_value::<u8>(matches, "profile")?;
         h.set_brightness(profile, value)?;
+    }
+
+    if let Some(matches) = matches.subcommand_matches("mapping") {
+        let value = get_value::<String>(matches, "file")?;
+        let profile = get_value::<u8>(matches, "profile")?;
+        println!("println!  {}, {}", value, profile);
+        
+        // h.set_brightness(profile, value)?;
     }
 
     if let Some(matches) = matches.subcommand_matches("game_mode") {

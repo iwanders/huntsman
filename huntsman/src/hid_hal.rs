@@ -1,6 +1,21 @@
 ///! Encapsulate the hardware interaction in the HidApiHal object.
 extern crate hidapi;
 
+pub trait HidHal
+{
+    /// Connect to a particular usb device and endpoint id.
+    fn connect(
+            &mut self,
+            vendor_id: u16,
+            product_id: u16,
+            endpoint_id: u32,
+        ) -> Result<(), String>;
+    /// Send bytes as a control message.
+    fn control(&mut self, payload: &[u8]) -> Result<(), String>;
+    /// Retrieve the report after sending a control message. This is an echo / ack?
+    fn get_report(&mut self) -> Result<Vec<u8>, String>;
+}
+
 /// Struct to provide hardware / crate abstraction layer.
 pub struct HidApiHal {
     api: hidapi::HidApi,
@@ -16,21 +31,22 @@ fn prepend_zero(v: &[u8]) -> Vec<u8> {
     }
     return new_v;
 }
-
-impl HidApiHal {
+impl HidApiHal
+{
     /// Attempt to instantiate the hid api.
-    pub fn new() -> Result<HidApiHal, String> {
+    pub fn new() -> Result<Box<dyn HidHal>, String> {
         match hidapi::HidApi::new() {
             Err(e) => Err(e.to_string()),
-            Ok(api) => Ok(HidApiHal {
+            Ok(api) => Ok(Box::new(HidApiHal {
                 api: api,
                 connected_device: None,
-            }),
+            })),
         }
     }
+}
 
-    /// Connect to a particular usb device and endpoint id.
-    pub fn connect(
+impl HidHal for HidApiHal {
+    fn connect(
         &mut self,
         vendor_id: u16,
         product_id: u16,
@@ -55,8 +71,7 @@ impl HidApiHal {
         return Err("No device found.".to_string());
     }
 
-    /// Send bytes as a control message.
-    pub fn control(&mut self, payload: &[u8]) -> Result<(), String> {
+    fn control(&mut self, payload: &[u8]) -> Result<(), String> {
         match &mut self.connected_device {
             None => Err("No connected device.".to_string()),
             Some(d) => match d.send_feature_report(prepend_zero(payload).as_slice()) {
@@ -66,8 +81,7 @@ impl HidApiHal {
         }
     }
 
-    /// Retrieve the report after sending a control message. This is an echo / ack?
-    pub fn get_report(&mut self) -> Result<Vec<u8>, String> {
+    fn get_report(&mut self) -> Result<Vec<u8>, String> {
         let mut buff: [u8; 91] = [0; 91]; // This also specifies the length.
         buff[0] = 0;
         match &mut self.connected_device {
@@ -85,3 +99,51 @@ impl HidApiHal {
         }
     }
 }
+
+
+pub struct DryHidHal
+{
+    pub buffer: [u8; 90],
+    pub len: usize,
+}
+
+impl DryHidHal
+{
+    /// Attempt to instantiate the hid api.
+    pub fn new() -> Result<Box<dyn HidHal>, String> {
+        Ok(Box::new(DryHidHal {
+                buffer: [0; 90],
+                len: 0,
+            }))
+    }
+}
+
+impl HidHal for DryHidHal {
+    fn connect(
+        &mut self,
+        _vendor_id: u16,
+        _product_id: u16,
+        _endpoint_id: u32,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    /// Send bytes as a control message.
+    fn control(&mut self, payload: &[u8]) -> Result<(), String> {
+        self.buffer.fill(0);
+        for (i, x) in payload.iter().enumerate()
+        {
+            self.buffer[i] = *x;
+        }
+        self.len = payload.len();
+        Ok(())
+    }
+
+    /// Retrieve the report after sending a control message. This is an echo / ack?
+    fn get_report(&mut self) -> Result<Vec<u8>, String> {
+        self.buffer[0] = 0x02;
+        return Ok(self.buffer.to_vec());
+
+    }
+}
+

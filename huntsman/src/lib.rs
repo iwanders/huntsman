@@ -4,9 +4,11 @@
 mod hid_hal;
 pub use huntsman_comm::RGB;
 
+mod configurations;
+
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
-    hal: hid_hal::HidApiHal,
+    hal: Box<dyn hid_hal::HidHal>,
     print_comm: bool,
     print_retrieve: bool,
 }
@@ -15,6 +17,20 @@ impl Huntsman {
     /// Construct a new Huntsman instance, this tries to connect to the usb device and errors if it can't be found.
     pub fn new() -> Result<Huntsman, String> {
         match hid_hal::HidApiHal::new() {
+            Ok(mut hal) => match &mut hal.connect(0x1532, 0x226, 2) {
+                Ok(()) => Ok(Huntsman {
+                    hal: hal,
+                    print_comm: false,
+                    print_retrieve: false,
+                }),
+                Err(e) => Err(e.to_string()),
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    pub fn dry_new() -> Result<Huntsman, String> {
+        match hid_hal::DryHidHal::new() {
             Ok(mut hal) => match &mut hal.connect(0x1532, 0x226, 2) {
                 Ok(()) => Ok(Huntsman {
                     hal: hal,
