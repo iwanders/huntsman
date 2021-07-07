@@ -1,7 +1,7 @@
 use struct_helper::*;
 
 /// Struct to denote a physical key on the keyboard.
-#[derive(Debug, Clone, Copy, Default, FromBytes, ToBytes)]
+#[derive(Debug, Clone, Copy, Default, FromBytes, ToBytes, PartialEq, Eq)]
 pub struct Key {
     /// The key's at101 code, or whatever the keyboard uses to denote it.
     pub scan_code: u8,
@@ -9,7 +9,7 @@ pub struct Key {
     pub hypershift: bool,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {
     left_ctrl: bool,
     left_shift: bool,
@@ -67,7 +67,7 @@ impl std::fmt::Debug for Modifiers {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     pub id: u8,
@@ -100,7 +100,7 @@ pub type MacroId = u16;
 
 /// Represent particular mapping for a physical key on the keyboard to produce any of the outputs
 /// from this enum.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyMapping {
     /// Key is inactive
     Disabled,
@@ -128,6 +128,8 @@ pub enum KeyMapping {
     GenericDesktop(u8),
     /// Profile instruction? Seen once in hypershift + application profile cycle (0x04)
     ProfileInstruction(u8),
+    /// Maps to enable hypershift when pressed, seems to take 1 byte payload, only seen as 0x01.
+    Hypershift,
 }
 
 impl KeyMapping {
@@ -143,7 +145,7 @@ impl KeyMapping {
     const MAP_GENERIC_DESKTOP: u8 = 0x09; // HID page 0x01
     const MAP_MULTI_MEDIA: u8 = 0x0a; // HID page 0x0c
     const MAP_BUTTON_PAGE: u8 = 0x0b; // HID page 0x09
-
+    const MAP_HYPERSHIFT: u8 = 0x0c;
     const MAP_TURBO_KEY: u8 = 0x0d;
     const MAP_TURBO_MOUSE: u8 = 0x0e;
 
@@ -322,6 +324,22 @@ impl FromBytes for KeyMapping {
 
                 return Ok(3);
             }
+            KeyMapping::MAP_HYPERSHIFT => {
+                if len_byte != 1 {
+                    return Err(format!(
+                        "Length didn't match, expected {}, got {}",
+                        1, len_byte
+                    ));
+                }
+                let res = src[2];
+                if res != 0x01
+                {
+                    panic!("Hypershift class detected, but value is not 0x01, got 0x{:x}, full: {:?}", res, src);
+                }
+                *self = KeyMapping::Hypershift;
+
+                return Ok(3);
+            }
             z => panic!("Unhandled keymap code {:?}, total src: {:?}", z, src),
         }
     }
@@ -411,6 +429,11 @@ impl ToBytes for KeyMapping {
                 buff.push(KeyMapping::MAP_PROFILE_INSTRUCTION);
                 buff.push(1);
                 buff.push(*id as u8);
+            }
+            KeyMapping::Hypershift => {
+                buff.push(KeyMapping::MAP_HYPERSHIFT);
+                buff.push(1);
+                buff.push(1);
             }
         }
         Ok(buff)
@@ -656,6 +679,12 @@ mod tests {
             assert_eq!(true, false);
         }
 
+        // And hypershift map, yet another class identifier.
+        let right_control_hypershift =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:0c:01:01:00", 0x48);
+        let res = test_keymap_roundtrip(&right_control_hypershift);
+        assert_eq!(KeyMapping::Hypershift, res.mapping);
+
         // 2021_06_05_23_25_set_right_ctrl_scroll_click.pcapng
         // 00:1f:00:00:00:0a:02:0d:01:40:00:01:01:03:00:00:00:00:00
         // 2021_06_05_23_25_set_right_ctrl_button_5.pcapng  <- prob 4...
@@ -849,5 +878,9 @@ mod tests {
         // This is the profile cycle shortcut, the hardware-enabled profile cycle....
         let _hypershift_application =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:01:81:01:07:01:04:00", 0x0a);
+
+        // Set right control as hypershift;
+        let _right_control_hypershift =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:0c:01:01:00", 0x48);
     }
 }
