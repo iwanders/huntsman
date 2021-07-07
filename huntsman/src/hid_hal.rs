@@ -1,15 +1,9 @@
 ///! Encapsulate the hardware interaction in the HidApiHal object.
 extern crate hidapi;
 
-pub trait HidHal
-{
+pub trait HidHal {
     /// Connect to a particular usb device and endpoint id.
-    fn connect(
-            &mut self,
-            vendor_id: u16,
-            product_id: u16,
-            endpoint_id: u32,
-        ) -> Result<(), String>;
+    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), String>;
     /// Send bytes as a control message.
     fn control(&mut self, payload: &[u8]) -> Result<(), String>;
     /// Retrieve the report after sending a control message. This is an echo / ack?
@@ -31,8 +25,7 @@ fn prepend_zero(v: &[u8]) -> Vec<u8> {
     }
     return new_v;
 }
-impl HidApiHal
-{
+impl HidApiHal {
     /// Attempt to instantiate the hid api.
     pub fn new() -> Result<Box<dyn HidHal>, String> {
         match hidapi::HidApi::new() {
@@ -46,12 +39,7 @@ impl HidApiHal
 }
 
 impl HidHal for HidApiHal {
-    fn connect(
-        &mut self,
-        vendor_id: u16,
-        product_id: u16,
-        endpoint_id: u32,
-    ) -> Result<(), String> {
+    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), String> {
         for device in self.api.device_list() {
             if device.vendor_id() == vendor_id
                 && device.product_id() == product_id
@@ -100,21 +88,18 @@ impl HidHal for HidApiHal {
     }
 }
 
-
-pub struct DryHidHal
-{
+pub struct DryHidHal {
     pub buffer: [u8; 90],
     pub len: usize,
 }
 
-impl DryHidHal
-{
+impl DryHidHal {
     /// Attempt to instantiate the hid api.
     pub fn new() -> Result<Box<dyn HidHal>, String> {
         Ok(Box::new(DryHidHal {
-                buffer: [0; 90],
-                len: 0,
-            }))
+            buffer: [0; 90],
+            len: 0,
+        }))
     }
 }
 
@@ -131,8 +116,7 @@ impl HidHal for DryHidHal {
     /// Send bytes as a control message.
     fn control(&mut self, payload: &[u8]) -> Result<(), String> {
         self.buffer.fill(0);
-        for (i, x) in payload.iter().enumerate()
-        {
+        for (i, x) in payload.iter().enumerate() {
             self.buffer[i] = *x;
         }
         self.len = payload.len();
@@ -143,7 +127,5 @@ impl HidHal for DryHidHal {
     fn get_report(&mut self) -> Result<Vec<u8>, String> {
         self.buffer[0] = 0x02;
         return Ok(self.buffer.to_vec());
-
     }
 }
-

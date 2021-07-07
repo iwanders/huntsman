@@ -473,9 +473,6 @@ impl Command for SetGameMode {
     }
 }
 
-
-
-
 /// Override a key with a new functionality.
 pub type SetKeyMap = mappings::KeyMap;
 impl SetKeyMap {
@@ -756,18 +753,23 @@ mod tests {
 
     #[test]
     fn test_set_key_full() {
-        let right_ctrl_right_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let right_ctrl_right_click =
+            parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
         let request_cmd: SetKeyMap = SetKeyMap {
             profile: 0x01,
-            key: mappings::Key{scan_code:0x40, hypershift: false},
+            key: mappings::Key {
+                id: 0x40,
+                hypershift: false,
+            },
             mapping: mappings::KeyMapping::Mouse(mappings::MouseButton::Right),
         };
         assert_eq!(request_cmd.serialize(), right_ctrl_right_click);
 
-        let right_ctrl_right_click_resp = parse_wireshark_truncated("02:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
-        let response = Command::response(&request_cmd, &right_ctrl_right_click_resp).expect("success");
+        let right_ctrl_right_click_resp =
+            parse_wireshark_truncated("02:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let response =
+            Command::response(&request_cmd, &right_ctrl_right_click_resp).expect("success");
         let response = response.downcast_ref::<SetKeyMap>().unwrap();
         assert_eq!(*response, request_cmd);
     }
-    
 }

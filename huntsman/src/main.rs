@@ -239,17 +239,13 @@ pub fn main() -> Result<(), String> {
         }
     }
 
-    
     let dry_run = matches.occurrences_of("d") == 1;
 
     let mut h: huntsman::Huntsman;
-    if dry_run
-    {
+    if dry_run {
         h = huntsman::Huntsman::dry_new()?;
         // h = huntsman::Huntsman::new()?;
-    }
-    else
-    {
+    } else {
         // We have a subcommand, try to make the Huntsman object.
         h = huntsman::Huntsman::new()?;
     }
@@ -283,7 +279,7 @@ pub fn main() -> Result<(), String> {
         let value = get_value::<String>(matches, "file")?;
         let profile = get_value::<u8>(matches, "profile")?;
         println!("println!  {}, {}", value, profile);
-        
+
         // h.set_brightness(profile, value)?;
     }
 

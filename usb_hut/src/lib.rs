@@ -4,6 +4,4 @@ mod defs;
 
 pub use defs::*;
 mod keyboard_page;
-pub use keyboard_page::{hid_keyboard_page};
-
-
+pub use keyboard_page::hid_keyboard_page;

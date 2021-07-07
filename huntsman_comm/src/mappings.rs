@@ -1,27 +1,36 @@
-use struct_helper::*;
+use serde::de::Deserializer;
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use serde::ser::{Serializer};
-use serde::de::{Deserializer};
+use struct_helper::*;
 use usb_hut::hid_keyboard_page;
 
 /// Struct to denote a physical key on the keyboard.
-#[derive(Debug, Clone, Copy, Default, FromBytes, ToBytes, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(
+    Debug, Clone, Copy, Default, FromBytes, ToBytes, PartialEq, Eq, Deserialize, Serialize,
+)]
 pub struct Key {
     /// The key's at101 code, or whatever the keyboard uses to denote it.
-    #[serde(serialize_with = "at101_serialize", deserialize_with = "at101_deserialize")]
-    pub scan_code: u8,
+    #[serde(
+        serialize_with = "at101_serialize",
+        deserialize_with = "at101_deserialize"
+    )]
+    pub id: u8,
     /// Whether or not this is the hypershift binding of that key.
     pub hypershift: bool,
 }
 
 // https://serde.rs/impl-serialize.html
-fn at101_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error> where    S: Serializer
+fn at101_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
 {
     use serde::ser::Error;
     serializer.serialize_str(at101_to_key_name(*scan_code).map_err(Error::custom)?)
 }
 
-fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error> where D: Deserializer<'de>
+fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
 {
     let s: &str = Deserialize::deserialize(deserializer)?;
     use serde::de::Error;
@@ -29,17 +38,15 @@ fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error> where D: D
     Ok(r)
 }
 
-
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Deserialize, Serialize)]
 /// Enum to represent the possible modifiers.
-pub enum Modifier
-{
+pub enum Modifier {
     None = 0x00,
-    #[serde(alias = "ctrl", alias="control", alias="Control")]
+    #[serde(alias = "ctrl", alias = "control", alias = "Control")]
     LeftControl = 0x01,
     #[serde(alias = "shift", alias = "Shift")]
     LeftShift = 0x02,
-    #[serde(alias = "alt", alias="Alt")]
+    #[serde(alias = "alt", alias = "Alt")]
     LeftAlt = 0x04,
     RightControl = 0x10,
     RightShift = 0x20,
@@ -48,43 +55,36 @@ pub enum Modifier
 // ^ Right modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
 //  ^ Left modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
 
-impl Default for Modifier
-{
-    fn default() -> Self
-    {
+impl Default for Modifier {
+    fn default() -> Self {
         Modifier::None
     }
 }
 
-type ModifiersAsVec = Vec<Modifier>;
+type ModifiersVec = Vec<Modifier>;
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 /// A container to hold multiple modifiers.
-#[serde(from = "ModifiersAsVec", into = "ModifiersAsVec")]
+#[serde(from = "ModifiersVec", into = "ModifiersVec")]
 pub struct Modifiers([Modifier; 8]); // this array is just shennenigans to make it copyable.
 
 impl Modifiers {
-    pub fn control() -> Modifiers
-    {
+    pub fn control() -> Modifiers {
         Self::with(Modifier::LeftControl)
     }
 
-    pub fn alt() -> Modifiers
-    {
+    pub fn alt() -> Modifiers {
         Self::with(Modifier::LeftAlt)
     }
 
-    pub fn shift() -> Modifiers
-    {
+    pub fn shift() -> Modifiers {
         Self::with(Modifier::LeftShift)
     }
 
-    pub fn with(m: Modifier) -> Modifiers
-    {
+    pub fn with(m: Modifier) -> Modifiers {
         let mut r: Modifiers = Default::default();
         r.push(m);
         r
     }
-    
 
     /// Check if any modifier is set.
     pub fn is_any(&self) -> bool {
@@ -92,77 +92,59 @@ impl Modifiers {
     }
 
     /// Check if only the specified modifier is set (once).
-    pub fn is_only(&self, m: Modifier) -> bool
-    {
+    pub fn is_only(&self, m: Modifier) -> bool {
         let mut found: bool = false;
-        for v in self.0.iter()
-        {
-            if *v == Modifier::None
-            {
-                continue
+        for v in self.0.iter() {
+            if *v == Modifier::None {
+                continue;
             }
 
-            if *v == m
-            {
+            if *v == m {
                 found = true;
-            }
-            else
-            {
+            } else {
                 return false;
             }
-    
         }
         found
     }
 
     /// Add a modifier.
-    pub fn push(&mut self, m: Modifier)
-    {
-        for (i, v) in self.0.iter().enumerate()
-        {
-            if *v == Modifier::None
-            {
+    pub fn push(&mut self, m: Modifier) {
+        for (i, v) in self.0.iter().enumerate() {
+            if *v == Modifier::None {
                 self.0[i] = m;
-                return
+                return;
             }
-            if *v == m
-            {
-                return
+            if *v == m {
+                return;
             }
         }
     }
 }
 
-
 impl std::fmt::Debug for Modifiers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", ModifiersAsVec::from(*self))?;
+        write!(f, "{:?}", ModifiersVec::from(*self))?;
         Ok(())
     }
 }
 
-impl From<Modifiers> for ModifiersAsVec
-{
-    fn from(v: Modifiers) -> ModifiersAsVec
-    {
-        let mut r: ModifiersAsVec = Default::default();
+impl From<Modifiers> for ModifiersVec {
+    fn from(v: Modifiers) -> ModifiersVec {
+        let mut r: ModifiersVec = Default::default();
         for e in v.0.iter() {
-            if *e != Modifier::None
-            {
+            if *e != Modifier::None {
                 r.push(*e)
             }
         }
         r
     }
 }
-impl From<ModifiersAsVec> for Modifiers
-{
-    fn from(v: ModifiersAsVec) -> Modifiers
-    {
+impl From<ModifiersVec> for Modifiers {
+    fn from(v: ModifiersVec) -> Modifiers {
         let mut r: Modifiers = Default::default();
         for e in v.iter() {
-            if *e != Modifier::None
-            {
+            if *e != Modifier::None {
                 r.push(*e)
             }
         }
@@ -173,28 +155,22 @@ impl From<ModifiersAsVec> for Modifiers
 impl From<u8> for Modifiers {
     fn from(encoded: u8) -> Self {
         let mut res: Modifiers = Default::default();
-        if (encoded & (Modifier::LeftControl as u8)) != 0
-        {
+        if (encoded & (Modifier::LeftControl as u8)) != 0 {
             res.push(Modifier::LeftControl);
         }
-        if (encoded & (Modifier::LeftShift as u8)) != 0
-        {
+        if (encoded & (Modifier::LeftShift as u8)) != 0 {
             res.push(Modifier::LeftShift);
         }
-        if (encoded & (Modifier::LeftAlt as u8)) != 0
-        {
+        if (encoded & (Modifier::LeftAlt as u8)) != 0 {
             res.push(Modifier::LeftAlt);
         }
-        if (encoded & (Modifier::RightControl as u8)) != 0
-        {
+        if (encoded & (Modifier::RightControl as u8)) != 0 {
             res.push(Modifier::RightControl);
         }
-        if (encoded & (Modifier::RightShift as u8)) != 0
-        {
+        if (encoded & (Modifier::RightShift as u8)) != 0 {
             res.push(Modifier::RightShift);
         }
-        if (encoded & (Modifier::RightAlt as u8)) != 0
-        {
+        if (encoded & (Modifier::RightAlt as u8)) != 0 {
             res.push(Modifier::RightAlt);
         }
         return res;
@@ -203,8 +179,7 @@ impl From<u8> for Modifiers {
 impl From<Modifiers> for u8 {
     fn from(item: Modifiers) -> Self {
         let mut res: u8 = 0;
-        for v in &item.0
-        {
+        for v in &item.0 {
             res |= *v as u8;
         }
         res
@@ -214,8 +189,12 @@ impl From<Modifiers> for u8 {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
-    #[serde(serialize_with = "at101_serialize", deserialize_with = "at101_deserialize")]
+    #[serde(
+        serialize_with = "at101_serialize",
+        deserialize_with = "at101_deserialize"
+    )]
     pub id: u8,
+    #[serde(default)]
     pub modifiers: Modifiers,
 }
 
@@ -618,15 +597,12 @@ impl ToBytes for KeyMap {
         buff.extend(self.profile.to_bytes(endianness)?);
         buff.extend(self.key.to_bytes(endianness)?);
         buff.extend(self.mapping.to_bytes(endianness)?);
-        while buff.len() < 0x0a
-        {
-            buff.push(0)  // zero pad to the appropriate size.
+        while buff.len() < 0x0a {
+            buff.push(0) // zero pad to the appropriate size.
         }
         Ok(buff)
     }
 }
-
-
 
 #[derive(Debug)]
 struct KeyError {
@@ -654,48 +630,42 @@ impl std::error::Error for KeyError {
     }
 }
 
-
 /// Function to look up a key by name and return the scan code.
-pub fn key_name_to_at101(key: &str) ->  Result<u8, Box<dyn std::error::Error>>
-{
+pub fn key_name_to_at101(key: &str) -> Result<u8, Box<dyn std::error::Error>> {
     // try to find a key that matches our self.key.
     let key_uppercase = key.to_uppercase();
     let with_key = "KEY_".to_string() + &key_uppercase;
-    for k in hid_keyboard_page::keys()
-    {
-        if k.name == &key_uppercase || k.name == &with_key
-        {
+    for k in hid_keyboard_page::keys() {
+        if k.name == &key_uppercase || k.name == &with_key {
             // how delightful, we found the key.
             // No guarantee for success though, we also need to check whether we have an AT101
             // code, if so we are in business, otherwise we still fail :(
-            if let Some(code) = k.at101
-            {
+            if let Some(code) = k.at101 {
                 return Ok(code as u8);
-            }
-            else
-            {
-                return Err(KeyError::boxed(format!("Key {}, found, but this key has no at101 scan code.", key)));
+            } else {
+                return Err(KeyError::boxed(format!(
+                    "Key {}, found, but this key has no at101 scan code.",
+                    key
+                )));
             }
         }
     }
     Err(KeyError::boxed(format!("Key not found, got {}.", key)))
 }
 
-pub fn at101_to_key_name(scan_code: u8) ->  Result<&'static str, Box<dyn std::error::Error>>
-{
-    for k in hid_keyboard_page::keys()
-    {
-        if let Some(key_code) = k.at101
-        {
-            if key_code == scan_code as usize
-            {
+pub fn at101_to_key_name(scan_code: u8) -> Result<&'static str, Box<dyn std::error::Error>> {
+    for k in hid_keyboard_page::keys() {
+        if let Some(key_code) = k.at101 {
+            if key_code == scan_code as usize {
                 return Ok(&k.name);
             }
         }
     }
-    Err(KeyError::boxed(format!("Could not find key for at101/scan_code: {}.", scan_code)))
+    Err(KeyError::boxed(format!(
+        "Could not find key for at101/scan_code: {}.",
+        scan_code
+    )))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -741,13 +711,13 @@ mod tests {
         let disable_key_62 =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:3e:00:00:00:00", 0x3a);
         let x = test_keymap_roundtrip(&disable_key_62);
-        assert_eq!(x.key.scan_code, 62);
+        assert_eq!(x.key.id, 62);
 
         // Test the key modifiers.
         let right_shift_to_right_shift =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:39:00:02:02:00:e5:00", 0xd8);
         let x = test_keymap_roundtrip(&right_shift_to_right_shift);
-        assert_eq!(x.key.scan_code, 57); // at101 for right shift.
+        assert_eq!(x.key.id, 57); // at101 for right shift.
         let v = expect_key(x);
         assert!(!v.modifiers.is_any());
         assert_eq!(v.id, 0xe5);
@@ -942,15 +912,12 @@ mod tests {
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:0c:01:01:00", 0x48);
     }
 
-
-    fn print_serialize<T: Serialize + std::fmt::Debug>(v: T) -> String
-    {
+    fn print_serialize<T: Serialize + std::fmt::Debug>(v: T) -> String {
         let serialized = serde_json::to_string(&v).unwrap();
         println!("serialize {:?} -> {}", v, serialized);
         serialized
     }
-    fn print_deserialize<'a, T: Deserialize<'a> + Sized + std::fmt::Debug>(v: &'a str) -> T
-    {
+    fn print_deserialize<'a, T: Deserialize<'a> + Sized + std::fmt::Debug>(v: &'a str) -> T {
         let deserialized: T = serde_json::from_str(&v).unwrap();
         println!("deserialize {} -> {:?}", v, deserialized);
         deserialized
@@ -958,9 +925,18 @@ mod tests {
 
     #[test]
     fn test_key_lookup() {
-        assert_eq!(key_name_to_at101("KEY_RIGHT_META").expect("Should be found"), 128);
-        assert_eq!(key_name_to_at101("RIGHT_META").expect("Should be found"), 128);
-        assert_eq!(key_name_to_at101("right_meta").expect("Should be found"), 128);
+        assert_eq!(
+            key_name_to_at101("KEY_RIGHT_META").expect("Should be found"),
+            128
+        );
+        assert_eq!(
+            key_name_to_at101("RIGHT_META").expect("Should be found"),
+            128
+        );
+        assert_eq!(
+            key_name_to_at101("right_meta").expect("Should be found"),
+            128
+        );
         assert_eq!(key_name_to_at101("a").expect("Should be found"), 31);
         assert_eq!(key_name_to_at101("1").expect("Should be found"), 2);
         assert_eq!(key_name_to_at101("kpd_plus").expect("Should be found"), 106);
@@ -969,23 +945,31 @@ mod tests {
         assert!(key_name_to_at101("this is not a key").is_err()); // no key found
     }
 
-
     #[test]
-    pub fn test_key_serialize()
-    {
-
+    pub fn test_key_serialize() {
         print_serialize(KeyMapping::Disabled);
         print_serialize(KeyMapping::Mouse(MouseButton::Left));
 
-        print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, modifiers: Modifiers::shift()}));
-        print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, modifiers: Modifiers::control()}));
+        print_serialize(KeyMapping::Key(KeyboardKey {
+            id: 0x04,
+            modifiers: Modifiers::shift(),
+        }));
+        print_serialize(KeyMapping::Key(KeyboardKey {
+            id: 0x04,
+            modifiers: Modifiers::control(),
+        }));
 
-        print_serialize(Key{scan_code: 0x04, hypershift: false});
-        print_serialize(Key{scan_code: 0x31, hypershift: false});
+        print_serialize(Key {
+            id: 0x04,
+            hypershift: false,
+        });
+        print_serialize(Key {
+            id: 0x31,
+            hypershift: false,
+        });
 
-        print_deserialize::<Key>("{\"scan_code\":\"KEY_V\",\"hypershift\":false}");
+        print_deserialize::<Key>("{\"id\":\"KEY_V\",\"hypershift\":false}");
         print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["LeftControl"]}"#);
-        print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["LeftControl", "Alt"]}"#);
+        print_deserialize::<KeyboardKey>(r#"{"id":"3","modifiers":["LeftControl", "Alt"]}"#);
     }
-
 }
