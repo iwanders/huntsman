@@ -3,5 +3,5 @@
 mod defs;
 
 pub use defs::*;
-mod generated;
-pub use generated::{hid_keys, keys};
+mod keyboard_page;
+pub use keyboard_page::{hid_keyboard_page};

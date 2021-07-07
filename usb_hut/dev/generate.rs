@@ -178,7 +178,7 @@ fn desc_to_name(desc: &str) -> String {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::args().len() < 2 {
-        println!("use like: cargo run --bin generate -- hut1_22_pdf_keyboard_page_0x07.txt src/generated.rs");
+        println!("use like: cargo run --bin generate -- hut1_22_pdf_keyboard_page_0x07.txt src/keyboard_page.rs");
         std::process::exit(1);
     }
     let keys = parse_file(&std::env::args().nth(1).unwrap());
@@ -195,11 +195,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         keydefs.push(format!(
             "
     pub const {}: Key = Key {{
+        name: \"{}\",
         hid: 0x{:0>2x},
         at101: {:?},
         usage: Usage::{:?},
         desc: \"{}\",
     }};",
+            n.to_ascii_uppercase(),
             n.to_ascii_uppercase(),
             k.hid,
             k.at101,
@@ -219,26 +221,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let fcontent = format!(
             "#[allow(dead_code)]
 // This file is generated with dev/generate.rs
-use crate::defs::Key;
 
-// keys:
-pub mod hid_keys {{
+pub mod hid_keyboard_page {{
     #[allow(dead_code)]
     use crate::defs::{{Key, Usage}};
 {}
-}}
 
-pub const fn keys() -> [Key; {}] {{
-    [
+    pub const fn keys() -> &'static [Key] {{
+        &[
 {},
-    ]
+        ]
+    }}
 }}
 ",
             keydefs.join("\n"),
-            names.len(),
             names
                 .iter()
-                .map(|x| format!("        hid_keys::{}", x))
+                .map(|x| format!("            {}", x))
                 .collect::<Vec<String>>()
                 .join(",\n")
         );

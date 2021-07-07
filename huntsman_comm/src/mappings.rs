@@ -332,9 +332,11 @@ impl FromBytes for KeyMapping {
                     ));
                 }
                 let res = src[2];
-                if res != 0x01
-                {
-                    panic!("Hypershift class detected, but value is not 0x01, got 0x{:x}, full: {:?}", res, src);
+                if res != 0x01 {
+                    panic!(
+                        "Hypershift class detected, but value is not 0x01, got 0x{:x}, full: {:?}",
+                        res, src
+                    );
                 }
                 *self = KeyMapping::Hypershift;
 
