@@ -299,27 +299,6 @@ mod tests {
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    #[test]
-    fn test_moving_pixel() {
-        let mut state: DummyState = DummyState {
-            time: 1.0,
-            elapsed: 0.0,
-            canvas: Canvas::new(10, 1),
-        };
-        let mut eff: HorizontalMovingPixel = HorizontalMovingPixel {
-            color: RGBA::red(),
-            velocity: 1.0,
-            row: 0,
-        };
-
-        println!("\n{}", eff.update(&mut state).to_string());
-        state.time += 0.5;
-        println!("{}", eff.update(&mut state).to_string());
-        state.time += 0.5;
-        println!("{}", eff.update(&mut state).to_string());
-        state.time += 0.25;
-        println!("{}", eff.update(&mut state).to_string());
-    }
 
     #[test]
     fn test_kernel_blend_single() {
