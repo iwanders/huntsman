@@ -92,6 +92,7 @@ impl std::fmt::Debug for Modifiers {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
+    #[serde(serialize_with = "at101_serialize", deserialize_with = "at101_deserialize")]
     pub id: u8,
     pub modifiers: Modifiers,
 }
@@ -848,23 +849,17 @@ mod tests {
 
 
     #[test]
-    pub fn test_keymapping_serialize()
+    pub fn test_key_serialize()
     {
 
         print_serialize(KeyMapping::Disabled);
         print_serialize(KeyMapping::Mouse(MouseButton::Left));
         print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, ..Default::default()}));
 
-    }
-
-    #[test]
-    pub fn test_key_serialize()
-    {
         print_serialize(Key{scan_code: 0x04, hypershift: false});
         print_serialize(Key{scan_code: 0x31, hypershift: false});
 
         print_deserialize::<Key>("{\"scan_code\":\"KEY_V\",\"hypershift\":false}");
-
     }
 
 }
