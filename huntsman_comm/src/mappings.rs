@@ -1,6 +1,6 @@
 use struct_helper::*;
 use serde::{Deserialize, Serialize};
-use serde::ser::{Serializer, SerializeStruct};
+use serde::ser::{Serializer};
 use serde::de::{Deserializer};
 use usb_hut::hid_keyboard_page;
 
@@ -30,66 +30,188 @@ fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error> where D: D
 }
 
 
-
-#[derive(Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Modifiers {
-    left_ctrl: bool,
-    left_shift: bool,
-    left_alt: bool,
-    // Maybe left meta?
-    right_ctrl: bool,
-    right_shift: bool,
-    right_alt: bool,
-    // Maybe right meta?
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Deserialize, Serialize)]
+/// Enum to represent the possible modifiers.
+pub enum Modifier
+{
+    None = 0x00,
+    #[serde(alias = "ctrl", alias="control", alias="Control")]
+    LeftControl = 0x01,
+    #[serde(alias = "shift", alias = "Shift")]
+    LeftShift = 0x02,
+    #[serde(alias = "alt", alias="Alt")]
+    LeftAlt = 0x04,
+    RightControl = 0x10,
+    RightShift = 0x20,
+    RightAlt = 0x40,
 }
-impl Modifiers {
-    pub fn any(&self) -> bool {
-        u8::from(*self) != 0
+// ^ Right modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
+//  ^ Left modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
+
+impl Default for Modifier
+{
+    fn default() -> Self
+    {
+        Modifier::None
     }
 }
 
-// ^ Right modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
-//  ^ Left modifier bitmask, 0x1=ctrl, 0x2=shift, 0x4 = alt
-impl From<u8> for Modifiers {
-    fn from(encoded: u8) -> Self {
-        Modifiers {
-            left_ctrl: (encoded & 0x01) != 0,
-            left_shift: (encoded & 0x02) != 0,
-            left_alt: (encoded & 0x04) != 0,
-            right_ctrl: (encoded & 0x10) != 0,
-            right_shift: (encoded & 0x20) != 0,
-            right_alt: (encoded & 0x40) != 0,
+type ModifiersAsVec = Vec<Modifier>;
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// A container to hold multiple modifiers.
+#[serde(from = "ModifiersAsVec", into = "ModifiersAsVec")]
+pub struct Modifiers([Modifier; 8]); // this array is just shennenigans to make it copyable.
+
+impl Modifiers {
+    pub fn control() -> Modifiers
+    {
+        Self::with(Modifier::LeftControl)
+    }
+
+    pub fn alt() -> Modifiers
+    {
+        Self::with(Modifier::LeftAlt)
+    }
+
+    pub fn shift() -> Modifiers
+    {
+        Self::with(Modifier::LeftShift)
+    }
+
+    pub fn with(m: Modifier) -> Modifiers
+    {
+        let mut r: Modifiers = Default::default();
+        r.push(m);
+        r
+    }
+    
+
+    /// Check if any modifier is set.
+    pub fn is_any(&self) -> bool {
+        u8::from(*self) != 0
+    }
+
+    /// Check if only the specified modifier is set (once).
+    pub fn is_only(&self, m: Modifier) -> bool
+    {
+        let mut found: bool = false;
+        for v in self.0.iter()
+        {
+            if *v == Modifier::None
+            {
+                continue
+            }
+
+            if *v == m
+            {
+                found = true;
+            }
+            else
+            {
+                return false;
+            }
+    
+        }
+        found
+    }
+
+    /// Add a modifier.
+    pub fn push(&mut self, m: Modifier)
+    {
+        for (i, v) in self.0.iter().enumerate()
+        {
+            if *v == Modifier::None
+            {
+                self.0[i] = m;
+                return
+            }
+            if *v == m
+            {
+                return
+            }
         }
     }
 }
-impl From<Modifiers> for u8 {
-    fn from(item: Modifiers) -> Self {
-        ((item.left_ctrl as u8) << 0)
-            | ((item.left_shift as u8) << 1)
-            | ((item.left_alt as u8) << 2)
-            | ((item.right_ctrl as u8) << (0 + 4))
-            | ((item.right_shift as u8) << (1 + 4))
-            | ((item.right_alt as u8) << (2 + 4))
-    }
-}
+
 
 impl std::fmt::Debug for Modifiers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let enc: u8 = (*self).into();
-        write!(f, "[")?;
-        for (side_i, side) in ["left", "right"].iter().enumerate() {
-            for (p, which) in ["ctrl", "shift", "alt"].iter().enumerate() {
-                if (enc & ((1 << p) << (4 * side_i))) != 0 {
-                    write!(f, "{}_{}", side, which)?
-                }
-            }
-        }
-        write!(f, "]")?;
+        write!(f, "{:?}", ModifiersAsVec::from(*self))?;
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+impl From<Modifiers> for ModifiersAsVec
+{
+    fn from(v: Modifiers) -> ModifiersAsVec
+    {
+        let mut r: ModifiersAsVec = Default::default();
+        for e in v.0.iter() {
+            if *e != Modifier::None
+            {
+                r.push(*e)
+            }
+        }
+        r
+    }
+}
+impl From<ModifiersAsVec> for Modifiers
+{
+    fn from(v: ModifiersAsVec) -> Modifiers
+    {
+        let mut r: Modifiers = Default::default();
+        for e in v.iter() {
+            if *e != Modifier::None
+            {
+                r.push(*e)
+            }
+        }
+        r
+    }
+}
+
+impl From<u8> for Modifiers {
+    fn from(encoded: u8) -> Self {
+        let mut res: Modifiers = Default::default();
+        if (encoded & (Modifier::LeftControl as u8)) != 0
+        {
+            res.push(Modifier::LeftControl);
+        }
+        if (encoded & (Modifier::LeftShift as u8)) != 0
+        {
+            res.push(Modifier::LeftShift);
+        }
+        if (encoded & (Modifier::LeftAlt as u8)) != 0
+        {
+            res.push(Modifier::LeftAlt);
+        }
+        if (encoded & (Modifier::RightControl as u8)) != 0
+        {
+            res.push(Modifier::RightControl);
+        }
+        if (encoded & (Modifier::RightShift as u8)) != 0
+        {
+            res.push(Modifier::RightShift);
+        }
+        if (encoded & (Modifier::RightAlt as u8)) != 0
+        {
+            res.push(Modifier::RightAlt);
+        }
+        return res;
+    }
+}
+impl From<Modifiers> for u8 {
+    fn from(item: Modifiers) -> Self {
+        let mut res: u8 = 0;
+        for v in &item.0
+        {
+            res |= *v as u8;
+        }
+        res
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     #[serde(serialize_with = "at101_serialize", deserialize_with = "at101_deserialize")]
@@ -123,7 +245,7 @@ pub type MacroId = u16;
 
 /// Represent particular mapping for a physical key on the keyboard to produce any of the outputs
 /// from this enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum KeyMapping {
     /// Key is inactive
     Disabled,
@@ -627,30 +749,30 @@ mod tests {
         let x = test_keymap_roundtrip(&right_shift_to_right_shift);
         assert_eq!(x.key.scan_code, 57); // at101 for right shift.
         let v = expect_key(x);
-        assert_eq!(v.modifiers.any(), false);
+        assert!(!v.modifiers.is_any());
         assert_eq!(v.id, 0xe5);
 
         let right_ctrl_alphanumeric_left_shift =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:02:04:00", 0x42);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_left_shift));
-        assert_eq!(v.modifiers.left_shift, true);
+        assert!(v.modifiers.is_only(Modifier::LeftShift));
 
         let right_ctrl_alphanumeric_left_alt =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:04:04", 0x44);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_left_alt));
-        assert_eq!(v.modifiers.left_alt, true);
+        assert!(v.modifiers.is_only(Modifier::LeftAlt));
 
         let right_ctrl_alphanumeric_right_control =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:10:04:00", 0x50);
         let v = expect_key(test_keymap_roundtrip(
             &right_ctrl_alphanumeric_right_control,
         ));
-        assert_eq!(v.modifiers.right_ctrl, true);
+        assert!(v.modifiers.is_only(Modifier::RightControl));
 
         let right_ctrl_alphanumeric_right_shift =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:02:02:20:04", 0x60);
         let v = expect_key(test_keymap_roundtrip(&right_ctrl_alphanumeric_right_shift));
-        assert_eq!(v.modifiers.right_shift, true);
+        assert!(v.modifiers.is_only(Modifier::RightShift));
 
         // mouse button;
         let right_ctrl_right_click =
@@ -745,7 +867,7 @@ mod tests {
         let res = test_keymap_roundtrip(&right_ctrl_alphanumeric_mod_right_alt_and_20_per_s);
         if let KeyMapping::TurboKey(button, repeat_interval) = res.mapping {
             assert_eq!(button.id, 0x04);
-            assert_eq!(button.modifiers.right_alt, true);
+            assert!(button.modifiers.is_only(Modifier::RightAlt));
             assert_eq!(repeat_interval, (1000.0f64 / 20.0).floor() as u16);
         } else {
             assert_eq!(true, false);
@@ -854,12 +976,16 @@ mod tests {
 
         print_serialize(KeyMapping::Disabled);
         print_serialize(KeyMapping::Mouse(MouseButton::Left));
-        print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, ..Default::default()}));
+
+        print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, modifiers: Modifiers::shift()}));
+        print_serialize(KeyMapping::Key(KeyboardKey{id: 0x04, modifiers: Modifiers::control()}));
 
         print_serialize(Key{scan_code: 0x04, hypershift: false});
         print_serialize(Key{scan_code: 0x31, hypershift: false});
 
         print_deserialize::<Key>("{\"scan_code\":\"KEY_V\",\"hypershift\":false}");
+        print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["LeftControl"]}"#);
+        print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["LeftControl", "Alt"]}"#);
     }
 
 }
