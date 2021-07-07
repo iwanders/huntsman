@@ -13,6 +13,7 @@ crate-type = ["lib"]
 [dependencies]
 struct_helper = { path = "../struct_helper" }
 clap = { version = "2.33.3", optional = true }
+usb_hut = { path = "../usb_hut" }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
