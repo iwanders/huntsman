@@ -110,12 +110,16 @@ impl Default for SetGameMode {
 
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
-/// Payload to set the key override.
+/// Payload to set the key override, only really used for the dissector.
 pub struct SetKeyOverride {
-    pub first: u8,
-    pub key_code: u8,
+    pub profile: u8,
+    pub scan_code: u8,
     pub hypershift: u8,
     pub mapping_type: u8,
+    pub mapping_len: u8,
+    pub mapping_first: u8,
+    pub mapping_second: u8,
+    pub mapping_third: u8,
 }
 
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]

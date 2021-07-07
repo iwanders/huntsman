@@ -1,7 +1,8 @@
 use struct_helper::*;
+use serde::{Deserialize, Serialize};
 
 /// Struct to denote a physical key on the keyboard.
-#[derive(Debug, Clone, Copy, Default, FromBytes, ToBytes, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, FromBytes, ToBytes, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Key {
     /// The key's at101 code, or whatever the keyboard uses to denote it.
     pub scan_code: u8,
@@ -9,7 +10,7 @@ pub struct Key {
     pub hypershift: bool,
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Modifiers {
     left_ctrl: bool,
     left_shift: bool,
@@ -67,14 +68,14 @@ impl std::fmt::Debug for Modifiers {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     pub id: u8,
     pub modifiers: Modifiers,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 /// Represents a particular mouse button for mouse clicks.
 pub enum MouseButton {
     Left = 1,
@@ -100,7 +101,7 @@ pub type MacroId = u16;
 
 /// Represent particular mapping for a physical key on the keyboard to produce any of the outputs
 /// from this enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum KeyMapping {
     /// Key is inactive
     Disabled,
@@ -447,13 +448,16 @@ impl Default for KeyMapping {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-
-struct KeyMap {
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct KeyMap {
+    /// The profile to apply this mapping to.
     pub profile: u8,
+    /// The physical key on the keyboard to map.
     pub key: Key,
+    /// The effect that pressing this key will have.
     pub mapping: KeyMapping,
 }
+
 impl FromBytes for KeyMap {
     fn from_bytes(&mut self, src: &[u8], endianness: Endianness) -> Result<usize, String> {
         let mut offset: usize = 0;
@@ -470,6 +474,10 @@ impl ToBytes for KeyMap {
         buff.extend(self.profile.to_bytes(endianness)?);
         buff.extend(self.key.to_bytes(endianness)?);
         buff.extend(self.mapping.to_bytes(endianness)?);
+        while buff.len() < 0x0a
+        {
+            buff.push(0)  // zero pad to the appropriate size.
+        }
         Ok(buff)
     }
 }
@@ -651,7 +659,6 @@ mod tests {
         }
 
         // special
-        // 2021_06_05_23_32_set_right_ctrl_alpha_numeric_include_mod_right_alt_and_20_turbo
         let f9_otf_macro =
             parse_wireshark_truncated("02:1f:00:00:00:06:02:8d:04:78:01:11:01:04:00", 0xe0);
         let res = test_keymap_roundtrip(&f9_otf_macro);

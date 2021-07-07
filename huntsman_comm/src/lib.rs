@@ -473,25 +473,28 @@ impl Command for SetGameMode {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
-/// Override a key with a new functionality. Still very much WIP, see tests.
-pub struct SetKeyOverride {}
-impl SetKeyOverride {
+
+
+
+/// Override a key with a new functionality.
+pub type SetKeyMap = mappings::KeyMap;
+impl SetKeyMap {
     pub const CMD: Cmd = Cmd {
         major: 0x02,
         minor: 0x0D,
     };
 }
-
-impl Command for SetKeyOverride {
+impl Command for SetKeyMap {
     fn register(&self) -> Cmd {
-        return SetKeyOverride::CMD;
+        return SetKeyMap::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let wire_cmd = wire::SetKeyOverride {
-            ..Default::default()
-        };
-        wire_cmd.to_le_bytes().expect("Should succeed")
+        let serialized = self.to_be_bytes().expect("Success");
+        serialized
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let cmd = mappings::KeyMap::from_be_bytes(&data).expect("Should pass");
+        Ok(Box::new(cmd))
     }
 }
 
@@ -612,9 +615,9 @@ fn make_read_command(cmd: Cmd) -> Cmd {
 pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::Inspectable>>)> {
     vec![
         (SetGameMode::CMD, Box::new(wire::SetGameMode::inspect)),
-        (SetKeyOverride::CMD, Box::new(wire::SetKeyOverride::inspect)),
+        (SetKeyMap::CMD, Box::new(wire::SetKeyOverride::inspect)),
         (
-            make_read_command(SetKeyOverride::CMD),
+            make_read_command(SetKeyMap::CMD),
             Box::new(wire::SetKeyOverride::inspect),
         ),
         (SetLedEffect::CMD, Box::new(wire::SetLedEffect::inspect)),
@@ -750,4 +753,21 @@ mod tests {
 
         // 0x06, 0x08; add macro (by id? Or memory address??)
     }
+
+    #[test]
+    fn test_set_key_full() {
+        let right_ctrl_right_click = parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let request_cmd: SetKeyMap = SetKeyMap {
+            profile: 0x01,
+            key: mappings::Key{scan_code:0x40, hypershift: false},
+            mapping: mappings::KeyMapping::Mouse(mappings::MouseButton::Right),
+        };
+        assert_eq!(request_cmd.serialize(), right_ctrl_right_click);
+
+        let right_ctrl_right_click_resp = parse_wireshark_truncated("02:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
+        let response = Command::response(&request_cmd, &right_ctrl_right_click_resp).expect("success");
+        let response = response.downcast_ref::<SetKeyMap>().unwrap();
+        assert_eq!(*response, request_cmd);
+    }
+    
 }
