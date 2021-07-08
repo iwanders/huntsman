@@ -3,9 +3,13 @@
 This [Rust][rust] workspace allows interacting with the [Razer Huntsman Elite][kbd] keyboard. 
 
 Not all features of the keyboard are supported, neither do I intend to make this project feature
-complete, it's mostly my means of learning a bit of Rust. Currently supported are the majority of
-the LED effects, setting overall brightness and setting a custom frame to the LEDs. For the effects
-some random color functionality is available that isn't available through the official ui.
+complete, it's mostly my means of learning a bit of Rust. Currently supported functionality is:
+
+- Retrieving the serial number.
+- The majority of the LED effects.
+- Setting overall brightness.
+- Setting a custom frame to the LEDs.
+- Remapping keys.
 
 ## Architecture
 
@@ -16,21 +20,24 @@ provide a derive macro that implements `StructHelper` for a particular struct. T
 over the fields in the struct. It also implements a safe way to serialize a particular struct to
 bytes.
 
-The [`huntsman_comm`](/huntsman_comm) holds the `Command` trait, which is something we can send to
-the keyboard. This crate also contains a module called `wire`, that holds struct definitions for
-each command as it is sent over the USB bus. These structs all derive from `struct_helper`.
-Main purpose is to provide convenient methods to create the instructions we can send to the keyboard
-, lots of fields are unknown or not 100% certain as we have to determine the communication protocol
-from reverse engineering USB packet captures.
-
 The [`huntsman`](/huntsman) crate provides a convenient `Huntsman` object to interact with the
 keyboard and provides methods to manipulate it. It also provides a command line utility to interact
-with the keyboard.
+with the keyboard `cargo run --bin huntsman -- --help`. 
+
+The [`huntsman::commands`](/huntsman/commands.rs) module holds the command messages and data
+structuresthat can be serialized to the wire format. The
+[`commands::mappings`](/huntsman/commands/mappings.rs) file holds data structures necessary to remap
+key functionality from their default to the other supported functionality, such as other keys,
+mouse clicks or repeating a keystroke on an interval.
+
 
 The [`huntsman_dissector`](/huntsman_dissector) uses the `StructHelper` derived structs from the
 [`huntsman_comm`](/huntsman_comm) crate, together with the [`wireshark_dissector_rs`](/wireshark_dissector_rs)
 crate to make a Wireshark dissector that dissects using the structs and fields that
 are defined in the `huntsman_comm` crate. This helps significanly with reverse engineering.
+
+The [`torch`](/torch) crate contains a binary that can update the custom frame display on the
+keyboard using various effects. These effect operations can be composed into a tree.
 
 ## Usage
 
