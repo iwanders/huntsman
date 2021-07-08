@@ -18,6 +18,8 @@ macro_rules! add_colors {
     };
 }
 
+type Error = Box<dyn std::error::Error>;
+
 fn get_colors(matches: &clap::ArgMatches) -> Vec<commands::RGB> {
     let mut res: Vec<commands::RGB> = Vec::new();
     if let Some(z) = matches.values_of("colors") {
@@ -63,16 +65,16 @@ macro_rules! add_duration {
     };
 }
 
-fn get_duration(matches: &clap::ArgMatches) -> Result<commands::Duration, String> {
+fn get_duration(matches: &clap::ArgMatches) -> Result<commands::Duration, Error> {
     if let Some(v_in) = matches.value_of("duration") {
         return match v_in {
             "short" => Ok(commands::Duration::Short),
             "medium" => Ok(commands::Duration::Medium),
             "long" => Ok(commands::Duration::Long),
-            _ => Err(format!("No match for {}", v_in)),
+            _ => Err(Box::new(clap::Error::with_description("Invalid duration", clap::ErrorKind::InvalidValue))),
         };
     }
-    Err("Couldn't find argument".to_string())
+    Err(Box::new(clap::Error::with_description("Couldn't find duration.", clap::ErrorKind::EmptyValue)))
 }
 
 fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> Result<T, String> {
@@ -85,7 +87,7 @@ fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> R
     Err(format!("Couldn't parse argument {}.", name))
 }
 
-pub fn main() -> Result<(), String> {
+pub fn main() -> Result<(), Error> {
     let mut app = App::new("Huntsman toolie")
         .about("Allows configuring the keyboard in various ways.")
         .arg(
@@ -233,7 +235,7 @@ pub fn main() -> Result<(), String> {
         _ => {
             &mut app.print_help();
             println!();
-            return Err("No subcommand given.".to_string());
+            return Err(Box::new(clap::Error::with_description("No subcommand given", clap::ErrorKind::MissingSubcommand)));
         }
     }
 

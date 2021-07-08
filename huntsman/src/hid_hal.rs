@@ -1,13 +1,41 @@
 ///! Encapsulate the hardware interaction in the HidApiHal object.
 extern crate hidapi;
 
+
+#[derive(Debug)]
+struct HalError {
+    details: String,
+}
+
+impl HalError {
+    fn new(msg: &str) -> HalError {
+        HalError {
+            details: msg.to_string(),
+        }
+    }
+    fn boxed(msg: &str) -> Box<HalError> {
+        Box::new(HalError::new(msg))
+    }
+}
+impl std::fmt::Display for HalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "HalError {}", self.details)
+    }
+}
+impl std::error::Error for HalError {
+    fn description(&self) -> &str {
+        &self.details
+    }
+}
+
+
 pub trait HidHal {
     /// Connect to a particular usb device and endpoint id.
-    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), String>;
+    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), Box<dyn std::error::Error>>;
     /// Send bytes as a control message.
-    fn control(&mut self, payload: &[u8]) -> Result<(), String>;
+    fn control(&mut self, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>>;
     /// Retrieve the report after sending a control message. This is an echo / ack?
-    fn get_report(&mut self) -> Result<Vec<u8>, String>;
+    fn get_report(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>>;
 }
 
 /// Struct to provide hardware / crate abstraction layer.
@@ -27,9 +55,9 @@ fn prepend_zero(v: &[u8]) -> Vec<u8> {
 }
 impl HidApiHal {
     /// Attempt to instantiate the hid api.
-    pub fn new() -> Result<Box<dyn HidHal>, String> {
+    pub fn new() -> Result<Box<dyn HidHal>, Box<dyn std::error::Error>> {
         match hidapi::HidApi::new() {
-            Err(e) => Err(e.to_string()),
+            Err(e) => Err(Box::new(e)),
             Ok(api) => Ok(Box::new(HidApiHal {
                 api: api,
                 connected_device: None,
@@ -39,7 +67,7 @@ impl HidApiHal {
 }
 
 impl HidHal for HidApiHal {
-    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), String> {
+    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), Box<dyn std::error::Error>> {
         for device in self.api.device_list() {
             if device.vendor_id() == vendor_id
                 && device.product_id() == product_id
@@ -51,31 +79,31 @@ impl HidHal for HidApiHal {
                         return Ok(());
                     }
                     Err(z) => {
-                        return Err(z.to_string());
+                        return Err(Box::new(z));
                     }
                 }
             }
         }
-        return Err("No device found.".to_string());
+        return Err(HalError::boxed("No device found."));
     }
 
-    fn control(&mut self, payload: &[u8]) -> Result<(), String> {
+    fn control(&mut self, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.connected_device {
-            None => Err("No connected device.".to_string()),
+            None => Err(HalError::boxed("No connected device.")),
             Some(d) => match d.send_feature_report(prepend_zero(payload).as_slice()) {
-                Err(e) => Err(e.to_string()),
+                Err(e) => Err(Box::new(e)),
                 Ok(()) => Ok(()),
             },
         }
     }
 
-    fn get_report(&mut self) -> Result<Vec<u8>, String> {
+    fn get_report(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let mut buff: [u8; 91] = [0; 91]; // This also specifies the length.
         buff[0] = 0;
         match &mut self.connected_device {
-            None => Err("No connected device.".to_string()),
+            None => Err(HalError::boxed("No connected device.")),
             Some(d) => match d.get_feature_report(&mut buff) {
-                Err(e) => Err(e.to_string()),
+                Err(e) => Err(HalError::boxed(&format!("{:?}", e))),
                 Ok(len) => {
                     let mut z: Vec<u8> = Vec::new();
                     for i in 1..len {
@@ -95,7 +123,7 @@ pub struct DryHidHal {
 
 impl DryHidHal {
     /// Attempt to instantiate the hid api.
-    pub fn new() -> Result<Box<dyn HidHal>, String> {
+    pub fn new() -> Result<Box<dyn HidHal>, Box<dyn std::error::Error>> {
         Ok(Box::new(DryHidHal {
             buffer: [0; 90],
             len: 0,
@@ -109,12 +137,12 @@ impl HidHal for DryHidHal {
         _vendor_id: u16,
         _product_id: u16,
         _endpoint_id: u32,
-    ) -> Result<(), String> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
     /// Send bytes as a control message.
-    fn control(&mut self, payload: &[u8]) -> Result<(), String> {
+    fn control(&mut self, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         self.buffer.fill(0);
         for (i, x) in payload.iter().enumerate() {
             self.buffer[i] = *x;
@@ -124,7 +152,7 @@ impl HidHal for DryHidHal {
     }
 
     /// Retrieve the report after sending a control message. This is an echo / ack?
-    fn get_report(&mut self) -> Result<Vec<u8>, String> {
+    fn get_report(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         self.buffer[0] = 0x02;
         return Ok(self.buffer.to_vec());
     }

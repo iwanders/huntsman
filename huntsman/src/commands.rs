@@ -3,7 +3,7 @@
 use struct_helper::{Inspectable, ToBytes};
 /// The wire module holds the structs as they actually go over the USB bus.
 pub mod wire;
-pub use struct_helper::FromBytes;
+use struct_helper::FromBytes;
 pub use wire::Cmd;
 pub use wire::RGB;
 

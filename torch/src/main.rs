@@ -10,7 +10,7 @@ fn get_time() -> f64 {
 }
 
 #[allow(dead_code)]
-fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), String> {
+fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), Box<dyn std::error::Error>> {
     let s = get_time();
     let mut rgb_buff: Vec<RGB> = vec![Default::default(); c.width()];
     for y in 0..c.height() {
