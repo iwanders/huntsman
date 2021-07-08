@@ -15,9 +15,9 @@ fn set_canvas(h: &mut huntsman::Huntsman, c: &Canvas) -> Result<(), Box<dyn std:
     let mut rgb_buff: Vec<RGB> = vec![Default::default(); c.width()];
     for y in 0..c.height() {
         for x in 0..usize::min(c.width(), 23) {
-            rgb_buff[x].r = c.pixel(x, y).r_u8();
-            rgb_buff[x].g = c.pixel(x, y).g_u8();
-            rgb_buff[x].b = c.pixel(x, y).b_u8();
+            rgb_buff[x].r = c.pixel(x, c.height() - y-1).r_u8();
+            rgb_buff[x].g = c.pixel(x, c.height() - y-1).g_u8();
+            rgb_buff[x].b = c.pixel(x, c.height() - y-1).b_u8();
         }
         h.set_color(y as u8, &rgb_buff[..])?
     }
@@ -49,7 +49,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut h = huntsman::Huntsman::new()?;
     h.effect_custom()?;
     loop {
-    // for _i in 0..300 {
+    // for _i in 0..100 {
         mystate.start_update();
         let s = get_time();
         let res = eff[0].borrow_mut().update(&mut mystate);

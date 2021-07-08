@@ -246,6 +246,18 @@ impl MovingParticles
                 sy = choose_int(0, ch, state);
                 sx = cw as f64 + kw as f64;
             }
+            else if vy >= 0.0 && vx == 0.0
+            {
+                // start on bottom boundary.
+                sx = choose_int(0, cw, state);
+                sy = -(kh as f64);
+            }
+            else if vy < 0.0 && vx == 0.0
+            {
+                // start on top boundary
+                sx = choose_int(0, cw, state);
+                sy = ch as f64 + kh as f64;
+            }
             self.particles.push(ParticleState{vx, vy, x: sx, y: sy})
         }
 
@@ -258,18 +270,25 @@ impl MovingParticles
         // Destroy particles that are beyond the canvas.
         self.particles = self.particles.drain(..)
             .filter(|p| {
-                if p.vx >= 0.0
+                if p.vx >= 0.0 && p.vy == 0.0
                 {
                     return p.x < (cw + kw) as f64;
                 }
-                if p.vx < 0.0
+                if p.vx < 0.0 && p.vy == 0.0
                 {
                     return p.x > -(kw as f64);
+                }
+                if p.vy < 0.0 && p.vx == 0.0
+                {
+                    return p.y > -(kh as f64);
+                }
+                if p.vy >= 0.0 && p.vx == 0.0
+                {
+                    return p.y < (ch + kh) as f64;
                 }
                 return false;
             })
             .collect();
-        println!("Particle count {}", self.particles.len());
     }
 
     fn render(&self, state: &mut dyn State) -> Canvas
