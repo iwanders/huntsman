@@ -276,11 +276,16 @@ pub fn main() -> Result<(), String> {
     }
 
     if let Some(matches) = matches.subcommand_matches("mapping") {
-        let value = get_value::<String>(matches, "file")?;
+        let file = get_value::<String>(matches, "file")?;
         let profile = get_value::<u8>(matches, "profile")?;
-        println!("println!  {}, {}", value, profile);
-
-        // h.set_brightness(profile, value)?;
+        println!("println!  {}, {}", file, profile);
+        let mappings = huntsman::configuration::load_mappings(&file).map_err(|x| {format!("{:?}", x) })?;
+        println!("{:?}", mappings);
+        for m in mappings.iter()
+        {
+            // build the actual configuration.
+            h.set_mapping(profile, m.key, m.mapping)?;
+        }
     }
 
     if let Some(matches) = matches.subcommand_matches("game_mode") {

@@ -16,6 +16,7 @@ pub struct Key {
     )]
     pub id: u8,
     /// Whether or not this is the hypershift binding of that key.
+    #[serde(default)]
     pub hypershift: bool,
 }
 
@@ -32,14 +33,15 @@ fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: &str = Deserialize::deserialize(deserializer)?;
+    let s: String = Deserialize::deserialize(deserializer)?;
     use serde::de::Error;
-    let r = key_name_to_at101(s).map_err(Error::custom)?;
+    let r = key_name_to_at101(&s).map_err(Error::custom)?;
     Ok(r)
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Deserialize, Serialize)]
 /// Enum to represent the possible modifiers.
+#[serde(rename_all = "snake_case")]
 pub enum Modifier {
     None = 0x00,
     #[serde(alias = "ctrl", alias = "control", alias = "Control")]
@@ -186,7 +188,7 @@ impl From<Modifiers> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     #[serde(
@@ -224,7 +226,10 @@ pub type MacroId = u16;
 
 /// Represent particular mapping for a physical key on the keyboard to produce any of the outputs
 /// from this enum.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+// #[serde(tag = "type")]
+// #[serde(tag = "t", content = "c")]
 pub enum KeyMapping {
     /// Key is inactive
     Disabled,
@@ -958,6 +963,8 @@ mod tests {
             id: 0x04,
             modifiers: Modifiers::control(),
         }));
+
+        print_serialize(KeyMapping::Macro(0x1337, 1));
 
         print_serialize(Key {
             id: 0x04,

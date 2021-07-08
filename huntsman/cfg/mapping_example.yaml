@@ -1,0 +1,9 @@
+mappings:
+  - #profile: ~
+    id: right_control
+    #hypershift: false
+    mapping:
+      key:
+        id: KEY_5
+        #modifiers:
+        #  - left_shift

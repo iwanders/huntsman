@@ -4,7 +4,7 @@
 mod hid_hal;
 pub use huntsman_comm::RGB;
 
-mod configuration;
+pub mod configuration;
 
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
@@ -169,6 +169,17 @@ impl Huntsman {
             .downcast_ref::<huntsman_comm::GetSerialNumber>()
             .unwrap();
         println!("{}", response.serial.as_ref().unwrap());
+        Ok(())
+    }
+
+    /// Set a key mapping
+    pub fn set_mapping(&mut self, profile: u8, key: huntsman_comm::mappings::Key, mapping: huntsman_comm::mappings::KeyMapping) -> Result<(), String> {
+        let cmd: huntsman_comm::SetKeyMap = huntsman_comm::SetKeyMap{profile, key, mapping};
+        let result = self.set_command(&cmd)?;
+        let response = huntsman_comm::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<huntsman_comm::SetKeyMap>()
+            .unwrap();
         Ok(())
     }
 
