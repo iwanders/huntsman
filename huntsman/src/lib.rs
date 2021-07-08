@@ -2,7 +2,10 @@
 //! utility that makes use of this object.
 
 mod hid_hal;
-pub use huntsman_comm::RGB;
+
+pub mod commands;
+
+pub use commands::RGB;
 
 pub mod configuration;
 
@@ -56,7 +59,7 @@ impl Huntsman {
     /// Function to send a command to the control endpoint.
     fn set_command(
         &mut self,
-        command: &dyn huntsman_comm::Command,
+        command: &dyn commands::Command,
     ) -> Result<Option<Vec<u8>>, String> {
         let v = command.serialize();
         if self.print_comm {
@@ -99,7 +102,7 @@ impl Huntsman {
     /// Function to send a Boxed command to the control endpoint.
     fn set_command_box(
         &mut self,
-        boxed_command: &Box<dyn huntsman_comm::Command>,
+        boxed_command: &Box<dyn commands::Command>,
     ) -> Result<Option<Vec<u8>>, String> {
         self.set_command(boxed_command.as_ref())
     }
@@ -113,7 +116,7 @@ impl Huntsman {
         index: u8,
         start: u8,
     ) -> Result<(), String> {
-        let mut leds: huntsman_comm::SetLedState = Default::default();
+        let mut leds: commands::SetLedState = Default::default();
         leds.count = start + count;
         leds.id = index;
         for l in start as usize..leds.count as usize {
@@ -125,7 +128,7 @@ impl Huntsman {
     }
 
     pub fn set_color(&mut self, row: u8, color: &[RGB]) -> Result<(), String> {
-        let mut leds: huntsman_comm::SetLedState = Default::default();
+        let mut leds: commands::SetLedState = Default::default();
         leds.count = color.len() as u8;
         leds.id = row;
         for l in 0..leds.count as usize {
@@ -138,7 +141,7 @@ impl Huntsman {
 
     /// Set the brightness of the entire keyboard, specify as [0, 1.0].
     pub fn set_brightness(&mut self, profile: u8, value: f32) -> Result<(), String> {
-        let mut cmd: huntsman_comm::SetLedBrightness = Default::default();
+        let mut cmd: commands::SetLedBrightness = Default::default();
         cmd.profile = profile;
         cmd.value = value;
         return self.set_command(&cmd).and_then(|_v| Ok(()));
@@ -146,7 +149,7 @@ impl Huntsman {
 
     /// Toggle game mode on or off.
     pub fn set_game_mode(&mut self, value: bool) -> Result<(), String> {
-        let mut cmd: huntsman_comm::SetGameMode = Default::default();
+        let mut cmd: commands::SetGameMode = Default::default();
         cmd.value = value;
         let r = self.set_command(&cmd).and_then(|_v| Ok(()));
         return r;
@@ -156,29 +159,29 @@ impl Huntsman {
     pub fn dev_run(&mut self) -> Result<(), String> {
         self.set_print_comm(true);
         self.set_print_retrieve(true);
-        let cmd = huntsman_comm::dev_run_cmd();
+        let cmd = commands::dev_run_cmd();
         return self.set_command_box(&cmd).and_then(|_v| Ok(()));
     }
 
     /// Retrieve the serial number
     pub fn get_serial_number(&mut self) -> Result<(), String> {
-        let cmd: huntsman_comm::GetSerialNumber = Default::default();
+        let cmd: commands::GetSerialNumber = Default::default();
         let result = self.set_command(&cmd)?;
-        let response = huntsman_comm::Command::response(&cmd, &result.unwrap())?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
         let response = response
-            .downcast_ref::<huntsman_comm::GetSerialNumber>()
+            .downcast_ref::<commands::GetSerialNumber>()
             .unwrap();
         println!("{}", response.serial.as_ref().unwrap());
         Ok(())
     }
 
     /// Set a key mapping
-    pub fn set_mapping(&mut self, profile: u8, key: huntsman_comm::mappings::Key, mapping: huntsman_comm::mappings::KeyMapping) -> Result<(), String> {
-        let cmd: huntsman_comm::SetKeyMap = huntsman_comm::SetKeyMap{profile, key, mapping};
+    pub fn set_mapping(&mut self, profile: u8, key: commands::mappings::Key, mapping: commands::mappings::KeyMapping) -> Result<(), String> {
+        let cmd: commands::SetKeyMap = commands::SetKeyMap{profile, key, mapping};
         let result = self.set_command(&cmd)?;
-        let response = huntsman_comm::Command::response(&cmd, &result.unwrap())?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
         let response = response
-            .downcast_ref::<huntsman_comm::SetKeyMap>()
+            .downcast_ref::<commands::SetKeyMap>()
             .unwrap();
         Ok(())
     }
@@ -195,8 +198,8 @@ impl Huntsman {
         }
         for i in 0..=255 {
             println!("Retrieving keymapping for key {} (0x{:0>2x})", i, i);
-            let cmd = huntsman_comm::ArbitraryCommand {
-                register: huntsman_comm::Cmd {
+            let cmd = commands::ArbitraryCommand {
+                register: commands::Cmd {
                     major: 0x02,
                     minor: 0x8D,
                 },
@@ -208,68 +211,68 @@ impl Huntsman {
         Ok(())
     }
 
-    /// Disables led effects, turning off each led. See also [`huntsman_comm::SetLedEffect::off()`]
+    /// Disables led effects, turning off each led. See also [`commands::SetLedEffect::off()`]
     pub fn effect_off(&mut self) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::off();
+        let cmd = commands::SetLedEffect::off();
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Sets a fixed color on all leds. See also [`huntsman_comm::SetLedEffect::fixed()`]
+    /// Sets a fixed color on all leds. See also [`commands::SetLedEffect::fixed()`]
     pub fn effect_fixed(&mut self, color: &RGB) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::fixed(&color);
+        let cmd = commands::SetLedEffect::fixed(&color);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Applies the breathing effect, fading colors in and out sequentially. See also [`huntsman_comm::SetLedEffect::breathing()`]
+    /// Applies the breathing effect, fading colors in and out sequentially. See also [`commands::SetLedEffect::breathing()`]
     pub fn effect_breathing(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::breathing(&colors);
+        let cmd = commands::SetLedEffect::breathing(&colors);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Spectrum cycle, entire keyboard cycles the hue. See also [`huntsman_comm::SetLedEffect::spectrum()`]
+    /// Spectrum cycle, entire keyboard cycles the hue. See also [`commands::SetLedEffect::spectrum()`]
     pub fn effect_spectrum(&mut self) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::spectrum();
+        let cmd = commands::SetLedEffect::spectrum();
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// A hue wave moved over the keyboard. See also [`huntsman_comm::SetLedEffect::wave()`]
+    /// A hue wave moved over the keyboard. See also [`commands::SetLedEffect::wave()`]
     pub fn effect_wave(&mut self, direction: bool, delay: u8) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::wave(direction, delay);
+        let cmd = commands::SetLedEffect::wave(direction, delay);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Lights up keys after they are pressed. See also [`huntsman_comm::SetLedEffect::reactive()`]
+    /// Lights up keys after they are pressed. See also [`commands::SetLedEffect::reactive()`]
     /// Only takes a single color.
     pub fn effect_reactive(
         &mut self,
-        duration: huntsman_comm::Duration,
+        duration: commands::Duration,
         colors: &Vec<RGB>,
     ) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::reactive(duration, colors);
+        let cmd = commands::SetLedEffect::reactive(duration, colors);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Waves propagate outwards from pressed keys. See also [`huntsman_comm::SetLedEffect::ripple()`]
+    /// Waves propagate outwards from pressed keys. See also [`commands::SetLedEffect::ripple()`]
     /// Only takes a single color
     pub fn effect_ripple(&mut self, colors: &Vec<RGB>) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::ripple(&colors);
+        let cmd = commands::SetLedEffect::ripple(&colors);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Keys light up randomly. See also [`huntsman_comm::SetLedEffect::starlight()`]
+    /// Keys light up randomly. See also [`commands::SetLedEffect::starlight()`]
     /// Only takes up to two colors.
     pub fn effect_starlight(
         &mut self,
-        duration: huntsman_comm::Duration,
+        duration: commands::Duration,
         colors: &Vec<RGB>,
     ) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::starlight(duration, colors);
+        let cmd = commands::SetLedEffect::starlight(duration, colors);
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 
-    /// Display the custom frame. See also [`huntsman_comm::SetLedEffect::custom()`]
+    /// Display the custom frame. See also [`commands::SetLedEffect::custom()`]
     pub fn effect_custom(&mut self) -> Result<(), String> {
-        let cmd = huntsman_comm::SetLedEffect::custom();
+        let cmd = commands::SetLedEffect::custom();
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
 }

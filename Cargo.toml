@@ -3,7 +3,6 @@
 members = [
     "wireshark_dissector_rs",
     "huntsman_dissector",
-    "huntsman_comm",
     "huntsman",
     "struct_helper",
     "usb_hut",

@@ -1,7 +1,6 @@
-extern crate huntsman_comm;
-//~ extern crate huntsman;
 
 use huntsman;
+use huntsman::commands;
 
 mod colors;
 use colors::str_to_color;
@@ -20,8 +19,8 @@ macro_rules! add_colors {
     };
 }
 
-fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB> {
-    let mut res: Vec<huntsman_comm::RGB> = Vec::new();
+fn get_colors(matches: &clap::ArgMatches) -> Vec<commands::RGB> {
+    let mut res: Vec<commands::RGB> = Vec::new();
     if let Some(z) = matches.values_of("colors") {
         // And now... we build whatever color parsing we need...
         for v in z {
@@ -36,7 +35,7 @@ fn get_colors(matches: &clap::ArgMatches) -> Vec<huntsman_comm::RGB> {
                     let r = (z.checked_shr(16).expect("Cant fail?") & 0xFF) as u8;
                     let g = (z.checked_shr(8).expect("Cant fail?") & 0xFF) as u8;
                     let b = (z & 0xFF) as u8;
-                    res.push(huntsman_comm::RGB { r, g, b });
+                    res.push(commands::RGB { r, g, b });
                     continue;
                 } else {
                     println!("Couldn't parse hex {} to u32", v);
@@ -65,12 +64,12 @@ macro_rules! add_duration {
     };
 }
 
-fn get_duration(matches: &clap::ArgMatches) -> Result<huntsman_comm::Duration, String> {
+fn get_duration(matches: &clap::ArgMatches) -> Result<commands::Duration, String> {
     if let Some(v_in) = matches.value_of("duration") {
         return match v_in {
-            "short" => Ok(huntsman_comm::Duration::Short),
-            "medium" => Ok(huntsman_comm::Duration::Medium),
-            "long" => Ok(huntsman_comm::Duration::Long),
+            "short" => Ok(commands::Duration::Short),
+            "medium" => Ok(commands::Duration::Medium),
+            "long" => Ok(commands::Duration::Long),
             _ => Err(format!("No match for {}", v_in)),
         };
     }

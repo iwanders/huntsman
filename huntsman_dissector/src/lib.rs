@@ -15,8 +15,8 @@ type FieldType = dissector::FieldType;
 type FieldDisplay = dissector::FieldDisplay;
 type Encoding = epan::proto::Encoding;
 
-extern crate huntsman_comm;
-use huntsman_comm::wire;
+extern crate huntsman;
+use huntsman::commands::wire;
 
 extern crate struct_helper;
 use struct_helper::{FromBytes, Inspectable};
@@ -199,7 +199,7 @@ impl HuntsmanDissector {
             .expect("Payload should exist")
             .start();
 
-        let cmd_id = huntsman_comm::Cmd {
+        let cmd_id = huntsman::commands::Cmd {
             major: command.cmd.major,
             minor: command.cmd.minor,
         };
@@ -207,7 +207,7 @@ impl HuntsmanDissector {
 
         // Iterate over all known commands from the comms side, and dissect their wire definitions
         // if available.
-        for (cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+        for (cmd, field_fun) in huntsman::commands::get_command_fields().iter() {
             if cmd_id == *cmd {
                 fields = Some(field_fun());
                 break;

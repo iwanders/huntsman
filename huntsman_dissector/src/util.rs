@@ -3,8 +3,8 @@
 
 use wireshark_dissector_rs::dissector;
 
-extern crate huntsman_comm;
-use huntsman_comm::wire;
+extern crate huntsman;
+use huntsman::commands::wire;
 extern crate struct_helper;
 use struct_helper::Inspectable;
 
@@ -319,7 +319,7 @@ pub fn make_all_fields() -> (Vec<DissectionField>, Vec<String>) {
         .expect("Payload should exist")
         .start();
 
-    for (_cmd, field_fun) in huntsman_comm::get_command_fields().iter() {
+    for (_cmd, field_fun) in huntsman::commands::get_command_fields().iter() {
         let fields = field_fun();
         field_recurser(
             fields.as_ref(),

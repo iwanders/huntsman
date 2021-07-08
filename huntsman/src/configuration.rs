@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use huntsman_comm::mappings;
+use crate::commands::mappings;
 
-pub use huntsman_comm::mappings::{Key, KeyMapping, Modifiers, KeyboardKey};
+pub use crate::commands::mappings::{Key, KeyMapping, Modifiers, KeyboardKey};
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct KeyConfig {

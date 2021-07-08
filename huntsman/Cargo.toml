@@ -8,8 +8,8 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 hidapi = "1.2.6"
 clap = "2.33.3"
-huntsman_comm = { path = "../huntsman_comm" }
 usb_hut = { path = "../usb_hut" }
+struct_helper = { path = "../struct_helper" }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

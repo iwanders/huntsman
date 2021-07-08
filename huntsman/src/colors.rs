@@ -1,6 +1,6 @@
 //! Provides some color shorthands.
 
-pub use huntsman_comm::RGB;
+pub use crate::commands::RGB;
 
 /// Try to convert a named color into a color struct.
 pub fn str_to_color(v: &str) -> Option<RGB> {
