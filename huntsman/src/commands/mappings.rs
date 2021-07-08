@@ -1,7 +1,7 @@
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use struct_helper::*;
+use struct_helper::{FromBytes, ToBytes, Endianness, offset_of};
 
 use crate::hut_util::{
     at101_to_key_name, key_name_to_at101, key_name_to_keyboard_hid, keyboard_hid_to_key_name,

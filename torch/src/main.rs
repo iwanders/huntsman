@@ -39,6 +39,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         stored: Default::default(),
         base_canvas: Canvas::transparent(23, 9),
         last_update_cycle: 0.0,
+        rng: None,
+        update_count: 0,
     };
     mystate.start_update();
     mystate.finish_update();
@@ -47,13 +49,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let mut h = huntsman::Huntsman::new()?;
     // h.effect_custom()?;
     // loop {
-    for _i in 0..100 {
+    for _i in 0..300 {
         mystate.start_update();
         let s = get_time();
         let res = eff[0].borrow_mut().update(&mut mystate);
         // println!("update took: {:.5}", get_time() - s);
         mystate.finish_update();
-        println!("{}", res.to_string());
+        println!("{}\n", res.to_string());
         // set_canvas(&mut h, &res)?;
         std::thread::sleep(ten_millis);
     }

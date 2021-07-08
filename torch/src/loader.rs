@@ -1,7 +1,7 @@
 use crate::effects::{make_effect, EffectPtr};
 
 use crate::effects::{Add, Retrieve, Store, Sub};
-use crate::effects::{MovingKernel, Rectangle};
+use crate::effects::{MovingKernel, MovingParticles, Rectangle};
 use crate::effects::{SetAlpha, Static};
 
 use serde::{Deserialize, Serialize};
@@ -43,6 +43,7 @@ pub enum EffectConfig {
     Retrieve(Retrieve),
     Rectangle(Rectangle),
     MovingKernel(MovingKernel),
+    MovingParticles(MovingParticles),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -123,6 +124,9 @@ pub fn make_effects_simple(
                 new_effect = make_effect(v.clone());
             }
             EffectConfig::MovingKernel(v) => {
+                new_effect = make_effect(v.clone());
+            }
+            EffectConfig::MovingParticles(v) => {
                 new_effect = make_effect(v.clone());
             }
         }

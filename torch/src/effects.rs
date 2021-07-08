@@ -165,6 +165,149 @@ impl Effect for MovingKernel {
     }
 }
 
+
+#[derive(Debug, Clone, Copy, Default)]
+struct ParticleState {
+    vx: f64,
+    vy: f64,
+    x: f64,
+    y: f64,
+}
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+/// Randomly generates particles and moves them.
+pub struct MovingParticles {
+    pub vx: f64,
+    pub vy: f64,
+
+    pub vx_jitter: f64,
+    pub vy_jitter: f64,
+
+    pub spawn_chance: f64,
+
+    #[serde(skip)]
+    particles: Vec<ParticleState>,
+
+    #[serde(skip)]
+    children: Vec<EffectPtr>,
+
+    #[serde(skip)]
+    last_update: usize,
+}
+impl MovingParticles
+{
+    fn run_update(&mut self, state: &mut dyn State)
+    {
+        let kernel = self.children[0].borrow_mut().update(state);
+        let canvas: Canvas;
+        if self.children.len() == 2 {
+            canvas = self.children[1].borrow_mut().update(state);
+        } else {
+            canvas = state.get_canvas();
+        }
+
+        fn choose_int(min: usize, max: usize, state: &mut dyn State) -> f64
+        {
+            use rand::seq::SliceRandom;
+            let mut start_positions: Vec<f64> = vec!();
+            for i in min..max
+            {
+                start_positions.push(i as f64);
+            }
+            *(start_positions.choose(state.get_rng()).unwrap())
+        }
+
+        let kw = kernel.width();
+        let kh = kernel.height();
+        let cw = canvas.width();
+        let ch = canvas.height();
+
+        use rand::Rng;
+        use rand::distributions::Uniform;
+        let spread = Uniform::new(-1.0, 1.0);
+        if state.get_rng().gen::<f64>() <= self.spawn_chance
+        {
+            // Determine the velocity, determine the position.
+            let vx = self.vx + self.vx_jitter * state.get_rng().sample(spread);
+            let vy = self.vy + self.vy_jitter * state.get_rng().sample(spread);
+
+            let mut sx: f64 = 0.0;
+            let mut sy: f64 = 0.0;
+
+            if vx >= 0.0 && vy == 0.0
+            {
+                // start on left boundary
+                sy = choose_int(0, ch, state);
+                sx = -(kw as f64);
+            }
+            else if vx < 0.0 && vy == 0.0
+            {
+                // start on right boundary
+                sy = choose_int(0, ch, state);
+                sx = cw as f64 + kw as f64;
+            }
+            self.particles.push(ParticleState{vx, vy, x: sx, y: sy})
+        }
+
+        for p in self.particles.iter_mut()
+        {
+            p.x += p.vx * state.get_elapsed();
+            p.y += p.vy * state.get_elapsed();
+        }
+
+        // Destroy particles that are beyond the canvas.
+        self.particles = self.particles.drain(..)
+            .filter(|p| {
+                if p.vx >= 0.0
+                {
+                    return p.x < (cw + kw) as f64;
+                }
+                if p.vx < 0.0
+                {
+                    return p.x > -(kw as f64);
+                }
+                return false;
+            })
+            .collect();
+        println!("Particle count {}", self.particles.len());
+    }
+
+    fn render(&self, state: &mut dyn State) -> Canvas
+    {
+
+        let kernel = self.children[0].borrow_mut().update(state);
+        let mut canvas: Canvas;
+        if self.children.len() == 2 {
+            canvas = self.children[1].borrow_mut().update(state);
+        } else {
+            canvas = state.get_canvas();
+        }
+        
+        for p in self.particles.iter()
+        {
+            canvas = canvas.apply_onto(&kernel, p.x, p.y);
+        }
+        canvas
+    }
+
+}
+
+impl Effect for MovingParticles {
+    fn update(&mut self, state: &mut dyn State) -> Canvas {
+        if state.get_update() != self.last_update
+        {
+            self.run_update(state);
+        }
+        self.render(state)
+
+    }
+    fn add_child(&mut self, effect: EffectPtr) {
+        self.children.push(effect);
+    }
+}
+
+
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 /// Makes a canvas that is the size of the specified rectangle, filled with the specified color.
 pub struct Rectangle {
@@ -276,6 +419,7 @@ mod tests {
         pub time: f64,
         pub elapsed: f64,
         pub canvas: Canvas,
+        pub rng: Option<rand::rngs::ThreadRng>
     }
     impl State for DummyState {
         fn get_stored(&self, _name: &str) -> Option<Canvas> {
@@ -294,6 +438,15 @@ mod tests {
 
         fn get_elapsed(&self) -> f64 {
             self.elapsed
+        }
+
+        fn get_rng(&mut self) -> &mut rand::rngs::ThreadRng
+        {
+            if self.rng.is_none()
+            {
+                self.rng = Some(rand::thread_rng());
+            }
+            self.rng.as_mut().unwrap()
         }
     }
 
