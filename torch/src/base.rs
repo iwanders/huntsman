@@ -101,6 +101,13 @@ impl RGBA {
     pub fn set_alpha(&mut self, v: f64) {
         self.a = v.clamp(0.0, 1.0);
     }
+
+    pub fn set_color(&mut self, v: &RGBA){
+        self.r = v.r;
+        self.g = v.g;
+        self.b = v.b;
+        self.clamp();
+    }
 }
 
 impl ops::Add<RGBA> for RGBA {

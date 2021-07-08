@@ -46,17 +46,17 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     mystate.finish_update();
     let ten_millis = std::time::Duration::from_millis(50);
 
-    // let mut h = huntsman::Huntsman::new()?;
-    // h.effect_custom()?;
-    // loop {
-    for _i in 0..300 {
+    let mut h = huntsman::Huntsman::new()?;
+    h.effect_custom()?;
+    loop {
+    // for _i in 0..300 {
         mystate.start_update();
         let s = get_time();
         let res = eff[0].borrow_mut().update(&mut mystate);
         // println!("update took: {:.5}", get_time() - s);
         mystate.finish_update();
         println!("{}\n", res.to_string());
-        // set_canvas(&mut h, &res)?;
+        set_canvas(&mut h, &res)?;
         std::thread::sleep(ten_millis);
     }
     Ok(())

@@ -413,6 +413,27 @@ impl Effect for SetAlpha {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Apply a color to the child, not modifying the alpha channel.
+pub struct Colorize {
+    #[serde(skip)]
+    pub child: Option<EffectPtr>,
+    pub color: RGBA,
+}
+
+impl Effect for Colorize {
+    fn update(&mut self, state: &mut dyn State) -> Canvas {
+        let mut canvas = self.child.as_mut().unwrap().borrow_mut().update(state);
+        for p in canvas.iter_mut() {
+            p.set_color(&self.color);
+        }
+        canvas
+    }
+    fn add_child(&mut self, effect: EffectPtr) {
+        self.child = Some(effect);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     struct DummyState {

@@ -1,8 +1,12 @@
 effects:
+  - name: root_addition
+    root: true
+    children: [store_moving, highlights]
+    Add: null
+    
   -
     name: store_moving
     children: ["add_thing"]
-    root: true
     Store: {name: "stored_moving"}
   -
     name: "add_thing"
@@ -22,7 +26,7 @@ effects:
   -
     name: sub_amount
     Static:
-      color: {r: 1.0, g: 1.0, b: 1.0, a: 0.8}
+      color: {r: 1.0, g: 1.0, b: 1.0, a: 0.5}
       scale_by_time: true
 
   -
@@ -34,20 +38,27 @@ effects:
     name: retrieved
     Retrieve: {name: "stored_moving"}
 
+  - 
+    name: highlights
+    children: [moving]
+    Colorize:
+      color: {r: 1.0, g: 1.0, b: 1.0, a: 0.0}
+      
+
   -
     name: "moving"
     MovingParticles:
-      vx: -5.0
+      vx: -3.0
       vy: 0.0
       vy_jitter: 0.0
       vx_jitter: 2.0
-      spawn_chance: 0.2
+      spawn_chance: 0.1
     children: [moving_thing]
 
   - name: moving_thing
     Rectangle:
       width: 1
       height: 1
-      color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+      color: {r: 0.0, g: 0.5, b: 0.0, a: 1.0}
 
 
