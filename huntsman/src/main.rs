@@ -71,10 +71,16 @@ fn get_duration(matches: &clap::ArgMatches) -> Result<commands::Duration, Error>
             "short" => Ok(commands::Duration::Short),
             "medium" => Ok(commands::Duration::Medium),
             "long" => Ok(commands::Duration::Long),
-            _ => Err(Box::new(clap::Error::with_description("Invalid duration", clap::ErrorKind::InvalidValue))),
+            _ => Err(Box::new(clap::Error::with_description(
+                "Invalid duration",
+                clap::ErrorKind::InvalidValue,
+            ))),
         };
     }
-    Err(Box::new(clap::Error::with_description("Couldn't find duration.", clap::ErrorKind::EmptyValue)))
+    Err(Box::new(clap::Error::with_description(
+        "Couldn't find duration.",
+        clap::ErrorKind::EmptyValue,
+    )))
 }
 
 fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> Result<T, String> {
@@ -235,7 +241,10 @@ pub fn main() -> Result<(), Error> {
         _ => {
             &mut app.print_help();
             println!();
-            return Err(Box::new(clap::Error::with_description("No subcommand given", clap::ErrorKind::MissingSubcommand)));
+            return Err(Box::new(clap::Error::with_description(
+                "No subcommand given",
+                clap::ErrorKind::MissingSubcommand,
+            )));
         }
     }
 

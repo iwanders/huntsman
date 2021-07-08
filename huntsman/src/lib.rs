@@ -8,6 +8,7 @@ pub mod commands;
 pub use commands::RGB;
 
 pub mod configuration;
+mod hut_util;
 
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
@@ -15,7 +16,6 @@ pub struct Huntsman {
     print_comm: bool,
     print_retrieve: bool,
 }
-
 
 type Error = Box<dyn std::error::Error>;
 
@@ -82,8 +82,7 @@ impl Huntsman {
 
             if result.is_ok() {
                 let res = result.unwrap();
-                if self.print_retrieve
-                {
+                if self.print_retrieve {
                     println!(
                         "{}",
                         (res.clone())

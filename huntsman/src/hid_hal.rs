@@ -1,7 +1,6 @@
 ///! Encapsulate the hardware interaction in the HidApiHal object.
 extern crate hidapi;
 
-
 #[derive(Debug)]
 struct HalError {
     details: String,
@@ -28,10 +27,14 @@ impl std::error::Error for HalError {
     }
 }
 
-
 pub trait HidHal {
     /// Connect to a particular usb device and endpoint id.
-    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), Box<dyn std::error::Error>>;
+    fn connect(
+        &mut self,
+        vendor_id: u16,
+        product_id: u16,
+        endpoint_id: u32,
+    ) -> Result<(), Box<dyn std::error::Error>>;
     /// Send bytes as a control message.
     fn control(&mut self, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>>;
     /// Retrieve the report after sending a control message. This is an echo / ack?
@@ -67,7 +70,12 @@ impl HidApiHal {
 }
 
 impl HidHal for HidApiHal {
-    fn connect(&mut self, vendor_id: u16, product_id: u16, endpoint_id: u32) -> Result<(), Box<dyn std::error::Error>> {
+    fn connect(
+        &mut self,
+        vendor_id: u16,
+        product_id: u16,
+        endpoint_id: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         for device in self.api.device_list() {
             if device.vendor_id() == vendor_id
                 && device.product_id() == product_id
