@@ -1,3 +1,4 @@
+# moving a kernel with a color and decaying it.
 effects:
   -
     name: store_moving

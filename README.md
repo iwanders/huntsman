@@ -24,9 +24,9 @@ The [`huntsman`](/huntsman) crate provides a convenient `Huntsman` object to int
 keyboard and provides methods to manipulate it. It also provides a command line utility to interact
 with the keyboard `cargo run --bin huntsman -- --help`. 
 
-The [`huntsman::commands`](/huntsman/commands.rs) module holds the command messages and data
+The [`huntsman::commands`](/huntsman/src/commands.rs) module holds the command messages and data
 structuresthat can be serialized to the wire format. The
-[`commands::mappings`](/huntsman/commands/mappings.rs) file holds data structures necessary to remap
+[`commands::mappings`](/huntsman/src/commands/mappings.rs) file holds data structures necessary to remap
 key functionality from their default to the other supported functionality, such as other keys,
 mouse clicks or repeating a keystroke on an interval.
 
@@ -37,7 +37,10 @@ crate to make a Wireshark dissector that dissects using the structs and fields t
 are defined in the `huntsman_comm` crate. This helps significanly with reverse engineering.
 
 The [`torch`](/torch) crate contains a binary that can update the custom frame display on the
-keyboard using various effects. These effect operations can be composed into a tree.
+keyboard using various effects. These effect operations can be composed into a tree to make complex
+effects. See the `cfg` folder in the `torch` crate.
+
+The [`usb_hut`](/usb_hut) contains the usb HID usage tables used for the key mappings and macros.
 
 ## Usage
 

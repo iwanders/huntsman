@@ -1,3 +1,4 @@
+# moving red pulse that decays.
 effects:
   -
     name: store_moving
