@@ -5,3 +5,10 @@ mappings:
     mapping:
       key:
         id: right_control
+    #  mapping:
+      #  turbo_key:
+        #  - 
+          #  id: a
+        #  - 50
+    #  mapping:
+      #  macro: [1, 1]
