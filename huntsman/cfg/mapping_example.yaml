@@ -4,6 +4,4 @@ mappings:
     #hypershift: false
     mapping:
       key:
-        id: KEY_5
-        #modifiers:
-        #  - left_shift
+        id: right_control

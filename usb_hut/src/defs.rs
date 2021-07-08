@@ -4,7 +4,7 @@ pub enum Usage {
     DynamicFlag,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Key {
     pub name: &'static str,
     pub hid: usize,

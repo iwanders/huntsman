@@ -188,12 +188,31 @@ impl From<Modifiers> for u8 {
     }
 }
 
+
+fn keyboard_page_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use serde::ser::Error;
+    serializer.serialize_str(keyboard_hid_to_key_name(*scan_code).map_err(Error::custom)?)
+}
+
+fn keyboard_page_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    use serde::de::Error;
+    let r = key_name_to_keyboard_hid(&s).map_err(Error::custom)?;
+    Ok(r)
+}
+
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.
 pub struct KeyboardKey {
     #[serde(
-        serialize_with = "at101_serialize",
-        deserialize_with = "at101_deserialize"
+        serialize_with = "keyboard_page_serialize",
+        deserialize_with = "keyboard_page_deserialize"
     )]
     pub id: u8,
     #[serde(default)]
@@ -635,8 +654,9 @@ impl std::error::Error for KeyError {
     }
 }
 
-/// Function to look up a key by name and return the scan code.
-pub fn key_name_to_at101(key: &str) -> Result<u8, Box<dyn std::error::Error>> {
+
+fn key_name_to_key(key: &str) -> Result<usb_hut::Key, Box<dyn std::error::Error>>
+{
     // try to find a key that matches our self.key.
     let key_uppercase = key.to_uppercase();
     let with_key = "KEY_".to_string() + &key_uppercase;
@@ -645,19 +665,26 @@ pub fn key_name_to_at101(key: &str) -> Result<u8, Box<dyn std::error::Error>> {
             // how delightful, we found the key.
             // No guarantee for success though, we also need to check whether we have an AT101
             // code, if so we are in business, otherwise we still fail :(
-            if let Some(code) = k.at101 {
-                return Ok(code as u8);
-            } else {
-                return Err(KeyError::boxed(format!(
-                    "Key {}, found, but this key has no at101 scan code.",
-                    key
-                )));
-            }
+            return Ok(*k);
         }
     }
     Err(KeyError::boxed(format!("Key not found, got {}.", key)))
 }
 
+/// Function to look up a key by name and return the scan code.
+pub fn key_name_to_at101(key: &str) -> Result<u8, Box<dyn std::error::Error>> {
+    let k = key_name_to_key(key)?;
+    if let Some(code) = k.at101 {
+        return Ok(code as u8);
+    } else {
+        return Err(KeyError::boxed(format!(
+            "Key {}, found, but this key has no at101 scan code.",
+            key
+        )));
+    }
+}
+
+/// Function to go from at101 code to a key name.
 pub fn at101_to_key_name(scan_code: u8) -> Result<&'static str, Box<dyn std::error::Error>> {
     for k in hid_keyboard_page::keys() {
         if let Some(key_code) = k.at101 {
@@ -670,6 +697,25 @@ pub fn at101_to_key_name(scan_code: u8) -> Result<&'static str, Box<dyn std::err
         "Could not find key for at101/scan_code: {}.",
         scan_code
     )))
+}
+
+/// Function to go from a keyboard hid id to a key name.
+pub fn keyboard_hid_to_key_name(hid_id: u8) -> Result<&'static str, Box<dyn std::error::Error>> {
+    for k in hid_keyboard_page::keys() {
+        if k.hid == hid_id as usize {
+            return Ok(&k.name);
+        }
+    }
+    Err(KeyError::boxed(format!(
+        "Could not find key for usb hid id: {}.",
+        hid_id
+    )))
+}
+
+/// Function to look up a key by name and return the scan code.
+pub fn key_name_to_keyboard_hid(key: &str) -> Result<u8, Box<dyn std::error::Error>> {
+    let k = key_name_to_key(key)?;
+    Ok(k.hid as u8)
 }
 
 #[cfg(test)]
@@ -976,7 +1022,7 @@ mod tests {
         });
 
         print_deserialize::<Key>("{\"id\":\"KEY_V\",\"hypershift\":false}");
-        print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["LeftControl"]}"#);
-        print_deserialize::<KeyboardKey>(r#"{"id":"3","modifiers":["LeftControl", "Alt"]}"#);
+        print_deserialize::<KeyboardKey>(r#"{"id":"KEY_3","modifiers":["left_control"]}"#);
+        print_deserialize::<KeyboardKey>(r#"{"id":"3","modifiers":["left_control", "alt"]}"#);
     }
 }
