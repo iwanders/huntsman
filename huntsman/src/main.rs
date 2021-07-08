@@ -1,4 +1,3 @@
-
 use huntsman;
 use huntsman::commands;
 
@@ -278,10 +277,10 @@ pub fn main() -> Result<(), String> {
         let file = get_value::<String>(matches, "file")?;
         let profile = get_value::<u8>(matches, "profile")?;
         println!("println!  {}, {}", file, profile);
-        let mappings = huntsman::configuration::load_mappings(&file).map_err(|x| {format!("{:?}", x) })?;
+        let mappings =
+            huntsman::configuration::load_mappings(&file).map_err(|x| format!("{:?}", x))?;
         println!("{:?}", mappings);
-        for m in mappings.iter()
-        {
+        for m in mappings.iter() {
             // build the actual configuration.
             h.set_mapping(profile, m.key, m.mapping)?;
         }

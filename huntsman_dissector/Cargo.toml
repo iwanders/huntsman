@@ -20,7 +20,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [features]
-build-devtool = ["clap"]
+build-devtool = ["clap", "serde_json"]
 
 [[bin]]
 name = "dev_analyse"

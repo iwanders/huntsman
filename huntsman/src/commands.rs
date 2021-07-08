@@ -77,11 +77,8 @@ pub trait Command: std::fmt::Debug {
                 original_checksum, wire.checksum
             ));
         }
-        if data[0] != 0x02
-        {
-            return Err(format!(
-                "Return code was not 0x02",
-            ));
+        if data[0] != 0x02 {
+            return Err(format!("Return code was not 0x02",));
         }
         self.response_payload(&wire.payload[..])
     }

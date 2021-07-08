@@ -1,8 +1,8 @@
 use std::process::Command;
 extern crate serde_json;
 
-extern crate huntsman_comm;
-use huntsman_comm::*;
+extern crate huntsman;
+use huntsman::commands::*;
 
 extern crate clap;
 use clap::{App, Arg, SubCommand};
@@ -140,7 +140,7 @@ fn payload_str(command: &wire::Command) -> Result<String, Box<dyn std::error::Er
         GetStorageStatistics::CMD => Ok(payload_as::<wire::GetStorageStatistics>(p)),
         SetLedBrightness::CMD => Ok(payload_as::<wire::SetLedBrightness>(p)),
         SetGameMode::CMD => Ok(payload_as::<wire::SetGameMode>(p)),
-        SetKeyOverride::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
+        SetKeyMap::CMD => Ok(payload_as::<wire::SetKeyOverride>(p)),
         MacroActions::CMD => Ok(payload_as::<wire::MacroActionsPayload>(p)),
         MacroMetadata::CMD => Ok(payload_as::<wire::MacroMetadata>(p)),
         _ => Ok("".to_string()),
@@ -196,7 +196,7 @@ fn command_dump(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Er
                 continue;
             }
 
-            if matches.occurrences_of("mappings") != 0 && command.cmd == SetKeyOverride::CMD {
+            if matches.occurrences_of("mappings") != 0 && command.cmd == SetKeyMap::CMD {
                 let parsed = wire::SetKeyOverride::from_be_bytes(&command.payload).unwrap();
                 if command.status == 2 {
                     // continue;

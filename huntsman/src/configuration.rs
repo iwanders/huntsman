@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::commands::mappings;
 
-pub use crate::commands::mappings::{Key, KeyMapping, Modifiers, KeyboardKey};
+pub use crate::commands::mappings::{Key, KeyMapping, KeyboardKey, Modifiers};
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct KeyConfig {
@@ -34,7 +34,6 @@ pub fn load_mappings(filename: &str) -> Result<Vec<KeyConfig>, Box<dyn std::erro
     )))
 }
 
-
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -47,16 +46,16 @@ mod tests {
 
     #[test]
     fn test_key_lookup() {
-        print_serialize(KeyConfig{
+        print_serialize(KeyConfig {
             profile: None,
             key: Key {
                 id: 0x04,
-                hypershift: false
+                hypershift: false,
             },
             mapping: KeyMapping::Key(KeyboardKey {
                 id: 0x04,
                 modifiers: Modifiers::shift(),
-            })
+            }),
         });
     }
 }

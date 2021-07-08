@@ -188,7 +188,6 @@ impl From<Modifiers> for u8 {
     }
 }
 
-
 fn keyboard_page_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -654,9 +653,7 @@ impl std::error::Error for KeyError {
     }
 }
 
-
-fn key_name_to_key(key: &str) -> Result<usb_hut::Key, Box<dyn std::error::Error>>
-{
+fn key_name_to_key(key: &str) -> Result<usb_hut::Key, Box<dyn std::error::Error>> {
     // try to find a key that matches our self.key.
     let key_uppercase = key.to_uppercase();
     let with_key = "KEY_".to_string() + &key_uppercase;
@@ -722,7 +719,7 @@ pub fn key_name_to_keyboard_hid(key: &str) -> Result<u8, Box<dyn std::error::Err
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::helpers::{parse_wireshark_truncated, PAYLOAD_START};
+    use crate::commands::helpers::{parse_wireshark_truncated, PAYLOAD_START};
 
     #[test]
     fn overrides_for_keys() {

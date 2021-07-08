@@ -57,10 +57,7 @@ impl Huntsman {
     }
 
     /// Function to send a command to the control endpoint.
-    fn set_command(
-        &mut self,
-        command: &dyn commands::Command,
-    ) -> Result<Option<Vec<u8>>, String> {
+    fn set_command(&mut self, command: &dyn commands::Command) -> Result<Option<Vec<u8>>, String> {
         let v = command.serialize();
         if self.print_comm {
             println!("{:?} -> {:?}", command, v);
@@ -176,13 +173,20 @@ impl Huntsman {
     }
 
     /// Set a key mapping
-    pub fn set_mapping(&mut self, profile: u8, key: commands::mappings::Key, mapping: commands::mappings::KeyMapping) -> Result<(), String> {
-        let cmd: commands::SetKeyMap = commands::SetKeyMap{profile, key, mapping};
+    pub fn set_mapping(
+        &mut self,
+        profile: u8,
+        key: commands::mappings::Key,
+        mapping: commands::mappings::KeyMapping,
+    ) -> Result<(), String> {
+        let cmd: commands::SetKeyMap = commands::SetKeyMap {
+            profile,
+            key,
+            mapping,
+        };
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
-        let response = response
-            .downcast_ref::<commands::SetKeyMap>()
-            .unwrap();
+        let response = response.downcast_ref::<commands::SetKeyMap>().unwrap();
         Ok(())
     }
 
