@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use struct_helper::{FromBytes, ToBytes, Endianness, offset_of};
 
 use crate::hut_util::{
-    at101_to_key_name, key_name_to_at101, key_name_to_keyboard_hid, keyboard_hid_to_key_name,
+    at101_serialize,
+    at101_deserialize,
+    keyboard_page_serialize,
+    keyboard_page_deserialize,
 };
 
 /// Struct to denote a physical key on the keyboard.
@@ -21,25 +24,6 @@ pub struct Key {
     /// Whether or not this is the hypershift binding of that key.
     #[serde(default)]
     pub hypershift: bool,
-}
-
-// https://serde.rs/impl-serialize.html
-fn at101_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    use serde::ser::Error;
-    serializer.serialize_str(at101_to_key_name(*scan_code).map_err(Error::custom)?)
-}
-
-fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    use serde::de::Error;
-    let r = key_name_to_at101(&s).map_err(Error::custom)?;
-    Ok(r)
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -191,23 +175,6 @@ impl From<Modifiers> for u8 {
     }
 }
 
-fn keyboard_page_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    use serde::ser::Error;
-    serializer.serialize_str(keyboard_hid_to_key_name(*scan_code).map_err(Error::custom)?)
-}
-
-fn keyboard_page_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    use serde::de::Error;
-    let r = key_name_to_keyboard_hid(&s).map_err(Error::custom)?;
-    Ok(r)
-}
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.

@@ -1,9 +1,18 @@
 use struct_helper::*;
+use serde::de::Deserializer;
+use serde::ser::Serializer;
+use serde::{Deserialize, Serialize};
+
+use crate::hut_util::{
+    keyboard_page_serialize,
+    keyboard_page_deserialize,
+};
+
 
 pub type MacroId = u16;
 
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum MouseState {
     None = 0,
     Left = 1,
@@ -13,13 +22,19 @@ pub enum MouseState {
     M5 = 16,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 /// Enum to represent an action in a macro.
 pub enum MacroAction {
     /// HID key id.
-    KeyboardMake{hid: u8},
+    #[serde(
+        serialize_with = "keyboard_page_serialize",
+        deserialize_with = "keyboard_page_deserialize"
+    )]
+    KeyboardMake{
+        hid: u8},
     /// HID key id.
-    KeyboardBreak{hid: u8},
+    KeyboardBreak{
+        hid: u8},
     /// Delay in milliseconds.
     Delay(u32),
     /// Sets the mouse click state (bitmask), use again with 0 to release
@@ -490,5 +505,24 @@ mod tests {
         copied_assert_eq!(payloads[0].event_bytes_in_msg, 0x48 as u8);
         copied_assert_eq!(payloads[1].event_bytes_in_msg, (total_bytes - 0x48) as u8);
         copied_assert_eq!(total_bytes, 20 * 2 * 2);  // each mouse action is 2 bytes.
+    }
+
+    fn print_serialize<T: Serialize + std::fmt::Debug>(v: T) -> String {
+        let serialized = serde_json::to_string(&v).unwrap();
+        println!("serialize {:?} -> {}", v, serialized);
+        serialized
+    }
+    fn print_deserialize<'a, T: Deserialize<'a> + Sized + std::fmt::Debug>(v: &'a str) -> T {
+        let deserialized: T = serde_json::from_str(&v).unwrap();
+        println!("deserialize {} -> {:?}", v, deserialized);
+        deserialized
+    }
+
+    #[test]
+    pub fn test_macro_serialize() {
+        print_serialize(MacroAction::MouseClick(MouseState::Left));
+        print_serialize(MacroAction::KeyboardMake{hid: 0x04});
+
+        print_deserialize::<MacroAction>(r#"{"KeyboardMake":"KEY_A"}"#);
     }
 }

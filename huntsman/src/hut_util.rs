@@ -1,4 +1,9 @@
 use usb_hut::hid_keyboard_page;
+use serde::de::Deserializer;
+use serde::ser::Serializer;
+use serde::{Deserialize, Serialize};
+
+
 #[derive(Debug)]
 struct KeyError {
     details: String,
@@ -86,6 +91,45 @@ pub fn key_name_to_keyboard_hid(key: &str) -> Result<u8, Box<dyn std::error::Err
     let k = key_name_to_key(key)?;
     Ok(k.hid as u8)
 }
+
+
+// https://serde.rs/impl-serialize.html
+pub fn at101_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use serde::ser::Error;
+    serializer.serialize_str(at101_to_key_name(*scan_code).map_err(Error::custom)?)
+}
+
+pub fn at101_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    use serde::de::Error;
+    let r = key_name_to_at101(&s).map_err(Error::custom)?;
+    Ok(r)
+}
+
+pub fn keyboard_page_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use serde::ser::Error;
+    serializer.serialize_str(keyboard_hid_to_key_name(*scan_code).map_err(Error::custom)?)
+}
+
+pub fn keyboard_page_deserialize<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    use serde::de::Error;
+    let r = key_name_to_keyboard_hid(&s).map_err(Error::custom)?;
+    Ok(r)
+}
+
 
 #[cfg(test)]
 mod tests {
