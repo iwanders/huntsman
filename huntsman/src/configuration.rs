@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
-
-use crate::commands::mappings;
 pub use crate::commands::mappings::{Key, KeyMapping, KeyboardKey, Modifiers};
 
-use crate::commands::macros;
 pub use crate::commands::macros::MacroAction;
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]

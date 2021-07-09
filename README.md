@@ -9,7 +9,8 @@ complete, it's mostly my means of learning a bit of Rust. Currently supported fu
 - The majority of the LED effects.
 - Setting overall brightness.
 - Setting a custom frame to the LEDs.
-- Remapping keys.
+- Remapping keys (to keys, mouse, macro's, various HID pages).
+- Hardware macro load and delete.
 
 ## Architecture
 

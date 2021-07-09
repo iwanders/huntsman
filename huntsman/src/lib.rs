@@ -190,7 +190,7 @@ impl Huntsman {
         };
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
-        let response = response.downcast_ref::<commands::SetKeyMap>().unwrap();
+        let _response = response.downcast_ref::<commands::SetKeyMap>().unwrap();
         Ok(())
     }
 
@@ -299,7 +299,7 @@ impl Huntsman {
     pub fn macro_delete(&mut self, macro_id: u16) -> Result<(), Error> {
         let mut cmd: commands::MacroDelete = Default::default();
         cmd.0.macro_id = macro_id;
-        let result = self.set_command(&cmd)?;
+        let _result = self.set_command(&cmd)?;
         Ok(())
     }
 
@@ -308,7 +308,7 @@ impl Huntsman {
         let mut cmd: commands::MacroCreate = Default::default();
         cmd.0.macro_id = macro_id;
         cmd.0.event_bytes = size as u32;
-        let result = self.set_command(&cmd)?;
+        let _result = self.set_command(&cmd)?;
         Ok(())
     }
 

@@ -1,6 +1,6 @@
 use serde::de::Deserializer;
 use serde::ser::Serializer;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use usb_hut::hid_keyboard_page;
 
 #[derive(Debug)]
