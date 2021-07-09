@@ -224,6 +224,28 @@ mod tests {
         parse_wireshark_truncated, parse_wireshark_value, PAYLOAD_START,
     };
 
+    /*
+        On macro metadata; seems to be a... lot of stuff.
+        eb:69:30:b1:54:e6:e2:49:8b:6c:20:41:37:cc:47:86:06:00:00:00:61:61:61:00:00:00:00:00:00:00:00:00:50:71:10:06:00:....
+                     uuid                              |nr of evnts|name                               | *
+        *) Looks like dirty memory at times... perhaps a binary blob representing something?
+        There is an f(uuid) -> MacroId function.
+
+        For uuid that consist of just a single byte and the rest null bytes, the uuid can be
+        determined with (Python code):
+
+        factors = [1, 3, 2, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67, 79, 92, 106]
+        v = []
+        for i in range(len(uid)):
+            v.append(factors[i] * uid[i])
+        v.append(120)
+        macro_id = sum(v)
+
+        This factor sequence is very close to the Lazy Caterer's sequence, just having an extra 3
+        on the second index; https://oeis.org/A000124 
+        [1, 2, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67, 79, 92, 106] # 121
+    */
+
     #[test]
     fn test_macro_events() {
         // This is the actual macro payload, not the metadata, it is chunked in blocks.
