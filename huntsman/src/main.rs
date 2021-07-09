@@ -389,10 +389,17 @@ pub fn main() -> Result<(), Error> {
         match matches.subcommand_name() {
             Some("list") => {
                 let ids = h.macro_list()?;
-                println!("Macro's in memory:");
-                for id in ids.iter()
+                if ids.len() != 0
                 {
-                    println!("   - 0x{:0>4x}", id);
+                    println!("Macro's in memory:");
+                    for id in ids.iter()
+                    {
+                        println!("   - 0x{:0>4x}", id);
+                    }
+                }
+                else
+                {
+                    println!("No macro's in memory.");
                 }
             }
             Some("load") => {
@@ -400,8 +407,9 @@ pub fn main() -> Result<(), Error> {
                 let file = get_value::<String>(submatches, "file")?;
                 let macro_config =
                     huntsman::configuration::load_macro(&file).map_err(|x| format!("{:?}", x))?;
-                println!("{:?}", macro_config);
+                println!("Loading macro:\n{:?}", macro_config);
                 h.macro_create_actions(macro_config.macro_id, &macro_config.events)?;
+                println!("Macro 0x{:0>4x} succesfully loaded.", macro_config.macro_id);
             }
             Some("del") => {
                 let submatches = matches.subcommand_matches("del").unwrap();
@@ -417,7 +425,7 @@ pub fn main() -> Result<(), Error> {
                         return Ok(());
                     }
                 }
-                println!("The device doesn't report macro {:0>4x} is present.", macro_id);
+                println!("The device doesn't report macro 0x{:0>4x} is present.", macro_id);
             }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),
