@@ -561,7 +561,7 @@ impl Command for GetActiveMacros {
 
 
 /// The command to create a macro.
-// pub use macros::MacroCreate;
+#[derive(Debug, Default)]
 pub struct MacroCreate(pub macros::MacroCreate);
 impl MacroCreate {
     pub const CMD: Cmd = Cmd {
@@ -569,8 +569,18 @@ impl MacroCreate {
         minor: 0x08,
     };
 }
+impl Command for MacroCreate {
+    fn register(&self) -> Cmd {
+        return MacroCreate::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+}
+
 
 /// The command to create a macro.
+#[derive(Debug, Default)]
 pub struct MacroDelete(pub macros::MacroDelete);
 impl MacroDelete {
     pub const CMD: Cmd = Cmd {
@@ -578,14 +588,32 @@ impl MacroDelete {
         minor: 0x03,
     };
 }
+impl Command for MacroDelete {
+    fn register(&self) -> Cmd {
+        return MacroDelete::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+}
+
 
 /// Holds the macro payload.
+#[derive(Debug, Default)]
 pub struct MacroActionsPayload(pub macros::MacroActionsPayload);
 impl MacroActionsPayload {
     pub const CMD: Cmd = Cmd {
         major: 0x06,
         minor: 0x09,
     };
+}
+impl Command for MacroActionsPayload {
+    fn register(&self) -> Cmd {
+        return MacroActionsPayload::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
 }
 
 #[derive(Default, Copy, Clone, Debug)]

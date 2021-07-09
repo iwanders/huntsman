@@ -235,6 +235,13 @@ pub fn main() -> Result<(), Error> {
             SubCommand::with_name("macro")
                 .about("Configuration for macros")
                 .subcommand(SubCommand::with_name("list").about("List macros on the device"))
+                .subcommand(SubCommand::with_name("load").about("List macros on the device")
+                    .arg(
+                        Arg::with_name("file")
+                            .takes_value(true)
+                            .required(true)
+                            .help("The filename to read the macro from."),
+                    ))
         );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
@@ -361,6 +368,14 @@ pub fn main() -> Result<(), Error> {
         match matches.subcommand_name() {
             Some("list") => {
                 h.get_macro_list()?;
+            }
+            Some("load") => {
+                let submatches = matches.subcommand_matches("load").unwrap();
+                let file = get_value::<String>(submatches, "file")?;
+                let macro_config =
+                    huntsman::configuration::load_macro(&file).map_err(|x| format!("{:?}", x))?;
+                println!("{:?}", macro_config);
+                h.macro_create_actions(macro_config.macro_id, &macro_config.events)?;
             }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

@@ -294,4 +294,44 @@ impl Huntsman {
             .unwrap();
         Ok(())
     }
+
+    /// Delete macro by its id.
+    pub fn macro_delete(&mut self, macro_id: u16) ->  Result<(), Error> 
+    {
+        let mut cmd: commands::MacroDelete = Default::default();
+        cmd.0.macro_id = macro_id;
+        let result = self.set_command(&cmd)?;
+        Ok(())
+    }
+
+    /// Create a macro of a certain size, not setting the payload.
+    pub fn macro_create(&mut self, macro_id: u16, size: usize) ->  Result<(), Error> {
+        
+        let mut cmd: commands::MacroCreate = Default::default();
+        cmd.0.macro_id = macro_id;
+        cmd.0.event_bytes = size as u32;
+        let result = self.set_command(&cmd)?;
+        Ok(())
+    }
+
+    /// Create macro of correct size for acctions, allocate & assign actions.
+    pub fn macro_create_actions(&mut self, macro_id: u16, actions: &Vec<commands::macros::MacroAction>) ->  Result<(), Error> {
+        // First, delete the macro if it already exists.
+        let _ = self.macro_delete(macro_id); // ignore the result of this, it can fail if the id doesn't exist.
+        let total_bytes = commands::macros::macro_events_to_size(&actions);
+
+        // Create the macro
+        self.macro_create(macro_id, total_bytes)?;
+
+        // Then, set the payloads
+        let mut payloads = commands::macros::macro_events_to_payloads(macro_id, &actions);
+        for payload in payloads.drain(..)
+        {
+            let mut cmd: commands::MacroActionsPayload = Default::default();
+            cmd.0 = payload;
+            let _ = self.set_command(&cmd)?;  // set the payload chunk
+        }
+        // should be it... :O
+        Ok(())
+    }
 }

@@ -33,6 +33,10 @@ pub enum MacroAction {
     KeyboardMake{
         hid: u8},
     /// HID key id.
+    #[serde(
+        serialize_with = "keyboard_page_serialize",
+        deserialize_with = "keyboard_page_deserialize"
+    )]
     KeyboardBreak{
         hid: u8},
     /// Delay in milliseconds.
@@ -522,6 +526,7 @@ mod tests {
     pub fn test_macro_serialize() {
         print_serialize(MacroAction::MouseClick(MouseState::Left));
         print_serialize(MacroAction::KeyboardMake{hid: 0x04});
+        print_serialize(vec!(MacroAction::KeyboardMake{hid: 0x04}, MacroAction::KeyboardBreak{hid: 0x04}));
 
         print_deserialize::<MacroAction>(r#"{"KeyboardMake":"KEY_A"}"#);
     }

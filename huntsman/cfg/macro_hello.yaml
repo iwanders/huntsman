@@ -1,0 +1,4 @@
+macro_id: 0x1337
+events:
+  - KeyboardMake: h
+  - KeyboardBreak: h
