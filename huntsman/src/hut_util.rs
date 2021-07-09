@@ -1,8 +1,7 @@
-use usb_hut::hid_keyboard_page;
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-
+use usb_hut::hid_keyboard_page;
 
 #[derive(Debug)]
 struct KeyError {
@@ -92,7 +91,6 @@ pub fn key_name_to_keyboard_hid(key: &str) -> Result<u8, Box<dyn std::error::Err
     Ok(k.hid as u8)
 }
 
-
 // https://serde.rs/impl-serialize.html
 pub fn at101_serialize<S>(scan_code: &u8, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -129,7 +127,6 @@ where
     let r = key_name_to_keyboard_hid(&s).map_err(Error::custom)?;
     Ok(r)
 }
-
 
 #[cfg(test)]
 mod tests {

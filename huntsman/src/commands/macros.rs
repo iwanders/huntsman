@@ -1,16 +1,11 @@
-use struct_helper::*;
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use struct_helper::*;
 
-use crate::hut_util::{
-    keyboard_page_serialize,
-    keyboard_page_deserialize,
-};
-
+use crate::hut_util::{keyboard_page_deserialize, keyboard_page_serialize};
 
 pub type MacroId = u16;
-
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -32,15 +27,13 @@ pub enum MacroAction {
         serialize_with = "keyboard_page_serialize",
         deserialize_with = "keyboard_page_deserialize"
     )]
-    KeyboardMake{
-        hid: u8},
+    KeyboardMake { hid: u8 },
     /// HID key id.
     #[serde(
         serialize_with = "keyboard_page_serialize",
         deserialize_with = "keyboard_page_deserialize"
     )]
-    KeyboardBreak{
-        hid: u8},
+    KeyboardBreak { hid: u8 },
     /// Delay in milliseconds.
     Delay(u32),
     /// Sets the mouse click state (bitmask), use again with 0 to release
@@ -48,7 +41,7 @@ pub enum MacroAction {
     /// scroll with the mouse
     MouseScroll(i8),
     /// move mouse relative, with x and y values.
-    MouseMove{x: i16, y: i16},
+    MouseMove { x: i16, y: i16 },
     /// No action.
     None,
 }
@@ -82,11 +75,11 @@ impl FromBytes for MacroAction {
         let specification = src[0];
         match specification {
             MacroAction::KEYBOARD_MAKE => {
-                *self = MacroAction::KeyboardMake{hid: src[1]};
+                *self = MacroAction::KeyboardMake { hid: src[1] };
                 return Ok(2);
             }
             MacroAction::KEYBOARD_BREAK => {
-                *self = MacroAction::KeyboardBreak{hid: src[1]};
+                *self = MacroAction::KeyboardBreak { hid: src[1] };
                 return Ok(2);
             }
             MacroAction::KEYBOARD_DELAY_U8
@@ -127,7 +120,10 @@ impl FromBytes for MacroAction {
             MacroAction::MOUSE_MOVE => {
                 let x: [u8; 2] = [src[1], src[2]];
                 let y: [u8; 2] = [src[3], src[4]];
-                *self = MacroAction::MouseMove{x: i16::from_be_bytes(x), y: i16::from_be_bytes(y)};
+                *self = MacroAction::MouseMove {
+                    x: i16::from_be_bytes(x),
+                    y: i16::from_be_bytes(y),
+                };
                 return Ok(5);
             }
             z => panic!("Unhandled macro code {:?}, total src: {:?}", z, src),
@@ -139,11 +135,11 @@ impl ToBytes for MacroAction {
     fn to_bytes(&self, _endianness: Endianness) -> Result<Vec<u8>, String> {
         let mut buff: Vec<u8> = Vec::new();
         match self {
-            MacroAction::KeyboardMake{ hid } => {
+            MacroAction::KeyboardMake { hid } => {
                 buff.push(MacroAction::KEYBOARD_MAKE);
                 buff.push(*hid);
             }
-            MacroAction::KeyboardBreak{ hid } => {
+            MacroAction::KeyboardBreak { hid } => {
                 buff.push(MacroAction::KEYBOARD_BREAK);
                 buff.push(*hid);
             }
@@ -180,7 +176,7 @@ impl ToBytes for MacroAction {
                 buff.push(MacroAction::MOUSE_SCROLL);
                 buff.push(i8::to_le_bytes(*delta)[0]);
             }
-            MacroAction::MouseMove{x, y} => {
+            MacroAction::MouseMove { x, y } => {
                 buff.push(MacroAction::MOUSE_MOVE);
                 buff.extend(i16::to_be_bytes(*x).iter());
                 buff.extend(i16::to_be_bytes(*y).iter());
@@ -240,8 +236,6 @@ impl ToBytes for MacroActions {
     }
 }
 
-
-
 #[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug)]
 #[repr(C, packed)]
 /// Struct definition to hold the actions that make up a macro.
@@ -263,16 +257,13 @@ impl Default for MacroActionsPayload {
     }
 }
 
-pub fn macro_events_to_size(events: &Vec<MacroAction>) -> usize
-{
+pub fn macro_events_to_size(events: &Vec<MacroAction>) -> usize {
     let mut size: usize = 0;
     for event in events.iter() {
         size += event.to_bytes(Endianness::Big).unwrap().len();
     }
     size
 }
-
-
 
 #[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug)]
 #[repr(C)]
@@ -283,28 +274,29 @@ pub struct MacroList {
     pub macro_ids: [u16; 0x20], // 0x20 is approx, may have space for one or two more.
 }
 
-impl MacroList
-{
-    pub fn to_vec(&self) -> Vec<MacroId>
-    {
+impl MacroList {
+    pub fn to_vec(&self) -> Vec<MacroId> {
         let mut ids: Vec<MacroId> = Vec::new();
-        for i in 0..self.length as usize 
-        {
+        for i in 0..self.length as usize {
             ids.push(self.macro_ids[i])
         }
         ids
     }
 }
 
-impl Default for MacroList 
-{
+impl Default for MacroList {
     fn default() -> Self {
-        MacroList{length: 0, macro_ids: [0; 0x20]}
+        MacroList {
+            length: 0,
+            macro_ids: [0; 0x20],
+        }
     }
 }
 
-pub fn macro_events_to_payloads(macro_id: MacroId, events: &Vec<MacroAction>) -> Vec<MacroActionsPayload>
-{
+pub fn macro_events_to_payloads(
+    macro_id: MacroId,
+    events: &Vec<MacroAction>,
+) -> Vec<MacroActionsPayload> {
     // first, convert the events to the payload bytes.
     let mut buff: Vec<u8> = Vec::new();
     for event in events.iter() {
@@ -313,25 +305,22 @@ pub fn macro_events_to_payloads(macro_id: MacroId, events: &Vec<MacroAction>) ->
 
     // Cool, now we have bytes, we just have to chunk it and produce our MacroActionsPayloads.
     let mut payloads: Vec<MacroActionsPayload> = Vec::new();
-    let chunk_size = 0x48;  // set in stone.
+    let chunk_size = 0x48; // set in stone.
 
-    for (i, payload) in buff.chunks(chunk_size).enumerate()
-    {
-        let mut cmd = MacroActionsPayload{
-                macro_id,
-                position: (i * chunk_size) as u32,
-                event_bytes_in_msg: payload.len() as u8,
-                ..Default::default()
-            };
-        for (j, b) in payload.iter().enumerate()
-        {
+    for (i, payload) in buff.chunks(chunk_size).enumerate() {
+        let mut cmd = MacroActionsPayload {
+            macro_id,
+            position: (i * chunk_size) as u32,
+            event_bytes_in_msg: payload.len() as u8,
+            ..Default::default()
+        };
+        for (j, b) in payload.iter().enumerate() {
             cmd.events[j] = *b
         }
         payloads.push(cmd);
     }
 
     payloads
-    
 }
 
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
@@ -352,7 +341,6 @@ pub struct MacroMetadata {
                            // pub name: [u8; 12],    // It can be longer....
                            // Lots of more stuff here, which looks... mostly like dirty memory
 }
-
 
 #[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
 #[repr(C, packed)]
@@ -393,7 +381,7 @@ mod tests {
         macro_id = sum(v)
 
         This factor sequence is very close to the Lazy Caterer's sequence, just having an extra 3
-        on the second index; https://oeis.org/A000124 
+        on the second index; https://oeis.org/A000124
         [1, 2, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67, 79, 92, 106] # 121
 
         The keyboard itself seems to give 0 F's about the macro metadata, just allocating a macro,
@@ -469,53 +457,47 @@ mod tests {
         let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
         let mouse_move_action =
             MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
-        assert_eq!(mouse_move_action, MacroAction::MouseMove{x: 1, y: -1});
+        assert_eq!(mouse_move_action, MacroAction::MouseMove { x: 1, y: -1 });
         let and_back = mouse_move_action.to_be_bytes().expect("Success");
         assert_eq!(mouse_move_action_input, and_back);
     }
-
 
     #[test]
     fn test_macro_create() {
         // This is the create macro command, it takes an id and the number of bytes for the actual
         // events. The metadata is not counted in this.
-        let long_create = parse_wireshark_truncated(
-            "00:1f:00:00:00:06:06:08:1a:2e:00:00:28:cd:00",
-            0xd9,
-        );
+        let long_create =
+            parse_wireshark_truncated("00:1f:00:00:00:06:06:08:1a:2e:00:00:28:cd:00", 0xd9);
         let parsed = MacroCreate::from_be_bytes(&long_create[PAYLOAD_START..]).expect("success");
-        let macro_id = parsed.macro_id;  // copy to avoid borrowing from packed struct
+        let macro_id = parsed.macro_id; // copy to avoid borrowing from packed struct
         let event_bytes = parsed.event_bytes;
         assert_eq!(macro_id, 0x1a2e);
         assert_eq!(event_bytes, 0x28cd);
 
-        let short_create = parse_wireshark_truncated(
-            "0:1f:00:00:00:06:06:08:7f:39:00:00:00:04:00",
-            0x4a,
-        );
+        let short_create =
+            parse_wireshark_truncated("0:1f:00:00:00:06:06:08:7f:39:00:00:00:04:00", 0x4a);
         let parsed = MacroCreate::from_be_bytes(&short_create[PAYLOAD_START..]).expect("success");
         let macro_id = parsed.macro_id;
         let event_bytes = parsed.event_bytes;
         assert_eq!(macro_id, 0x7f39);
         assert_eq!(event_bytes, 0x04);
-
     }
 
     // checking against a packed struct, don't want warnings about references to it.
     macro_rules! copied_assert_eq {
-        ( $a:expr, $b:expr ) => {
-            {
-                let a = $a;
-                let b = $b;
-                assert_eq!(a, b);
-            }
-        };
+        ( $a:expr, $b:expr ) => {{
+            let a = $a;
+            let b = $b;
+            assert_eq!(a, b);
+        }};
     }
     #[test]
-    fn test_macro_payloads()
-    {
+    fn test_macro_payloads() {
         // Trivial macro that fits in one chunk.
-        let mouse_click = vec!(MacroAction::MouseClick(MouseState::Left), MacroAction::MouseClick(MouseState::None), );
+        let mouse_click = vec![
+            MacroAction::MouseClick(MouseState::Left),
+            MacroAction::MouseClick(MouseState::None),
+        ];
         let payloads = macro_events_to_payloads(0x7f39, &mouse_click);
         println!("Payloads: {:?}", payloads);
         let as_bytes = payloads.first().unwrap().to_be_bytes().expect("Success");
@@ -529,8 +511,7 @@ mod tests {
         // Larger macro that spans two chunks, don't have hard data to test against, check the indices
         // against expectation.
         let mut actions: Vec<MacroAction> = Vec::new();
-        for i in 0..20
-        {
+        for i in 0..20 {
             actions.push(MacroAction::MouseClick(MouseState::Left));
             actions.push(MacroAction::MouseClick(MouseState::None));
         }
@@ -544,7 +525,7 @@ mod tests {
         copied_assert_eq!(payloads[1].position, 0x48 as u32);
         copied_assert_eq!(payloads[0].event_bytes_in_msg, 0x48 as u8);
         copied_assert_eq!(payloads[1].event_bytes_in_msg, (total_bytes - 0x48) as u8);
-        copied_assert_eq!(total_bytes, 20 * 2 * 2);  // each mouse action is 2 bytes.
+        copied_assert_eq!(total_bytes, 20 * 2 * 2); // each mouse action is 2 bytes.
     }
 
     fn print_serialize<T: Serialize + std::fmt::Debug>(v: T) -> String {
@@ -561,22 +542,22 @@ mod tests {
     #[test]
     pub fn test_macro_serialize() {
         print_serialize(MacroAction::MouseClick(MouseState::Left));
-        print_serialize(MacroAction::KeyboardMake{hid: 0x04});
-        print_serialize(vec!(MacroAction::KeyboardMake{hid: 0x04}, MacroAction::KeyboardBreak{hid: 0x04}));
+        print_serialize(MacroAction::KeyboardMake { hid: 0x04 });
+        print_serialize(vec![
+            MacroAction::KeyboardMake { hid: 0x04 },
+            MacroAction::KeyboardBreak { hid: 0x04 },
+        ]);
 
         print_deserialize::<MacroAction>(r#"{"keyboard_make":"KEY_A"}"#);
     }
 
     pub fn test_macro_get_list() {
-        let expected = parse_wireshark_truncated(
-            "02:1f:00:00:00:ca:06:81:00:02:13:37:13:36:00",
-            0x4e,
-        );
+        let expected =
+            parse_wireshark_truncated("02:1f:00:00:00:ca:06:81:00:02:13:37:13:36:00", 0x4e);
         let parsed = MacroList::from_be_bytes(&expected[PAYLOAD_START..]).expect("success");
         assert_eq!(parsed.length, 2);
         assert_eq!(parsed.macro_ids[0], 0x1337);
         assert_eq!(parsed.macro_ids[1], 0x1336);
         assert_eq!(parsed.to_vec(), vec!(0x1337, 0x1336));
-        
     }
 }

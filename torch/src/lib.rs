@@ -12,7 +12,7 @@ pub struct BasicState {
     pub base_canvas: Canvas,
     pub last_update_cycle: f64,
     pub update_count: usize,
-    pub rng: Option<rand::rngs::ThreadRng>
+    pub rng: Option<rand::rngs::ThreadRng>,
 }
 
 impl State for BasicState {
@@ -47,15 +47,12 @@ impl State for BasicState {
         self.update_count += 1;
     }
 
-    fn get_update(&self) -> usize
-    {
+    fn get_update(&self) -> usize {
         self.update_count
     }
 
-    fn get_rng(&mut self) -> &mut rand::rngs::ThreadRng
-    {
-        if self.rng.is_none()
-        {
+    fn get_rng(&mut self) -> &mut rand::rngs::ThreadRng {
+        if self.rng.is_none() {
             self.rng = Some(rand::thread_rng());
         }
         self.rng.as_mut().unwrap()

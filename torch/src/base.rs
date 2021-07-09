@@ -102,7 +102,7 @@ impl RGBA {
         self.a = v.clamp(0.0, 1.0);
     }
 
-    pub fn set_color(&mut self, v: &RGBA){
+    pub fn set_color(&mut self, v: &RGBA) {
         self.r = v.r;
         self.g = v.g;
         self.b = v.b;
@@ -333,7 +333,9 @@ pub trait State {
     fn finish_update(&mut self) -> () {}
 
     /// Return an integer representing how many times start_update has been called.
-    fn get_update(&self) -> usize { 0 }
+    fn get_update(&self) -> usize {
+        0
+    }
 
     /// Obtain the random number generator.
     fn get_rng(&mut self) -> &mut rand::rngs::ThreadRng;

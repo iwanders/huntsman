@@ -96,8 +96,7 @@ fn get_value<T: core::str::FromStr>(matches: &clap::ArgMatches, name: &str) -> R
 /// Parse a value from the commandline, interpreting as hex if the value starts with 0x
 fn get_numeric_u64(matches: &clap::ArgMatches, name: &str) -> Result<u64, String> {
     if let Some(v_in) = matches.value_of(name) {
-        if v_in.starts_with("0x")
-        {
+        if v_in.starts_with("0x") {
             let v = v_in.replace("0x", "");
             if let Ok(v) = u64::from_str_radix(&v, 16) {
                 return Ok(v);
@@ -246,23 +245,31 @@ pub fn main() -> Result<(), Error> {
                 .subcommand(
                     SubCommand::with_name("custom").about("No effect, use frame from SetLedState"),
                 ),
-        ).subcommand(
+        )
+        .subcommand(
             SubCommand::with_name("macro")
                 .about("Configuration for macros")
                 .subcommand(SubCommand::with_name("list").about("List macros on the device"))
-                .subcommand(SubCommand::with_name("del").about("Remove a macro from the device").arg(
-                        Arg::with_name("macro_id")
-                            .takes_value(true)
-                            .required(true)
-                            .help("The macro_id to remove."),
-                    ))
-                .subcommand(SubCommand::with_name("load").about("Load a macro from file to device")
-                    .arg(
-                        Arg::with_name("file")
-                            .takes_value(true)
-                            .required(true)
-                            .help("The filename to read the macro from."),
-                    ))
+                .subcommand(
+                    SubCommand::with_name("del")
+                        .about("Remove a macro from the device")
+                        .arg(
+                            Arg::with_name("macro_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The macro_id to remove."),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("load")
+                        .about("Load a macro from file to device")
+                        .arg(
+                            Arg::with_name("file")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The filename to read the macro from."),
+                        ),
+                ),
         );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
@@ -384,21 +391,16 @@ pub fn main() -> Result<(), Error> {
         }
     }
 
-
     if let Some(matches) = matches.subcommand_matches("macro") {
         match matches.subcommand_name() {
             Some("list") => {
                 let ids = h.macro_list()?;
-                if ids.len() != 0
-                {
+                if ids.len() != 0 {
                     println!("Macro's in memory:");
-                    for id in ids.iter()
-                    {
+                    for id in ids.iter() {
                         println!("   - 0x{:0>4x}", id);
                     }
-                }
-                else
-                {
+                } else {
                     println!("No macro's in memory.");
                 }
             }
@@ -415,17 +417,18 @@ pub fn main() -> Result<(), Error> {
                 let submatches = matches.subcommand_matches("del").unwrap();
                 let macro_id = get_numeric_u64(submatches, "macro_id")? as u16;
                 let ids = h.macro_list()?;
-                for id in ids.iter()
-                {
-                    if *id == macro_id
-                    {
+                for id in ids.iter() {
+                    if *id == macro_id {
                         // found the thing, remove it.
                         h.macro_delete(macro_id)?;
                         println!("Macro {:0>4x} removed.", macro_id);
                         return Ok(());
                     }
                 }
-                println!("The device doesn't report macro 0x{:0>4x} is present.", macro_id);
+                println!(
+                    "The device doesn't report macro 0x{:0>4x} is present.",
+                    macro_id
+                );
             }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

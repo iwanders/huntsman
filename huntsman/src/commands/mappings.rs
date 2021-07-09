@@ -1,13 +1,10 @@
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use struct_helper::{FromBytes, ToBytes, Endianness, offset_of};
+use struct_helper::{offset_of, Endianness, FromBytes, ToBytes};
 
 use crate::hut_util::{
-    at101_serialize,
-    at101_deserialize,
-    keyboard_page_serialize,
-    keyboard_page_deserialize,
+    at101_deserialize, at101_serialize, keyboard_page_deserialize, keyboard_page_serialize,
 };
 
 /// Struct to denote a physical key on the keyboard.
@@ -174,7 +171,6 @@ impl From<Modifiers> for u8 {
         res
     }
 }
-
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents a particular HID Keyboard page key with modifiers.

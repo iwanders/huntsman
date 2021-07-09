@@ -4,7 +4,7 @@ use crate::commands::mappings;
 pub use crate::commands::mappings::{Key, KeyMapping, KeyboardKey, Modifiers};
 
 use crate::commands::macros;
-pub use crate::commands::macros::{MacroAction};
+pub use crate::commands::macros::MacroAction;
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct KeyConfig {
@@ -36,10 +36,8 @@ pub fn load_mappings(filename: &str) -> Result<Vec<KeyConfig>, Box<dyn std::erro
     )))
 }
 
-
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
-pub struct MacroConfig
-{
+pub struct MacroConfig {
     #[serde(default)]
     pub macro_id: u16,
     pub events: Vec<MacroAction>,
@@ -50,9 +48,7 @@ pub fn load_macro(filename: &str) -> Result<MacroConfig, Box<dyn std::error::Err
     if filename.ends_with("yaml") {
         let yaml: serde_yaml::Value =
             serde_yaml::from_reader(file).expect("file should be proper yaml");
-        let macro_config: MacroConfig = serde_yaml::from_value(
-            yaml.clone(),
-        )?;
+        let macro_config: MacroConfig = serde_yaml::from_value(yaml.clone())?;
         return Ok(macro_config);
     }
     Err(Box::new(std::io::Error::new(
@@ -60,8 +56,6 @@ pub fn load_macro(filename: &str) -> Result<MacroConfig, Box<dyn std::error::Err
         "File type not supported. Use .yaml.",
     )))
 }
-
-
 
 #[cfg(test)]
 mod tests {

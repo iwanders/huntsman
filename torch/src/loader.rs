@@ -1,8 +1,8 @@
 use crate::effects::{make_effect, EffectPtr};
 
 use crate::effects::{Add, Retrieve, Store, Sub};
+use crate::effects::{Colorize, SetAlpha, Static};
 use crate::effects::{MovingKernel, MovingParticles, Rectangle};
-use crate::effects::{SetAlpha, Colorize, Static};
 
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;

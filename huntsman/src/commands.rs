@@ -540,7 +540,6 @@ impl Command for GetStorageStatistics {
     }
 }
 
-
 pub use macros::MacroId;
 #[derive(Default, Copy, Clone, Debug)]
 /// Get a list of macro's on the device. (Speculated, unconfirmed)
@@ -565,7 +564,6 @@ impl Command for GetActiveMacros {
     }
 }
 
-
 /// The command to create a macro.
 #[derive(Debug, Default)]
 pub struct MacroCreate(pub macros::MacroCreate);
@@ -584,7 +582,6 @@ impl Command for MacroCreate {
     }
 }
 
-
 /// The command to create a macro.
 #[derive(Debug, Default)]
 pub struct MacroDelete(pub macros::MacroDelete);
@@ -602,7 +599,6 @@ impl Command for MacroDelete {
         self.0.to_be_bytes().expect("cannot fail")
     }
 }
-
 
 /// Holds the macro payload.
 #[derive(Debug, Default)]
@@ -631,7 +627,6 @@ impl MacroMetadata {
         minor: 0x0c,
     };
 }
-
 
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
