@@ -285,14 +285,14 @@ impl Huntsman {
     }
 
     /// Method to retrieve the macros on the device.
-    pub fn get_macro_list(&mut self) -> Result<(), Error> {
+    pub fn get_macro_list(&mut self) -> Result<Vec<commands::MacroId>, Error> {
         let cmd: commands::GetActiveMacros = Default::default();
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
         let response = response
             .downcast_ref::<commands::GetActiveMacros>()
             .unwrap();
-        Ok(())
+        Ok(response.0.to_vec())
     }
 
     /// Delete macro by its id.

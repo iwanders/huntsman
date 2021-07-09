@@ -367,7 +367,12 @@ pub fn main() -> Result<(), Error> {
     if let Some(matches) = matches.subcommand_matches("macro") {
         match matches.subcommand_name() {
             Some("list") => {
-                h.get_macro_list()?;
+                let ids = h.get_macro_list()?;
+                println!("Macro's in memory:");
+                for id in ids.iter()
+                {
+                    println!("   - 0x{:0>4x}", id);
+                }
             }
             Some("load") => {
                 let submatches = matches.subcommand_matches("load").unwrap();

@@ -541,9 +541,10 @@ impl Command for GetStorageStatistics {
 }
 
 
+pub use macros::MacroId;
 #[derive(Default, Copy, Clone, Debug)]
 /// Get a list of macro's on the device. (Speculated, unconfirmed)
-pub struct GetActiveMacros {}
+pub struct GetActiveMacros(pub macros::MacroList);
 impl GetActiveMacros {
     pub const CMD: Cmd = Cmd {
         major: 0x06,
@@ -555,7 +556,12 @@ impl Command for GetActiveMacros {
         return GetActiveMacros::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        vec![0; 0x41]
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let macro_list = macros::MacroList::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetActiveMacros(macro_list);
+        Ok(Box::new(cmd))
     }
 }
 

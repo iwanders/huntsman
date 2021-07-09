@@ -270,6 +270,37 @@ pub fn macro_events_to_size(events: &Vec<MacroAction>) -> usize
     size
 }
 
+
+
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug)]
+#[repr(C)]
+/// Retrieve the list of macros currently in memory.
+pub struct MacroList {
+    pub length: u16,
+    #[inspect(dissect_additional_type = "bytes", dissection_hide = "true")]
+    pub macro_ids: [u16; 0x20], // 0x20 is approx, may have space for one or two more.
+}
+
+impl MacroList
+{
+    pub fn to_vec(&self) -> Vec<MacroId>
+    {
+        let mut ids: Vec<MacroId> = Vec::new();
+        for i in 0..self.length as usize 
+        {
+            ids.push(self.macro_ids[i])
+        }
+        ids
+    }
+}
+
+impl Default for MacroList 
+{
+    fn default() -> Self {
+        MacroList{length: 0, macro_ids: [0; 0x20]}
+    }
+}
+
 pub fn macro_events_to_payloads(macro_id: MacroId, events: &Vec<MacroAction>) -> Vec<MacroActionsPayload>
 {
     // first, convert the events to the payload bytes.
@@ -362,6 +393,9 @@ mod tests {
         This factor sequence is very close to the Lazy Caterer's sequence, just having an extra 3
         on the second index; https://oeis.org/A000124 
         [1, 2, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67, 79, 92, 106] # 121
+
+        The keyboard itself seems to give 0 F's about the macro metadata, just allocating a macro,
+        giving it actions and assigning a key mapping to it makes it work.
     */
 
     #[test]
@@ -465,19 +499,19 @@ mod tests {
 
     }
 
+    // checking against a packed struct, don't want warnings about references to it.
+    macro_rules! copied_assert_eq {
+        ( $a:expr, $b:expr ) => {
+            {
+                let a = $a;
+                let b = $b;
+                assert_eq!(a, b);
+            }
+        };
+    }
     #[test]
     fn test_macro_payloads()
     {
-        // checking against a packed struct, don't want warnings about references to it.
-        macro_rules! copied_assert_eq {
-            ( $a:expr, $b:expr ) => {
-                {
-                    let a = $a;
-                    let b = $b;
-                    assert_eq!(a, b);
-                }
-            };
-        }
         // Trivial macro that fits in one chunk.
         let mouse_click = vec!(MacroAction::MouseClick(MouseState::Left), MacroAction::MouseClick(MouseState::None), );
         let payloads = macro_events_to_payloads(0x7f39, &mouse_click);
@@ -529,5 +563,18 @@ mod tests {
         print_serialize(vec!(MacroAction::KeyboardMake{hid: 0x04}, MacroAction::KeyboardBreak{hid: 0x04}));
 
         print_deserialize::<MacroAction>(r#"{"KeyboardMake":"KEY_A"}"#);
+    }
+
+    pub fn test_macro_get_list() {
+        let expected = parse_wireshark_truncated(
+            "02:1f:00:00:00:ca:06:81:00:02:13:37:13:36:00",
+            0x4e,
+        );
+        let parsed = MacroList::from_be_bytes(&expected[PAYLOAD_START..]).expect("success");
+        assert_eq!(parsed.length, 2);
+        assert_eq!(parsed.macro_ids[0], 0x1337);
+        assert_eq!(parsed.macro_ids[1], 0x1336);
+        assert_eq!(parsed.to_vec(), vec!(0x1337, 0x1336));
+        
     }
 }
