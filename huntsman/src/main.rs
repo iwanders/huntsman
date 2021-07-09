@@ -231,6 +231,10 @@ pub fn main() -> Result<(), Error> {
                 .subcommand(
                     SubCommand::with_name("custom").about("No effect, use frame from SetLedState"),
                 ),
+        ).subcommand(
+            SubCommand::with_name("macro")
+                .about("Configuration for macros")
+                .subcommand(SubCommand::with_name("list").about("List macros on the device"))
         );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
@@ -346,6 +350,17 @@ pub fn main() -> Result<(), Error> {
             }
             Some("custom") => {
                 h.effect_custom()?;
+            }
+            None => println!("No subcommand was used"),
+            _ => println!("Some other subcommand was used"),
+        }
+    }
+
+
+    if let Some(matches) = matches.subcommand_matches("macro") {
+        match matches.subcommand_name() {
+            Some("list") => {
+                h.get_macro_list()?;
             }
             None => println!("No subcommand was used"),
             _ => println!("Some other subcommand was used"),

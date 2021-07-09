@@ -216,6 +216,61 @@ impl ToBytes for MacroActions {
     }
 }
 
+
+
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug)]
+#[repr(C, packed)]
+/// Struct definition to hold the actions that make up a macro.
+pub struct MacroActionsPayload {
+    pub macro_id: u16,
+    pub position: u32, // byte offset from start of macro actions
+    pub event_bytes_in_msg: u8,
+    #[inspect(dissect_additional_type = "bytes", dissection_hide = "true")]
+    pub events: [u8; 0x48],
+}
+impl Default for MacroActionsPayload {
+    fn default() -> MacroActionsPayload {
+        MacroActionsPayload {
+            events: [0; 0x48],
+            macro_id: 0,
+            position: 0,
+            event_bytes_in_msg: 0,
+        }
+    }
+}
+
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct Uuid {
+    pub uuid: [u8; 16],
+}
+
+#[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
+#[repr(C, packed)]
+/// Command for the macro metadata 0x060c (incomplete!)
+pub struct MacroMetadata {
+    pub macro_id: u16,
+    pub page_offset: u16,
+    pub something_always_0x00fa: u16,
+    pub uuid: Uuid,
+    pub action_bytes: u32, // is this... another endianness!?!?
+                           // pub name: [u8; 12],    // It can be longer....
+                           // Lots of more stuff here, which looks... mostly like dirty memory
+}
+
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
+#[repr(C, packed)]
+pub struct MacroCreate {
+    pub macro_id: u16,
+    pub event_bytes: u32,
+}
+
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
+#[repr(C)]
+pub struct MacroDelete {
+    pub macro_id: u16,
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -318,5 +373,32 @@ mod tests {
         assert_eq!(mouse_move_action, MacroAction::MouseMove(1, -1));
         let and_back = mouse_move_action.to_be_bytes().expect("Success");
         assert_eq!(mouse_move_action_input, and_back);
+    }
+
+
+    #[test]
+    fn test_macro_create() {
+        // This is the create macro command, it takes an id and the number of bytes for the actual
+        // events. The metadata is not counted in this.
+        let long_create = parse_wireshark_truncated(
+            "00:1f:00:00:00:06:06:08:1a:2e:00:00:28:cd:00",
+            0xd9,
+        );
+        let parsed = MacroCreate::from_be_bytes(&long_create[PAYLOAD_START..]).expect("success");
+        let macro_id = parsed.macro_id;  // copy to avoid borrowing from packed struct
+        let event_bytes = parsed.event_bytes;
+        assert_eq!(macro_id, 0x1a2e);
+        assert_eq!(event_bytes, 0x28cd);
+
+        let short_create = parse_wireshark_truncated(
+            "0:1f:00:00:00:06:06:08:7f:39:00:00:00:04:00",
+            0x4a,
+        );
+        let parsed = MacroCreate::from_be_bytes(&short_create[PAYLOAD_START..]).expect("success");
+        let macro_id = parsed.macro_id;
+        let event_bytes = parsed.event_bytes;
+        assert_eq!(macro_id, 0x7f39);
+        assert_eq!(event_bytes, 0x04);
+
     }
 }

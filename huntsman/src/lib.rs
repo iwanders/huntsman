@@ -283,4 +283,15 @@ impl Huntsman {
         let cmd = commands::SetLedEffect::custom();
         return self.set_command(&cmd).and_then(|_v| Ok(()));
     }
+
+    /// Method to retrieve the macros on the device.
+    pub fn get_macro_list(&mut self) -> Result<(), Error> {
+        let cmd: commands::GetActiveMacros = Default::default();
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetActiveMacros>()
+            .unwrap();
+        Ok(())
+    }
 }

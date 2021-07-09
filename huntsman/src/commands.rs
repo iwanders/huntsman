@@ -86,7 +86,7 @@ pub trait Command: std::fmt::Debug {
     /// If commands only care about the payload (most do), this method gets called from
     /// the default implementation of [`self.response()`] and passes just the payload slice.
     fn response_payload(&self, _data: &[u8]) -> Result<Box<dyn Any>, String> {
-        Err("Not implemented".to_string())
+        unimplemented!("Reading response payload is not implemented for this command.");
     }
 }
 
@@ -499,7 +499,7 @@ impl Command for SetKeyMap {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-/// Get the memory storage statistics.
+/// Get the list of active profiles
 pub struct GetActiveProfiles {}
 impl GetActiveProfiles {
     pub const CMD: Cmd = Cmd {
@@ -540,10 +540,48 @@ impl Command for GetStorageStatistics {
     }
 }
 
+
 #[derive(Default, Copy, Clone, Debug)]
+/// Get a list of macro's on the device. (Speculated, unconfirmed)
+pub struct GetActiveMacros {}
+impl GetActiveMacros {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x81,
+    };
+}
+impl Command for GetActiveMacros {
+    fn register(&self) -> Cmd {
+        return GetActiveMacros::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        vec![0; 0x41]
+    }
+}
+
+
+/// The command to create a macro.
+// pub use macros::MacroCreate;
+pub struct MacroCreate(pub macros::MacroCreate);
+impl MacroCreate {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x08,
+    };
+}
+
+/// The command to create a macro.
+pub struct MacroDelete(pub macros::MacroDelete);
+impl MacroDelete {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x03,
+    };
+}
+
 /// Holds the macro payload.
-pub struct MacroActions {}
-impl MacroActions {
+pub struct MacroActionsPayload(pub macros::MacroActionsPayload);
+impl MacroActionsPayload {
     pub const CMD: Cmd = Cmd {
         major: 0x06,
         minor: 0x09,
@@ -559,6 +597,7 @@ impl MacroMetadata {
         minor: 0x0c,
     };
 }
+
 
 #[derive(Default, Clone, Debug)]
 /// Sends an arbitrary payload to a register, use with caution, useful for testing.
@@ -630,11 +669,13 @@ pub fn get_command_fields() -> Vec<(Cmd, Box<dyn Fn() -> Box<dyn struct_helper::
             GetStorageStatistics::CMD,
             Box::new(wire::GetStorageStatistics::inspect),
         ),
-        (MacroMetadata::CMD, Box::new(wire::MacroMetadata::inspect)),
+        (MacroMetadata::CMD, Box::new(macros::MacroMetadata::inspect)),
         (
-            MacroActions::CMD,
-            Box::new(wire::MacroActionsPayload::inspect),
+            MacroActionsPayload::CMD,
+            Box::new(macros::MacroActionsPayload::inspect),
         ),
+        (MacroCreate::CMD, Box::new(macros::MacroCreate::inspect)),
+        (MacroDelete::CMD, Box::new(macros::MacroDelete::inspect)),
     ]
 }
 
