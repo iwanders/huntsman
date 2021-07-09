@@ -1,5 +1,8 @@
 use struct_helper::*;
 
+pub type MacroId = u16;
+
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MouseState {
     None = 0,
@@ -14,9 +17,9 @@ pub enum MouseState {
 /// Enum to represent an action in a macro.
 pub enum MacroAction {
     /// HID key id.
-    KeyboardMake(u8),
+    KeyboardMake{hid: u8},
     /// HID key id.
-    KeyboardBreak(u8),
+    KeyboardBreak{hid: u8},
     /// Delay in milliseconds.
     Delay(u32),
     /// Sets the mouse click state (bitmask), use again with 0 to release
@@ -58,11 +61,11 @@ impl FromBytes for MacroAction {
         let specification = src[0];
         match specification {
             MacroAction::KEYBOARD_MAKE => {
-                *self = MacroAction::KeyboardMake(src[1]);
+                *self = MacroAction::KeyboardMake{hid: src[1]};
                 return Ok(2);
             }
             MacroAction::KEYBOARD_BREAK => {
-                *self = MacroAction::KeyboardBreak(src[1]);
+                *self = MacroAction::KeyboardBreak{hid: src[1]};
                 return Ok(2);
             }
             MacroAction::KEYBOARD_DELAY_U8
@@ -115,13 +118,13 @@ impl ToBytes for MacroAction {
     fn to_bytes(&self, _endianness: Endianness) -> Result<Vec<u8>, String> {
         let mut buff: Vec<u8> = Vec::new();
         match self {
-            MacroAction::KeyboardMake(v) => {
+            MacroAction::KeyboardMake{ hid } => {
                 buff.push(MacroAction::KEYBOARD_MAKE);
-                buff.push(*v);
+                buff.push(*hid);
             }
-            MacroAction::KeyboardBreak(v) => {
+            MacroAction::KeyboardBreak{ hid } => {
                 buff.push(MacroAction::KEYBOARD_BREAK);
-                buff.push(*v);
+                buff.push(*hid);
             }
             MacroAction::Delay(v) => {
                 let b = v.to_be_bytes()?;
@@ -239,6 +242,46 @@ impl Default for MacroActionsPayload {
     }
 }
 
+pub fn macro_events_to_size(events: &Vec<MacroAction>) -> usize
+{
+    let mut size: usize = 0;
+    for event in events.iter() {
+        size += event.to_bytes(Endianness::Big).unwrap().len();
+    }
+    size
+}
+
+pub fn macro_events_to_payloads(macro_id: MacroId, events: &Vec<MacroAction>) -> Vec<MacroActionsPayload>
+{
+    // first, convert the events to the payload bytes.
+    let mut buff: Vec<u8> = Vec::new();
+    for event in events.iter() {
+        buff.extend(event.to_bytes(Endianness::Big).unwrap());
+    }
+
+    // Cool, now we have bytes, we just have to chunk it and produce our MacroActionsPayloads.
+    let mut payloads: Vec<MacroActionsPayload> = Vec::new();
+    let chunk_size = 0x48;  // set in stone.
+
+    for (i, payload) in buff.chunks(chunk_size).enumerate()
+    {
+        let mut cmd = MacroActionsPayload{
+                macro_id,
+                position: (i * chunk_size) as u32,
+                event_bytes_in_msg: payload.len() as u8,
+                ..Default::default()
+            };
+        for (j, b) in payload.iter().enumerate()
+        {
+            cmd.events[j] = *b
+        }
+        payloads.push(cmd);
+    }
+
+    payloads
+    
+}
+
 #[derive(Inspectable, FromBytes, ToBytes, Default, Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Uuid {
@@ -257,6 +300,7 @@ pub struct MacroMetadata {
                            // pub name: [u8; 12],    // It can be longer....
                            // Lots of more stuff here, which looks... mostly like dirty memory
 }
+
 
 #[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
 #[repr(C, packed)]
@@ -400,5 +444,51 @@ mod tests {
         assert_eq!(macro_id, 0x7f39);
         assert_eq!(event_bytes, 0x04);
 
+    }
+
+    #[test]
+    fn test_macro_payloads()
+    {
+        // checking against a packed struct, don't want warnings about references to it.
+        macro_rules! copied_assert_eq {
+            ( $a:expr, $b:expr ) => {
+                {
+                    let a = $a;
+                    let b = $b;
+                    assert_eq!(a, b);
+                }
+            };
+        }
+        // Trivial macro that fits in one chunk.
+        let mouse_click = vec!(MacroAction::MouseClick(MouseState::Left), MacroAction::MouseClick(MouseState::None), );
+        let payloads = macro_events_to_payloads(0x7f39, &mouse_click);
+        println!("Payloads: {:?}", payloads);
+        let as_bytes = payloads.first().unwrap().to_be_bytes().expect("Success");
+        let expected = parse_wireshark_truncated(
+            "00:1f:00:00:00:0b:06:09:7f:39:00:00:00:00:04:08:01:08:00",
+            0x47,
+        );
+        assert_eq!(as_bytes, &expected[PAYLOAD_START..expected.len() - 3]);
+        assert_eq!(macro_events_to_size(&mouse_click), 0x04);
+
+        // Larger macro that spans two chunks, don't have hard data to test against, check the indices
+        // against expectation.
+        let mut actions: Vec<MacroAction> = Vec::new();
+        for i in 0..20
+        {
+            actions.push(MacroAction::MouseClick(MouseState::Left));
+            actions.push(MacroAction::MouseClick(MouseState::None));
+        }
+        let payloads = macro_events_to_payloads(0x1337, &actions);
+        let total_bytes = macro_events_to_size(&actions);
+        println!("Payloads: {:?}", payloads);
+        copied_assert_eq!(payloads.len(), 2);
+        copied_assert_eq!(payloads[0].macro_id, 0x1337);
+        copied_assert_eq!(payloads[1].macro_id, 0x1337);
+        copied_assert_eq!(payloads[0].position, 0);
+        copied_assert_eq!(payloads[1].position, 0x48 as u32);
+        copied_assert_eq!(payloads[0].event_bytes_in_msg, 0x48 as u8);
+        copied_assert_eq!(payloads[1].event_bytes_in_msg, (total_bytes - 0x48) as u8);
+        copied_assert_eq!(total_bytes, 20 * 2 * 2);  // each mouse action is 2 bytes.
     }
 }
