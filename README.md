@@ -50,6 +50,10 @@ ensure you can use HID to interact with the keyboard without requiring elevated 
 ### `./huntsman`
 After building the workspace you can run the `huntsman` binary (`cargo run --bin huntsman -- --help`).
 
+#### On macro's.
+The device doesn't care about whether or not the macro metadata (uuid, name, etc) is present.
+When a key is mapped to a macro, and the macro is removed, the mapping remains. Recreating the macro
+with the id that was used for the mapping makes the mapping function again using the new macro payload.
 
 ### Wireshark dissector
 Modify the values at the bottom of the `lib.rs` file to match your Wireshark version. Then symlink 
