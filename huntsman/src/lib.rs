@@ -285,7 +285,7 @@ impl Huntsman {
     }
 
     /// Method to retrieve the macros currently on the device.
-    pub fn get_macro_list(&mut self) -> Result<Vec<commands::MacroId>, Error> {
+    pub fn macro_list(&mut self) -> Result<Vec<commands::MacroId>, Error> {
         let cmd: commands::GetActiveMacros = Default::default();
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;

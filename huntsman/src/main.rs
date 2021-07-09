@@ -388,7 +388,7 @@ pub fn main() -> Result<(), Error> {
     if let Some(matches) = matches.subcommand_matches("macro") {
         match matches.subcommand_name() {
             Some("list") => {
-                let ids = h.get_macro_list()?;
+                let ids = h.macro_list()?;
                 println!("Macro's in memory:");
                 for id in ids.iter()
                 {
@@ -406,7 +406,7 @@ pub fn main() -> Result<(), Error> {
             Some("del") => {
                 let submatches = matches.subcommand_matches("del").unwrap();
                 let macro_id = get_numeric_u64(submatches, "macro_id")? as u16;
-                let ids = h.get_macro_list()?;
+                let ids = h.macro_list()?;
                 for id in ids.iter()
                 {
                     if *id == macro_id

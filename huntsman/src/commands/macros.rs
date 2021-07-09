@@ -13,6 +13,7 @@ pub type MacroId = u16;
 
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MouseState {
     None = 0,
     Left = 1,
@@ -24,6 +25,7 @@ pub enum MouseState {
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 /// Enum to represent an action in a macro.
+#[serde(rename_all = "snake_case")]
 pub enum MacroAction {
     /// HID key id.
     #[serde(
@@ -46,7 +48,7 @@ pub enum MacroAction {
     /// scroll with the mouse
     MouseScroll(i8),
     /// move mouse relative, with x and y values.
-    MouseMove(i16, i16),
+    MouseMove{x: i16, y: i16},
     /// No action.
     None,
 }
@@ -125,7 +127,7 @@ impl FromBytes for MacroAction {
             MacroAction::MOUSE_MOVE => {
                 let x: [u8; 2] = [src[1], src[2]];
                 let y: [u8; 2] = [src[3], src[4]];
-                *self = MacroAction::MouseMove(i16::from_be_bytes(x), i16::from_be_bytes(y));
+                *self = MacroAction::MouseMove{x: i16::from_be_bytes(x), y: i16::from_be_bytes(y)};
                 return Ok(5);
             }
             z => panic!("Unhandled macro code {:?}, total src: {:?}", z, src),
@@ -145,8 +147,8 @@ impl ToBytes for MacroAction {
                 buff.push(MacroAction::KEYBOARD_BREAK);
                 buff.push(*hid);
             }
-            MacroAction::Delay(v) => {
-                let b = v.to_be_bytes()?;
+            MacroAction::Delay(delay) => {
+                let b = delay.to_be_bytes()?;
                 // now... we do things based on the amount of zeros :(
                 if b[0] != 0
                 // need 4 bytes
@@ -174,11 +176,11 @@ impl ToBytes for MacroAction {
                 buff.push(MacroAction::MOUSE_CLICK);
                 buff.push(*button as u8);
             }
-            MacroAction::MouseScroll(value) => {
+            MacroAction::MouseScroll(delta) => {
                 buff.push(MacroAction::MOUSE_SCROLL);
-                buff.push(i8::to_le_bytes(*value)[0]);
+                buff.push(i8::to_le_bytes(*delta)[0]);
             }
-            MacroAction::MouseMove(x, y) => {
+            MacroAction::MouseMove{x, y} => {
                 buff.push(MacroAction::MOUSE_MOVE);
                 buff.extend(i16::to_be_bytes(*x).iter());
                 buff.extend(i16::to_be_bytes(*y).iter());
@@ -467,7 +469,7 @@ mod tests {
         let mouse_move_action_input = parse_wireshark_value("15:00:01:ff:ff");
         let mouse_move_action =
             MacroAction::from_le_bytes(&mouse_move_action_input).expect("success");
-        assert_eq!(mouse_move_action, MacroAction::MouseMove(1, -1));
+        assert_eq!(mouse_move_action, MacroAction::MouseMove{x: 1, y: -1});
         let and_back = mouse_move_action.to_be_bytes().expect("Success");
         assert_eq!(mouse_move_action_input, and_back);
     }
@@ -562,7 +564,7 @@ mod tests {
         print_serialize(MacroAction::KeyboardMake{hid: 0x04});
         print_serialize(vec!(MacroAction::KeyboardMake{hid: 0x04}, MacroAction::KeyboardBreak{hid: 0x04}));
 
-        print_deserialize::<MacroAction>(r#"{"KeyboardMake":"KEY_A"}"#);
+        print_deserialize::<MacroAction>(r#"{"keyboard_make":"KEY_A"}"#);
     }
 
     pub fn test_macro_get_list() {

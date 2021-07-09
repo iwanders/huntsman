@@ -1,4 +1,42 @@
 macro_id: 0x1337
 events:
-  - KeyboardMake: h
-  - KeyboardBreak: h
+  - keyboard_make: h
+  - keyboard_break: h
+  - keyboard_make: e
+  - keyboard_break: e
+  - keyboard_make: l
+  - keyboard_break: l
+  - keyboard_make: l
+  - keyboard_break: l
+  - keyboard_make: o
+  - keyboard_break: o
+  - delay: 500
+  - keyboard_make: space
+  - keyboard_break: space
+  - keyboard_make: w
+  - keyboard_break: w
+  - delay: 500
+  - mouse_move: {x: 0, y: 100} # on linux this is downwards
+  - keyboard_make: o
+  - keyboard_break: o
+  - delay: 500
+  - mouse_move: {x: 100, y: 0} # on linux this is to the right
+  - keyboard_make: r
+  - keyboard_break: r
+  - delay: 500
+  - mouse_move: {x: 0, y: -100} # on linux this is upwards
+  - keyboard_make: l
+  - keyboard_break: l
+  - delay: 500
+  - mouse_move: {x: -100, y: 0} # on linux this is left wards.
+  - keyboard_make: d
+  - keyboard_break: d
+  - keyboard_make: dot
+  - keyboard_break: dot
+  - mouse_click: left  # can't hold multiple clicks at the same time atm
+  - mouse_click: none
+  - delay: 100
+  - mouse_scroll: -1 # scroll wheel seems a bit glitchy? maybe value wrong?
+  - delay: 500
+  - mouse_scroll: 1
+  - delay: 100
