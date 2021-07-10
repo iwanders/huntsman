@@ -42,6 +42,14 @@ pub struct ProfileDelete {
     pub profile_id: ProfileId,
 }
 
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
+#[repr(C)]
+/// Payload for setting and retrieving current profile.
+pub struct ProfileCurrent {
+    pub profile_id: ProfileId,
+}
+
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.

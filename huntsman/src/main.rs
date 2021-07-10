@@ -112,8 +112,15 @@ fn get_numeric_u64(matches: &clap::ArgMatches, name: &str) -> Result<u64, String
     Err(format!("Couldn't parse argument {}.", name))
 }
 
+fn get_profile_id(matches: &clap::ArgMatches) -> Result<commands::ProfileId, String> {
+    if let Some(v_in) = matches.value_of("profile_id") {
+        return Ok(profile_util::str_to_profile_id(&v_in.to_string()));
+    }
+    Err(format!("Couldn't parse argument profile_id."))
+}
+
 pub fn main() -> Result<(), Error> {
-    let mut app = App::new("Huntsman toolie")
+    let mut app = App::new("Huntsman toolie").setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .about("Allows configuring the keyboard in various ways.")
         .arg(
             Arg::with_name("c")
@@ -148,7 +155,7 @@ pub fn main() -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("mapping")
+            SubCommand::with_name("mapping").setting(clap::AppSettings::SubcommandRequiredElseHelp)
                 .about("Set mapping(s)")
                 .arg(
                     Arg::with_name("file")
@@ -210,7 +217,7 @@ pub fn main() -> Result<(), Error> {
             )
             .arg(Arg::with_name("index").short("i").takes_value(true))))
         .subcommand(
-            SubCommand::with_name("effect")
+            SubCommand::with_name("effect").setting(clap::AppSettings::SubcommandRequiredElseHelp)
                 .about("Sets an LED effect")
                 .subcommand(SubCommand::with_name("off").about("Disables current effect"))
                 .subcommand(add_colors!(
@@ -252,7 +259,7 @@ pub fn main() -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("macro")
+            SubCommand::with_name("macro").setting(clap::AppSettings::SubcommandRequiredElseHelp)
                 .about("Configuration for macros")
                 .subcommand(SubCommand::with_name("list").about("List macros on the device"))
                 .subcommand(
@@ -280,11 +287,12 @@ pub fn main() -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("profile")
+            SubCommand::with_name("profile").setting(clap::AppSettings::SubcommandRequiredElseHelp)
                 .about(
                     "Configuration for profiles, profiles 2, 3, 4 and 5 can be removed / created.",
                 )
                 .subcommand(SubCommand::with_name("list").about("List profiles on the device"))
+                .subcommand(SubCommand::with_name("current").about("Show the currently active profile."))
                 .subcommand(
                     SubCommand::with_name("count").about("Show the nr of profiles on the device."),
                 )
@@ -295,7 +303,7 @@ pub fn main() -> Result<(), Error> {
                             Arg::with_name("profile_id")
                                 .takes_value(true)
                                 .required(true)
-                                .help("The profile_id to remove, must exist."),
+                                .help("The profile_id to remove, must exist (or by color)."),
                         ),
                 )
                 .subcommand(
@@ -305,7 +313,17 @@ pub fn main() -> Result<(), Error> {
                             Arg::with_name("profile_id")
                                 .takes_value(true)
                                 .required(true)
-                                .help("The profile_id to allocate 2, 3, 4 or 5."),
+                                .help("The profile_id to allocate 2, 3, 4 or 5 (or by color)."),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("activate")
+                        .about("Activate (switch to) a profile by id")
+                        .arg(
+                            Arg::with_name("profile_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The profile_id to set the keyboard to 1, 2, 3, 4 or 5 (or by color)."),
                         ),
                 ),
         );
@@ -498,21 +516,33 @@ pub fn main() -> Result<(), Error> {
                 let count = h.profile_count()?;
                 println!("{}", count);
             }
+            Some("current") => {
+                let id = h.profile_get_current()?;
+                println!("Current profile: {} ({})", id, profile_util::profile_to_colored_name(id));
+            }
+            Some("activate") => {
+                let submatches = matches.subcommand_matches("activate").unwrap();
+                let profile_id = get_profile_id(submatches)?;
+                let _ = h.profile_set_current(profile_id)?;
+                let id = h.profile_get_current()?;
+                println!("Current profile: {} ({})", id, profile_util::profile_to_colored_name(id));
+
+            }
             Some("create") => {
                 let submatches = matches.subcommand_matches("create").unwrap();
-                let profile_id = get_numeric_u64(submatches, "profile_id")? as u8;
+                let profile_id = get_profile_id(submatches)?;
                 h.profile_create(profile_id)?;
-                println!("Profile {} created.", profile_id);
+                println!("Profile {} ({}) created.", profile_id, profile_util::profile_to_colored_name(profile_id));
             }
             Some("del") => {
                 let submatches = matches.subcommand_matches("del").unwrap();
-                let profile_id = get_numeric_u64(submatches, "profile_id")? as u8;
+                let profile_id = get_profile_id(submatches)?;
                 let ids = h.profile_list()?;
                 for id in ids.iter() {
                     if *id == profile_id {
                         // found the thing, remove it.
                         h.profile_delete(profile_id)?;
-                        println!("Profile {} removed.", profile_id);
+                        println!("Profile {} ({}) removed.", profile_id, profile_util::profile_to_colored_name(*id));
                         return Ok(());
                     }
                 }
@@ -521,7 +551,9 @@ pub fn main() -> Result<(), Error> {
                     profile_id
                 );
             }
-            None => println!("No subcommand was used"),
+            // None => {
+                // println!("No subcommand was used")
+            // },
             _ => println!("Some other subcommand was used"),
         }
     }

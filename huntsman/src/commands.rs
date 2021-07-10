@@ -583,7 +583,57 @@ impl Command for ProfileDelete {
     fn payload(&self) -> Vec<u8> {
         self.0.to_be_bytes().expect("cannot fail")
     }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        // no real response, but we can't delete the profile that's active.
+        let z = profiles::ProfileDelete::from_be_bytes(&data).expect("Should pass");
+        let cmd = ProfileDelete(z);
+        Ok(Box::new(cmd))
+    }
 }
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the currently active profile.
+pub struct GetProfileCurrent(pub profiles::ProfileCurrent);
+impl GetProfileCurrent {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x84,
+    };
+}
+impl Command for GetProfileCurrent {
+    fn register(&self) -> Cmd {
+        return GetProfileCurrent::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let res = profiles::ProfileCurrent::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetProfileCurrent(res);
+        Ok(Box::new(cmd))
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Get the currently active profile.
+pub struct SetProfileCurrent(pub profiles::ProfileCurrent);
+impl SetProfileCurrent {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x04,
+    };
+}
+impl Command for SetProfileCurrent {
+    fn register(&self) -> Cmd {
+        return SetProfileCurrent::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+}
+
+
+
 // Set/Read profile metadata: 0x0508,.... read metadata 0x0588
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -743,8 +793,8 @@ pub fn dev_run_cmd() -> Box<dyn Command> {
     // set right control back to right control.
     Box::new(ArbitraryCommand {
         register: Cmd {
-            major: 0x06,
-            minor: 0x80,
+            major: 0x05,
+            minor: 0x84,
         },
         payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     })

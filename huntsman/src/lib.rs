@@ -367,7 +367,7 @@ impl Huntsman {
         Ok(response.0.count)
     }
 
-    /// Delete profile by its id.
+    /// Delete profile by its id, one cannot delete the currently active profile.
     pub fn profile_delete(&mut self, profile_id: commands::ProfileId) -> Result<(), Error> {
         if profile_id < 2 || profile_id > 5 {
             // Not too sure what happens if we throw out 1...
@@ -375,7 +375,11 @@ impl Huntsman {
         }
         let mut cmd: commands::ProfileDelete = Default::default();
         cmd.0.profile_id = profile_id;
-        let _result = self.set_command(&cmd)?;
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::ProfileDelete>()
+            .unwrap();
         Ok(())
     }
 
@@ -385,6 +389,24 @@ impl Huntsman {
             panic!("Profile ids must be 2, 3, 4 or 5.");
         }
         let mut cmd: commands::ProfileCreate = Default::default();
+        cmd.0.profile_id = profile_id;
+        let _result = self.set_command(&cmd)?;
+        Ok(())
+    }
+
+    /// Retrieve the currently active profile.
+    pub fn profile_get_current(&mut self) -> Result<commands::ProfileId, Error> {
+        let cmd: commands::GetProfileCurrent = Default::default();
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetProfileCurrent>()
+            .unwrap();
+        Ok(response.0.profile_id)
+    }
+    /// Set the active profile to the id provided.
+    pub fn profile_set_current(&mut self, profile_id: commands::ProfileId) -> Result<(), Error> {
+        let mut cmd: commands::SetProfileCurrent = Default::default();
         cmd.0.profile_id = profile_id;
         let _result = self.set_command(&cmd)?;
         Ok(())

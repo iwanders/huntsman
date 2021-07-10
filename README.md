@@ -13,6 +13,7 @@ actually fairly feature complete:
 - Remapping keys (to keys, mouse, macro's, various HID pages, profile cycle, hypershift support).
 - Hardware macro load and delete from yaml files.
 - Profile creation and deletion.
+- Switching profiles.
 
 ## Architecture
 
