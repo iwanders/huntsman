@@ -4,6 +4,8 @@ use huntsman::commands;
 mod colors;
 use colors::str_to_color;
 
+mod profile_util;
+
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
@@ -101,6 +103,9 @@ fn get_numeric_u64(matches: &clap::ArgMatches, name: &str) -> Result<u64, String
             if let Ok(v) = u64::from_str_radix(&v, 16) {
                 return Ok(v);
             }
+        }
+        if let Ok(v) = v_in.to_string().parse::<u64>() {
+            return Ok(v);
         }
     }
 
@@ -251,6 +256,9 @@ pub fn main() -> Result<(), Error> {
                 .about("Configuration for macros")
                 .subcommand(SubCommand::with_name("list").about("List macros on the device"))
                 .subcommand(
+                    SubCommand::with_name("count").about("Show the nr of macros on the device."),
+                )
+                .subcommand(
                     SubCommand::with_name("del")
                         .about("Remove a macro from the device")
                         .arg(
@@ -268,6 +276,36 @@ pub fn main() -> Result<(), Error> {
                                 .takes_value(true)
                                 .required(true)
                                 .help("The filename to read the macro from."),
+                        ),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("profile")
+                .about(
+                    "Configuration for profiles, profiles 2, 3, 4 and 5 can be removed / created.",
+                )
+                .subcommand(SubCommand::with_name("list").about("List profiles on the device"))
+                .subcommand(
+                    SubCommand::with_name("count").about("Show the nr of profiles on the device."),
+                )
+                .subcommand(
+                    SubCommand::with_name("del")
+                        .about("Remove a profile from the device")
+                        .arg(
+                            Arg::with_name("profile_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The profile_id to remove, must exist."),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("create")
+                        .about("Create a profile by id")
+                        .arg(
+                            Arg::with_name("profile_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The profile_id to allocate 2, 3, 4 or 5."),
                         ),
                 ),
         );
@@ -404,6 +442,10 @@ pub fn main() -> Result<(), Error> {
                     println!("No macro's in memory.");
                 }
             }
+            Some("count") => {
+                let count = h.macro_count()?;
+                println!("{}", count);
+            }
             Some("load") => {
                 let submatches = matches.subcommand_matches("load").unwrap();
                 let file = get_value::<String>(submatches, "file")?;
@@ -421,13 +463,62 @@ pub fn main() -> Result<(), Error> {
                     if *id == macro_id {
                         // found the thing, remove it.
                         h.macro_delete(macro_id)?;
-                        println!("Macro {:0>4x} removed.", macro_id);
+                        println!("Macro 0x{:0>4x} removed.", macro_id);
                         return Ok(());
                     }
                 }
                 println!(
                     "The device doesn't report macro 0x{:0>4x} is present.",
                     macro_id
+                );
+            }
+            None => println!("No subcommand was used"),
+            _ => println!("Some other subcommand was used"),
+        }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("profile") {
+        match matches.subcommand_name() {
+            Some("list") => {
+                let ids = h.profile_list()?;
+                if ids.len() != 0 {
+                    println!("Profiles's in memory:");
+                    for id in ids.iter() {
+                        println!(
+                            "   - {} ({})",
+                            id,
+                            profile_util::profile_to_colored_name(*id)
+                        );
+                    }
+                } else {
+                    println!("No macro's in memory.");
+                }
+            }
+            Some("count") => {
+                let count = h.profile_count()?;
+                println!("{}", count);
+            }
+            Some("create") => {
+                let submatches = matches.subcommand_matches("create").unwrap();
+                let profile_id = get_numeric_u64(submatches, "profile_id")? as u8;
+                h.profile_create(profile_id)?;
+                println!("Profile {} created.", profile_id);
+            }
+            Some("del") => {
+                let submatches = matches.subcommand_matches("del").unwrap();
+                let profile_id = get_numeric_u64(submatches, "profile_id")? as u8;
+                let ids = h.profile_list()?;
+                for id in ids.iter() {
+                    if *id == profile_id {
+                        // found the thing, remove it.
+                        h.profile_delete(profile_id)?;
+                        println!("Profile {} removed.", profile_id);
+                        return Ok(());
+                    }
+                }
+                println!(
+                    "The device doesn't report profile {} is present.",
+                    profile_id
                 );
             }
             None => println!("No subcommand was used"),

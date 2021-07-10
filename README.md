@@ -3,14 +3,16 @@
 This [Rust][rust] workspace allows interacting with the [Razer Huntsman Elite][kbd] keyboard. 
 
 Not all features of the keyboard are supported, neither do I intend to make this project feature
-complete, it's mostly my means of learning a bit of Rust. Currently supported functionality is:
+complete, it's mostly my means of learning a bit of Rust. Currently supported functionality is
+actually fairly feature complete:
 
 - Retrieving the serial number.
 - The majority of the LED effects.
 - Setting overall brightness.
 - Setting a custom frame to the LEDs.
-- Remapping keys (to keys, mouse, macro's, various HID pages).
-- Hardware macro load and delete.
+- Remapping keys (to keys, mouse, macro's, various HID pages, profile cycle, hypershift support).
+- Hardware macro load and delete from yaml files.
+- Profile creation and deletion.
 
 ## Architecture
 
@@ -33,9 +35,9 @@ mouse clicks or repeating a keystroke on an interval.
 
 
 The [`huntsman_dissector`](/huntsman_dissector) uses the `StructHelper` derived structs from the
-[`huntsman_comm`](/huntsman_comm) crate, together with the [`wireshark_dissector_rs`](/wireshark_dissector_rs)
+[`huntsman::commands`](/huntsman/src/commands/) crate, together with the [`wireshark_dissector_rs`](/wireshark_dissector_rs)
 crate to make a Wireshark dissector that dissects using the structs and fields that
-are defined in the `huntsman_comm` crate. This helps significanly with reverse engineering.
+are defined in the `huntsman` crate. This helps significanly with reverse engineering.
 
 The [`torch`](/torch) crate contains a binary that can update the custom frame display on the
 keyboard using various effects. These effect operations can be composed into a tree to make complex
@@ -64,6 +66,8 @@ the official software.
 
 The official software always serializes delays in mouse move events using the four byte wide delay.
 This is unnecessary, it also seems to send very small delta's, often only -1 or 1.
+
+There's an example macro in the [`huntsman/cfg/`](/huntsman/cfg/) directory.
 
 ### Wireshark dissector
 Modify the values at the bottom of the `lib.rs` file to match your Wireshark version. Then symlink 

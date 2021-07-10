@@ -1,7 +1,7 @@
-//! This crate holds the communication details and provides the available commands.
+//! This module holds the commands that can be sent to the device.
 
 use struct_helper::{Inspectable, ToBytes};
-/// The wire module holds the structs as they actually go over the USB bus.
+
 pub mod wire;
 use struct_helper::FromBytes;
 pub use wire::Cmd;
@@ -9,6 +9,7 @@ pub use wire::RGB;
 
 pub mod macros;
 pub mod mappings;
+pub mod profiles;
 
 pub use std::any::Any;
 
@@ -498,9 +499,33 @@ impl Command for SetKeyMap {
     }
 }
 
+pub use profiles::ProfileId;
+#[derive(Default, Copy, Clone, Debug)]
+/// Retrieve the number of profiles's on the device.
+pub struct GetActiveProfileCount(pub profiles::ProfileCount);
+impl GetActiveProfileCount {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x80,
+    };
+}
+impl Command for GetActiveProfileCount {
+    fn register(&self) -> Cmd {
+        return GetActiveProfileCount::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let macro_count = profiles::ProfileCount::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetActiveProfileCount(macro_count);
+        Ok(Box::new(cmd))
+    }
+}
+
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the list of active profiles
-pub struct GetActiveProfiles {}
+pub struct GetActiveProfiles(pub profiles::ProfileList);
 impl GetActiveProfiles {
     pub const CMD: Cmd = Cmd {
         major: 0x05,
@@ -512,12 +537,54 @@ impl Command for GetActiveProfiles {
         return GetActiveProfiles::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        vec![0; 0x41]
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let macro_list = profiles::ProfileList::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetActiveProfiles(macro_list);
+        Ok(Box::new(cmd))
     }
 }
 // Allocate profile 0x0502, profile_id
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Create a profile
+pub struct ProfileCreate(pub profiles::ProfileCreate);
+impl ProfileCreate {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x02,
+    };
+}
+impl Command for ProfileCreate {
+    fn register(&self) -> Cmd {
+        return ProfileCreate::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+}
+
 // Delete profile 0x0503, profile_id,
-// Set/Read profile metadata: 0x0508,....
+#[derive(Default, Copy, Clone, Debug)]
+/// Create a profile
+pub struct ProfileDelete(pub profiles::ProfileDelete);
+impl ProfileDelete {
+    pub const CMD: Cmd = Cmd {
+        major: 0x05,
+        minor: 0x03,
+    };
+}
+impl Command for ProfileDelete {
+    fn register(&self) -> Cmd {
+        return ProfileDelete::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+}
+// Set/Read profile metadata: 0x0508,.... read metadata 0x0588
 
 #[derive(Default, Copy, Clone, Debug)]
 /// Get the memory storage statistics.
@@ -560,6 +627,29 @@ impl Command for GetActiveMacros {
     fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
         let macro_list = macros::MacroList::from_be_bytes(&data).expect("Should pass");
         let cmd = GetActiveMacros(macro_list);
+        Ok(Box::new(cmd))
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+/// Retrieve the number of macro's on the device.
+pub struct GetActiveMacroCount(pub macros::MacroCount);
+impl GetActiveMacroCount {
+    pub const CMD: Cmd = Cmd {
+        major: 0x06,
+        minor: 0x80,
+    };
+}
+impl Command for GetActiveMacroCount {
+    fn register(&self) -> Cmd {
+        return GetActiveMacroCount::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        self.0.to_be_bytes().expect("cannot fail")
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let macro_count = macros::MacroCount::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetActiveMacroCount(macro_count);
         Ok(Box::new(cmd))
     }
 }
@@ -644,18 +734,6 @@ impl Command for ArbitraryCommand {
     }
 }
 
-fn _remove_macro() {
-    // for macro id 3b:02, returns 02 status if existed, 03 if not.
-    Box::new(ArbitraryCommand {
-        register: Cmd {
-            //06:03:3b:02
-            major: 0x06,
-            minor: 0x03,
-        },
-        payload: vec![0x3b, 0x02],
-    });
-}
-
 pub fn _dev_run_cmd_profiles() -> Box<dyn Command> {
     Box::new(GetActiveProfiles {
         ..Default::default()
@@ -665,10 +743,10 @@ pub fn dev_run_cmd() -> Box<dyn Command> {
     // set right control back to right control.
     Box::new(ArbitraryCommand {
         register: Cmd {
-            major: 0x02,
-            minor: 0x0d,
+            major: 0x06,
+            minor: 0x80,
         },
-        payload: vec![0x01, 0x40, 0x00, 0x02, 0x02, 0x00, 0xe4],
+        payload: vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     })
 }
 

@@ -291,6 +291,13 @@ impl Default for MacroList {
     }
 }
 
+#[derive(Inspectable, FromBytes, ToBytes, Clone, Copy, Debug, Default)]
+#[repr(C)]
+/// Retrieve the number of macros in memory.
+pub struct MacroCount {
+    pub count: u16,
+}
+
 pub fn macro_events_to_payloads(
     macro_id: MacroId,
     events: &Vec<MacroAction>,

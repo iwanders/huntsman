@@ -294,6 +294,16 @@ impl Huntsman {
             .unwrap();
         Ok(response.0.to_vec())
     }
+    /// Method to retrieve the macros currently on the device.
+    pub fn macro_count(&mut self) -> Result<u16, Error> {
+        let cmd: commands::GetActiveMacroCount = Default::default();
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetActiveMacroCount>()
+            .unwrap();
+        Ok(response.0.count)
+    }
 
     /// Delete macro by its id.
     pub fn macro_delete(&mut self, macro_id: u16) -> Result<(), Error> {
@@ -333,6 +343,50 @@ impl Huntsman {
             let _ = self.set_command(&cmd)?; // set the payload chunk
         }
         // should be it... :O
+        Ok(())
+    }
+
+    /// Method to retrieve the profiles currently on the device.
+    pub fn profile_list(&mut self) -> Result<Vec<commands::ProfileId>, Error> {
+        let cmd: commands::GetActiveProfiles = Default::default();
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetActiveProfiles>()
+            .unwrap();
+        Ok(response.0.to_vec())
+    }
+    /// Method to retrieve the macros currently on the device.
+    pub fn profile_count(&mut self) -> Result<commands::ProfileId, Error> {
+        let cmd: commands::GetActiveProfileCount = Default::default();
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetActiveProfileCount>()
+            .unwrap();
+        Ok(response.0.count)
+    }
+
+    /// Delete profile by its id.
+    pub fn profile_delete(&mut self, profile_id: commands::ProfileId) -> Result<(), Error> {
+        if profile_id < 2 || profile_id > 5 {
+            // Not too sure what happens if we throw out 1...
+            panic!("Profile ids must be 2, 3, 4 or 5.");
+        }
+        let mut cmd: commands::ProfileDelete = Default::default();
+        cmd.0.profile_id = profile_id;
+        let _result = self.set_command(&cmd)?;
+        Ok(())
+    }
+
+    /// Create a profile by the provided id..
+    pub fn profile_create(&mut self, profile_id: commands::ProfileId) -> Result<(), Error> {
+        if profile_id < 2 || profile_id > 5 {
+            panic!("Profile ids must be 2, 3, 4 or 5.");
+        }
+        let mut cmd: commands::ProfileCreate = Default::default();
+        cmd.0.profile_id = profile_id;
+        let _result = self.set_command(&cmd)?;
         Ok(())
     }
 }
