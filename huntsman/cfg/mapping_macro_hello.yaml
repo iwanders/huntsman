@@ -1,14 +1,7 @@
 mappings:
   - #profile: ~
     id: right_control
-    #hypershift: false
-    #  mapping:
-      #  key:
-        #  id: right_control
-    #  mapping:
-      #  turbo_key:
-        #  - 
-          #  id: a
-        #  - 50
     mapping:
-      macro: [0x1337, 1]
+      macro: 
+        macro_id: 0x1337
+        count: 2

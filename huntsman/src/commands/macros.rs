@@ -509,7 +509,7 @@ mod tests {
         // Larger macro that spans two chunks, don't have hard data to test against, check the indices
         // against expectation.
         let mut actions: Vec<MacroAction> = Vec::new();
-        for i in 0..20 {
+        for _i in 0..20 {
             actions.push(MacroAction::MouseClick(MouseState::Left));
             actions.push(MacroAction::MouseClick(MouseState::None));
         }
@@ -549,6 +549,7 @@ mod tests {
         print_deserialize::<MacroAction>(r#"{"keyboard_make":"KEY_A"}"#);
     }
 
+    #[test]
     pub fn test_macro_get_list() {
         let expected =
             parse_wireshark_truncated("02:1f:00:00:00:ca:06:81:00:02:13:37:13:36:00", 0x4e);
