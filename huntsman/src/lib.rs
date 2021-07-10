@@ -377,9 +377,7 @@ impl Huntsman {
         cmd.0.profile_id = profile_id;
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
-        let response = response
-            .downcast_ref::<commands::ProfileDelete>()
-            .unwrap();
+        let _response = response.downcast_ref::<commands::ProfileDelete>().unwrap();
         Ok(())
     }
 

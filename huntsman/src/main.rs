@@ -518,21 +518,32 @@ pub fn main() -> Result<(), Error> {
             }
             Some("current") => {
                 let id = h.profile_get_current()?;
-                println!("Current profile: {} ({})", id, profile_util::profile_to_colored_name(id));
+                println!(
+                    "Current profile: {} ({})",
+                    id,
+                    profile_util::profile_to_colored_name(id)
+                );
             }
             Some("activate") => {
                 let submatches = matches.subcommand_matches("activate").unwrap();
                 let profile_id = get_profile_id(submatches)?;
                 let _ = h.profile_set_current(profile_id)?;
                 let id = h.profile_get_current()?;
-                println!("Current profile: {} ({})", id, profile_util::profile_to_colored_name(id));
-
+                println!(
+                    "Current profile: {} ({})",
+                    id,
+                    profile_util::profile_to_colored_name(id)
+                );
             }
             Some("create") => {
                 let submatches = matches.subcommand_matches("create").unwrap();
                 let profile_id = get_profile_id(submatches)?;
                 h.profile_create(profile_id)?;
-                println!("Profile {} ({}) created.", profile_id, profile_util::profile_to_colored_name(profile_id));
+                println!(
+                    "Profile {} ({}) created.",
+                    profile_id,
+                    profile_util::profile_to_colored_name(profile_id)
+                );
             }
             Some("del") => {
                 let submatches = matches.subcommand_matches("del").unwrap();
@@ -542,7 +553,11 @@ pub fn main() -> Result<(), Error> {
                     if *id == profile_id {
                         // found the thing, remove it.
                         h.profile_delete(profile_id)?;
-                        println!("Profile {} ({}) removed.", profile_id, profile_util::profile_to_colored_name(*id));
+                        println!(
+                            "Profile {} ({}) removed.",
+                            profile_id,
+                            profile_util::profile_to_colored_name(*id)
+                        );
                         return Ok(());
                     }
                 }
@@ -552,7 +567,7 @@ pub fn main() -> Result<(), Error> {
                 );
             }
             // None => {
-                // println!("No subcommand was used")
+            // println!("No subcommand was used")
             // },
             _ => println!("Some other subcommand was used"),
         }

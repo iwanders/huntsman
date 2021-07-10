@@ -632,8 +632,6 @@ impl Command for SetProfileCurrent {
     }
 }
 
-
-
 // Set/Read profile metadata: 0x0508,.... read metadata 0x0588
 
 #[derive(Default, Copy, Clone, Debug)]

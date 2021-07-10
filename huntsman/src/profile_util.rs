@@ -16,22 +16,17 @@ pub fn profile_to_colored_name(id: ProfileId) -> &'static str {
 
 /// Convert a profile id as string (number or color) to a profile id, if parsing fails, it returns
 /// profile 1 (white).
-pub fn str_to_profile_id(input: &str) -> ProfileId
-{
-    let res = match input.to_lowercase().as_str()
-    {
+pub fn str_to_profile_id(input: &str) -> ProfileId {
+    let res = match input.to_lowercase().as_str() {
         "red" => 2,
         "green" => 3,
         "blue" => 4,
         "cyan" => 5,
-        maybe_number => 
-        {
+        maybe_number => {
             if let Ok(v) = maybe_number.parse::<u8>() {
                 v
-            }
-            else
-            {
-                1  // didn't parse as a number, use sane fallback.
+            } else {
+                1 // didn't parse as a number, use sane fallback.
             }
         }
     };
