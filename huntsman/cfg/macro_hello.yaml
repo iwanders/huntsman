@@ -36,7 +36,11 @@ events:
   - mouse_click: left  # can't hold multiple clicks at the same time atm
   - mouse_click: none
   - delay: 100
-  - mouse_scroll: -1 # scroll wheel seems a bit glitchy? maybe value wrong?
+  - mouse_scroll: -1  # mouse scroll appears to be repeated several times in order to work...
+  - mouse_scroll: -1
+  - mouse_scroll: -1
   - delay: 500
+  - mouse_scroll: 1
+  - mouse_scroll: 1
   - mouse_scroll: 1
   - delay: 100

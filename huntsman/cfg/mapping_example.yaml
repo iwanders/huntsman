@@ -1,14 +1,85 @@
 mappings:
-  - #profile: ~
-    id: right_control
-    #hypershift: false
+  - #profile: ~  # unused atm, command line overrides it.
+    id: right_control  # Specify which key to set thge mapping of
+    hypershift: false  # Map the hypershift functionality or not?
+
+    # disable the key mapping:
+    #  mapping:
+      #  disabled: ~
+
+    # make it a left click
+    #  mapping:
+      #  mouse: left
+
+    # default, map to right control.
     mapping:
       key:
         id: right_control
+
+
+    # 'normal' key map, maps to capitalized A.
+    #  mapping:
+      #  key:
+        #  id: a
+        #  modifiers: [shift]
+
+    # Map it to a macro with id 0x1337, invoking it once per keypress
+    #  mapping:
+      #  macro: 
+        #  macro_id: 0x1337
+        #  count: 1
+
+    # Map it to a macro, repeating while pressed.
+    #  mapping:
+      #  macro_repeat: 0x1337
+
+    # Map it to a macro, toggling repeated running of the macrp
+    #  mapping:
+      #  macro_toggle: 0x1337
+
+    # Map it to the multimedia action, directly emitting this consumer page hid code
+    #  mapping:
+      #  multi_media: 0xe2  # this is the mute hid code.
+
+    # Map it to the button page, just makes clicks
+    #  mapping:
+      #  button_page: 0x01
+
+    # Map it to the turbo mouse, repeating left mouse button on an 100ms interval.
+    #  mapping:
+      #  turbo_mouse:
+        #  button: left
+        #  interval: 100
+
+    # Set it as a turbo key, repeating 'a' on a 50ms interval.
     #  mapping:
       #  turbo_key:
-        #  - 
+        #  key:
           #  id: a
-        #  - 50
+        #  interval: 50
+
+    # Set it as a special key...
+    # Special keys ONLY work if mapped as hypershift.
+    # 0x03 = toggle game mode
+    # 0x04 = otf macro
+    # 0x08 = brightness up
+    # 0x09 = brightness down
     #  mapping:
-      #  macro: [1, 1]
+      #  special: 0x04
+
+    # Set it as a generic desktop page mapping
+    # 0x81 for example is system power down;
+    #  mapping:
+      #  generic_desktop: 0x81
+
+    # Set as profile instruction;
+    # 0x03: - setting this fails.
+    # 0x04: is cycle down, same as hypershift context menu (cyan -> white)
+    # 0x05: is cyle up (cyan -> blue)
+    # 0x06: - setting mapping fails
+    #  mapping:
+      #  profile_instruction: 0x04
+
+    # Set as an extra hypershift key.
+    #  mapping:
+      #  hypershift: ~

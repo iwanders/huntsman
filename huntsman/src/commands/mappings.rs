@@ -184,6 +184,7 @@ pub struct KeyboardKey {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 /// Represents a particular mouse button for mouse clicks.
+#[serde(rename_all = "snake_case")]
 pub enum MouseButton {
     Left = 1,
     Right = 2,
@@ -220,7 +221,7 @@ pub enum KeyMapping {
     /// This is a standard keyboard key, emitting a HID Keyboard Page (0x07) event.
     Key(KeyboardKey),
     /// Macro 'n' times.
-    Macro{macro_id: MacroId, count: u8},
+    Macro { macro_id: MacroId, count: u8 },
     /// Macro repeat while pressed.
     MacroRepeat(MacroId),
     /// Macro toggle.
@@ -230,9 +231,9 @@ pub enum KeyMapping {
     /// Emits from button page 0x09? Only seen for doubleclick.
     ButtonPage(u8),
     /// Repeats mouse clicks using the provided interval.
-    TurboMouse{button: MouseButton, interval: u16},
+    TurboMouse { button: MouseButton, interval: u16 },
     /// Repeats keys using the provided interval.
-    TurboKey{key: KeyboardKey, interval: u16},
+    TurboKey { key: KeyboardKey, interval: u16 },
     /// Magical special keys, led brightness, game mode etc.
     Special(u8),
     /// Generic desktop page 0x01 (System Sleep)
@@ -315,7 +316,7 @@ impl FromBytes for KeyMapping {
                 let x: [u8; 2] = [src[3], src[2]];
                 let macro_id = u16::from_le_bytes(x);
                 let count = src[4];
-                *self = KeyMapping::Macro{macro_id, count};
+                *self = KeyMapping::Macro { macro_id, count };
 
                 return Ok(5);
             }
@@ -378,7 +379,10 @@ impl FromBytes for KeyMapping {
                 }
                 let x: [u8; 2] = [src[4], src[3]];
                 let repeat_interval = u16::from_le_bytes(x);
-                *self = KeyMapping::TurboMouse{button: src[2].into(), interval: repeat_interval};
+                *self = KeyMapping::TurboMouse {
+                    button: src[2].into(),
+                    interval: repeat_interval,
+                };
 
                 return Ok(5);
             }
@@ -392,7 +396,7 @@ impl FromBytes for KeyMapping {
 
                 let x: [u8; 2] = [src[5], src[4]];
                 let repeat_interval = u16::from_le_bytes(x);
-                *self = KeyMapping::TurboKey{
+                *self = KeyMapping::TurboKey {
                     key: KeyboardKey {
                         id: src[3],
                         modifiers: src[2].into(),
@@ -477,7 +481,7 @@ impl ToBytes for KeyMapping {
                 buff.push(1);
                 buff.push(*button as u8);
             }
-            KeyMapping::Macro{macro_id, count} => {
+            KeyMapping::Macro { macro_id, count } => {
                 buff.push(KeyMapping::MAP_MACRO);
                 buff.push(3);
                 let id = macro_id.to_le_bytes()?;
@@ -511,7 +515,7 @@ impl ToBytes for KeyMapping {
                 buff.push(1);
                 buff.push(*v);
             }
-            KeyMapping::TurboMouse{button, interval} => {
+            KeyMapping::TurboMouse { button, interval } => {
                 buff.push(KeyMapping::MAP_TURBO_MOUSE);
                 buff.push(3);
                 buff.push(*button as u8);
@@ -519,7 +523,7 @@ impl ToBytes for KeyMapping {
                 buff.push(id[1]);
                 buff.push(id[0]);
             }
-            KeyMapping::TurboKey{key, interval} => {
+            KeyMapping::TurboKey { key, interval } => {
                 buff.push(KeyMapping::MAP_TURBO_KEY);
                 buff.push(4);
                 buff.push(key.modifiers.into());
@@ -683,7 +687,7 @@ mod tests {
         let right_control_macro_single =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:01:00", 0x16);
         let res = test_keymap_roundtrip(&right_control_macro_single);
-        if let KeyMapping::Macro{macro_id, count} = res.mapping {
+        if let KeyMapping::Macro { macro_id, count } = res.mapping {
             assert_eq!(macro_id, 0x3b68);
             assert_eq!(count, 0x01);
         } else {
@@ -694,7 +698,7 @@ mod tests {
         let right_control_macro_double =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:03:03:3b:68:02:00", 0x15);
         let res = test_keymap_roundtrip(&right_control_macro_double);
-        if let KeyMapping::Macro{macro_id, count} = res.mapping {
+        if let KeyMapping::Macro { macro_id, count } = res.mapping {
             assert_eq!(macro_id, 0x3b68);
             assert_eq!(count, 0x02);
         } else {
@@ -745,7 +749,7 @@ mod tests {
         let right_control_turbo_left_click_7_per_s =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:03:40:00:0e:03:01:00:8e:00", 0xc4);
         let res = test_keymap_roundtrip(&right_control_turbo_left_click_7_per_s);
-        if let KeyMapping::TurboMouse{button, interval} = res.mapping {
+        if let KeyMapping::TurboMouse { button, interval } = res.mapping {
             assert_eq!(button, MouseButton::Left);
             assert_eq!(interval, (1000.0f64 / 7.0).floor() as u16);
         } else {
@@ -759,7 +763,7 @@ mod tests {
             0x3b,
         );
         let res = test_keymap_roundtrip(&right_ctrl_alphanumeric_mod_right_alt_and_20_per_s);
-        if let KeyMapping::TurboKey{key, interval} = res.mapping {
+        if let KeyMapping::TurboKey { key, interval } = res.mapping {
             assert_eq!(key.id, 0x04);
             assert!(key.modifiers.is_only(Modifier::RightAlt));
             assert_eq!(interval, (1000.0f64 / 20.0).floor() as u16);
@@ -861,7 +865,10 @@ mod tests {
             modifiers: Modifiers::control(),
         }));
 
-        print_serialize(KeyMapping::Macro{macro_id: 0x1337, count: 1});
+        print_serialize(KeyMapping::Macro {
+            macro_id: 0x1337,
+            count: 1,
+        });
 
         print_serialize(Key {
             id: 0x04,

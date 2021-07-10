@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 pub use crate::commands::mappings::{Key, KeyMapping, KeyboardKey, Modifiers};
+use serde::{Deserialize, Serialize};
 
 pub use crate::commands::macros::MacroAction;
 
