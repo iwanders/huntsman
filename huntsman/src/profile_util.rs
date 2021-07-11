@@ -18,6 +18,7 @@ pub fn profile_to_colored_name(id: ProfileId) -> &'static str {
 /// profile 1 (white).
 pub fn str_to_profile_id(input: &str) -> ProfileId {
     let res = match input.to_lowercase().as_str() {
+        "white" => 1,
         "red" => 2,
         "green" => 3,
         "blue" => 4,

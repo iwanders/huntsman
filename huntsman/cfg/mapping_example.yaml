@@ -1,7 +1,7 @@
 mappings:
   - #profile: ~  # unused atm, command line overrides it.
-    id: right_control  # Specify which key to set thge mapping of
-    hypershift: false  # Map the hypershift functionality or not?
+    id: right_control  # Specify which key to set the mapping of
+    hypershift: false  # Map the functionality when hypershift is pressed or not?
 
     # disable the key mapping:
     #  mapping:
@@ -65,7 +65,7 @@ mappings:
     # 0x08 = brightness up
     # 0x09 = brightness down
     #  mapping:
-      #  special: 0x04
+      #  special: 0x08
 
     # Set it as a generic desktop page mapping
     # 0x81 for example is system power down;
