@@ -155,7 +155,7 @@ pub fn main() -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("mapping").setting(clap::AppSettings::SubcommandRequiredElseHelp)
+            SubCommand::with_name("mapping")
                 .about("Set mapping(s)")
                 .arg(
                     Arg::with_name("file")
