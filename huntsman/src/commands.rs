@@ -477,8 +477,10 @@ impl Command for SetGameMode {
     }
 }
 
-/// Override a key with a new functionality.
-pub type SetKeyMap = mappings::KeyMap;
+pub use profiles::ProfileId;
+#[derive(Default, Clone, Debug)]
+/// Set a key mapping.
+pub struct SetKeyMap(pub mappings::KeyMap);
 impl SetKeyMap {
     pub const CMD: Cmd = Cmd {
         major: 0x02,
@@ -490,16 +492,40 @@ impl Command for SetKeyMap {
         return SetKeyMap::CMD;
     }
     fn payload(&self) -> Vec<u8> {
-        let serialized = self.to_be_bytes().expect("Success");
+        let serialized = self.0.to_be_bytes().expect("Success");
         serialized
     }
     fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
-        let cmd = mappings::KeyMap::from_be_bytes(&data).expect("Should pass");
+        let res = mappings::KeyMap::from_be_bytes(&data).expect("Should pass");
+        let cmd = SetKeyMap(res);
         Ok(Box::new(cmd))
     }
 }
 
-pub use profiles::ProfileId;
+#[derive(Default, Clone, Debug)]
+/// Retrieve a keymapping
+pub struct GetKeyMap(pub mappings::KeyMap);
+impl GetKeyMap {
+    pub const CMD: Cmd = Cmd {
+        major: 0x02,
+        minor: 0x8D,
+    };
+}
+impl Command for GetKeyMap {
+    fn register(&self) -> Cmd {
+        return GetKeyMap::CMD;
+    }
+    fn payload(&self) -> Vec<u8> {
+        let serialized = self.0.to_be_bytes().expect("Success");
+        serialized
+    }
+    fn response_payload(&self, data: &[u8]) -> Result<Box<dyn Any>, String> {
+        let res = mappings::KeyMap::from_be_bytes(&data).expect("Should pass");
+        let cmd = GetKeyMap(res);
+        Ok(Box::new(cmd))
+    }
+}
+
 #[derive(Default, Copy, Clone, Debug)]
 /// Retrieve the number of profiles's on the device.
 pub struct GetActiveProfileCount(pub profiles::ProfileCount);

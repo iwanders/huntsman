@@ -125,12 +125,12 @@ pub fn main() -> Result<(), Error> {
         .arg(
             Arg::with_name("c")
                 .short("c")
-                .help("Specifies whether to print comms."),
+                .help("Specifies whether to print outgoing commands."),
         )
         .arg(
             Arg::with_name("r")
                 .short("r")
-                .help("Specifies whether to retrieve the report after sending any command."),
+                .help("Specifies whether to print the reply sending any command."),
         )
         .arg(
             Arg::with_name("d")
@@ -155,23 +155,6 @@ pub fn main() -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("mapping")
-                .about("Set mapping(s)")
-                .arg(
-                    Arg::with_name("file")
-                        .takes_value(true)
-                        .required(true)
-                        .help("The filename to read the mappings from."),
-                )
-                .arg(
-                    Arg::with_name("profile")
-                        .short("p")
-                        .takes_value(true)
-                        .default_value("1")
-                        .help("The profile to use."),
-                ),
-        )
-        .subcommand(
             SubCommand::with_name("game_mode")
                 .about("Sets game mode on or off")
                 .arg(
@@ -183,24 +166,6 @@ pub fn main() -> Result<(), Error> {
         )
         .subcommand(SubCommand::with_name("serial_number").about("Retrieves the serial number"))
         .subcommand(SubCommand::with_name("dev_run").about("Runs dev_run"))
-        .subcommand(
-            SubCommand::with_name("dev_dump_keymaps")
-                .about("Dumps all keymappings.")
-                .arg(
-                    Arg::with_name("hypershift")
-                        .short("s")
-                        .takes_value(true)
-                        .default_value("false")
-                        .help("Retrieve hypershift commands or not."),
-                )
-                .arg(
-                    Arg::with_name("profile")
-                        .short("p")
-                        .takes_value(true)
-                        .default_value("1")
-                        .help("The profile id to retrieve."),
-                ),
-        )
         .subcommand(add_colors!(SubCommand::with_name("set_color")
             .about("Sets colors in the custom frame.")
             .arg(
@@ -326,7 +291,44 @@ pub fn main() -> Result<(), Error> {
                                 .help("The profile_id to set the keyboard to 1, 2, 3, 4 or 5 (or by color)."),
                         ),
                 ),
-        );
+        ).subcommand(
+            SubCommand::with_name("mapping").setting(clap::AppSettings::SubcommandRequiredElseHelp)
+                .about(
+                    "Modify the key mappings",
+                ).subcommand(
+            SubCommand::with_name("load")
+                .about("Set mapping(s)")
+                .arg(
+                    Arg::with_name("file")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The filename to read the mappings from."),
+                )
+                .arg(
+                    Arg::with_name("profile")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The profile to use."),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("retrieve")
+                .about("Dumps all keymappings for a profile.")
+                .arg(
+                    Arg::with_name("hypershift")
+                        .short("s")
+                        .takes_value(true)
+                        .default_value("false")
+                        .help("Retrieve hypershift commands or not."),
+                )
+                .arg(
+                    Arg::with_name("profile_id")
+                        .takes_value(true)
+                        .required(true)
+                        .help("The profile id to retrieve."),
+                ),
+        )
+    );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
 
@@ -364,11 +366,6 @@ pub fn main() -> Result<(), Error> {
         h.dev_run()?;
     }
 
-    if let Some(matches) = matches.subcommand_matches("dev_dump_keymaps") {
-        let hypershift = get_value::<bool>(matches, "hypershift")?;
-        let profile = get_value::<u8>(matches, "profile")?;
-        h.dev_dump_keymaps(hypershift, profile)?;
-    }
     if let Some(_matches) = matches.subcommand_matches("serial_number") {
         h.get_serial_number()?;
     }
@@ -377,19 +374,6 @@ pub fn main() -> Result<(), Error> {
         let value = get_value::<f32>(matches, "value")?;
         let profile = get_value::<u8>(matches, "profile")?;
         h.set_brightness(profile, value)?;
-    }
-
-    if let Some(matches) = matches.subcommand_matches("mapping") {
-        let file = get_value::<String>(matches, "file")?;
-        let profile = get_value::<u8>(matches, "profile")?;
-        println!("println!  {}, {}", file, profile);
-        let mappings =
-            huntsman::configuration::load_mappings(&file).map_err(|x| format!("{:?}", x))?;
-        println!("{:?}", mappings);
-        for m in mappings.iter() {
-            // build the actual configuration.
-            h.set_mapping(profile, m.key, m.mapping)?;
-        }
     }
 
     if let Some(matches) = matches.subcommand_matches("game_mode") {
@@ -566,9 +550,36 @@ pub fn main() -> Result<(), Error> {
                     profile_id
                 );
             }
-            // None => {
-            // println!("No subcommand was used")
-            // },
+            _ => println!("Some other subcommand was used"),
+        }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("mapping") {
+        match matches.subcommand_name() {
+            Some("load") => {
+                let submatches = matches.subcommand_matches("load").unwrap();
+                let file = get_value::<String>(submatches, "file")?;
+                let profile = get_profile_id(submatches)?;
+                println!("println!  {}, {}", file, profile);
+                let mappings = huntsman::configuration::load_mappings(&file)
+                    .map_err(|x| format!("{:?}", x))?;
+                println!("{:?}", mappings);
+                for m in mappings.iter() {
+                    // build the actual configuration.
+                    h.set_mapping(profile, m.key, m.mapping)?;
+                }
+            }
+            Some("retrieve") => {
+                let submatches = matches.subcommand_matches("retrieve").unwrap();
+                let hypershift = get_value::<bool>(submatches, "hypershift")?;
+                let profile = get_profile_id(submatches)?;
+                for k in huntsman::configuration::at101_keys().iter()
+                {
+                    let key = commands::mappings::Key{id: *k, hypershift: hypershift};
+                    let x = h.get_mapping(profile, key)?;
+                    println!("key: {:?}, mapping: {:?}", key, x);
+                }
+            }
             _ => println!("Some other subcommand was used"),
         }
     }

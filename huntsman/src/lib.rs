@@ -183,11 +183,11 @@ impl Huntsman {
         key: commands::mappings::Key,
         mapping: commands::mappings::KeyMapping,
     ) -> Result<(), Error> {
-        let cmd: commands::SetKeyMap = commands::SetKeyMap {
+        let cmd: commands::SetKeyMap = commands::SetKeyMap(commands::mappings::KeyMap{
             profile,
             key,
             mapping,
-        };
+        });
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
         let _response = response.downcast_ref::<commands::SetKeyMap>().unwrap();
@@ -195,28 +195,18 @@ impl Huntsman {
     }
 
     /// Dump keymappings.
-    pub fn dev_dump_keymaps(&mut self, hypershift: bool, profile: u8) -> Result<(), Error> {
-        self.set_print_comm(true);
-        self.set_print_retrieve(true);
-        let hypershift_flag: u8;
-        if hypershift {
-            hypershift_flag = 0x01;
-        } else {
-            hypershift_flag = 0x00;
-        }
-        for i in 0..=255 {
-            println!("Retrieving keymapping for key {} (0x{:0>2x})", i, i);
-            let cmd = commands::ArbitraryCommand {
-                register: commands::Cmd {
-                    major: 0x02,
-                    minor: 0x8D,
-                },
-                payload: vec![profile, i, hypershift_flag],
-            };
-            self.set_command(&cmd)?;
-            println!();
-        }
-        Ok(())
+    pub fn get_mapping(&mut self, profile: u8, key: commands::mappings::Key) -> Result<commands::mappings::KeyMap, Error> {
+        let cmd: commands::GetKeyMap = commands::GetKeyMap(commands::mappings::KeyMap{
+            profile: profile,
+            key: key,
+            ..Default::default()});
+
+        let result = self.set_command(&cmd)?;
+        let response = commands::Command::response(&cmd, &result.unwrap())?;
+        let response = response
+            .downcast_ref::<commands::GetKeyMap>()
+            .unwrap();
+        Ok(response.0)
     }
 
     /// Disables led effects, turning off each led. See also [`commands::SetLedEffect::off()`]

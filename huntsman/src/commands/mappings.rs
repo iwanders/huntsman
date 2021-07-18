@@ -562,7 +562,7 @@ impl Default for KeyMapping {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Copy, Default, Eq, PartialEq)]
 pub struct KeyMap {
     /// The profile to apply this mapping to.
     pub profile: u8,
