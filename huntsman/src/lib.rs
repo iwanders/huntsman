@@ -9,6 +9,7 @@ pub use commands::RGB;
 
 pub mod configuration;
 mod hut_util;
+mod keymap_util;
 
 /// Object to interface with the Huntsman Elite keyboard.
 pub struct Huntsman {
@@ -183,7 +184,7 @@ impl Huntsman {
         key: commands::mappings::Key,
         mapping: commands::mappings::KeyMapping,
     ) -> Result<(), Error> {
-        let cmd: commands::SetKeyMap = commands::SetKeyMap(commands::mappings::KeyMap{
+        let cmd: commands::SetKeyMap = commands::SetKeyMap(commands::mappings::KeyMap {
             profile,
             key,
             mapping,
@@ -195,17 +196,20 @@ impl Huntsman {
     }
 
     /// Dump keymappings.
-    pub fn get_mapping(&mut self, profile: u8, key: commands::mappings::Key) -> Result<commands::mappings::KeyMap, Error> {
-        let cmd: commands::GetKeyMap = commands::GetKeyMap(commands::mappings::KeyMap{
+    pub fn get_mapping(
+        &mut self,
+        profile: u8,
+        key: commands::mappings::Key,
+    ) -> Result<commands::mappings::KeyMap, Error> {
+        let cmd: commands::GetKeyMap = commands::GetKeyMap(commands::mappings::KeyMap {
             profile: profile,
             key: key,
-            ..Default::default()});
+            ..Default::default()
+        });
 
         let result = self.set_command(&cmd)?;
         let response = commands::Command::response(&cmd, &result.unwrap())?;
-        let response = response
-            .downcast_ref::<commands::GetKeyMap>()
-            .unwrap();
+        let response = response.downcast_ref::<commands::GetKeyMap>().unwrap();
         Ok(response.0)
     }
 

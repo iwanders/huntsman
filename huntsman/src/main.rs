@@ -317,9 +317,12 @@ pub fn main() -> Result<(), Error> {
                 .arg(
                     Arg::with_name("hypershift")
                         .short("s")
-                        .takes_value(true)
-                        .default_value("false")
                         .help("Retrieve hypershift commands or not."),
+                )
+                .arg(
+                    Arg::with_name("showall")
+                        .short("a")
+                        .help("Show all retrievals, or only modified from default."),
                 )
                 .arg(
                     Arg::with_name("profile_id")
@@ -571,13 +574,20 @@ pub fn main() -> Result<(), Error> {
             }
             Some("retrieve") => {
                 let submatches = matches.subcommand_matches("retrieve").unwrap();
-                let hypershift = get_value::<bool>(submatches, "hypershift")?;
+                let hypershift = submatches.occurrences_of("hypershift") == 1;
+                let show_all = submatches.occurrences_of("showall") == 1;
                 let profile = get_profile_id(submatches)?;
-                for k in huntsman::configuration::at101_keys().iter()
-                {
-                    let key = commands::mappings::Key{id: *k, hypershift: hypershift};
+
+                for k in huntsman::configuration::at101_keys().iter() {
+                    let key = commands::mappings::Key {
+                        id: *k,
+                        hypershift: hypershift,
+                    };
                     let x = h.get_mapping(profile, key)?;
-                    println!("key: {:?}, mapping: {:?}", key, x);
+                    let default_map = huntsman::configuration::get_default_keymap(key);
+                    if show_all || (default_map != x.mapping) {
+                        println!("key: {:?}, mapping: {:?}", key, x);
+                    }
                 }
             }
             _ => println!("Some other subcommand was used"),

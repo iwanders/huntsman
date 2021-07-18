@@ -52,21 +52,33 @@ type ModifiersVec = Vec<Modifier>;
 pub struct Modifiers([Modifier; 8]); // this array is just shennenigans to make it copyable.
 
 impl Modifiers {
-    pub fn control() -> Modifiers {
+    pub const fn none() -> Modifiers {
+        Modifiers([
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+            Modifier::None,
+        ])
+    }
+    pub const fn control() -> Modifiers {
         Self::with(Modifier::LeftControl)
     }
 
-    pub fn alt() -> Modifiers {
+    pub const fn alt() -> Modifiers {
         Self::with(Modifier::LeftAlt)
     }
 
-    pub fn shift() -> Modifiers {
+    pub const fn shift() -> Modifiers {
         Self::with(Modifier::LeftShift)
     }
 
-    pub fn with(m: Modifier) -> Modifiers {
-        let mut r: Modifiers = Default::default();
-        r.push(m);
+    pub const fn with(m: Modifier) -> Modifiers {
+        let mut r: Modifiers = Modifiers::none();
+        r.0[0] = m;
         r
     }
 

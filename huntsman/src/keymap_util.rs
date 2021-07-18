@@ -14,18 +14,18 @@ pub fn at101_keys() -> &'static [u8] {
     &KEYS_PRESENT
 }
 
-pub fn get_default_keymap(key: Key) -> KeyMapping
-{
-    let k = if key.hypershift { hypershift_keymaps() } else { default_keymaps() };
-    for z in k.iter()
-    {
-        if key.id == z.key.id
-        {
+pub fn get_default_keymap(key: Key) -> KeyMapping {
+    let k = if key.hypershift {
+        hypershift_keymaps()
+    } else {
+        default_keymaps()
+    };
+    for z in k.iter() {
+        if key.id == z.key.id {
             return z.mapping;
         }
     }
     panic!("Could not find default key for {:?}", key);
-
 }
 
 pub fn default_keymaps() -> &'static [KeyConfig] {
