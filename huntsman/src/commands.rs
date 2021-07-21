@@ -980,14 +980,14 @@ mod tests {
     fn test_set_key_full() {
         let right_ctrl_right_click =
             parse_wireshark_truncated("00:1f:00:00:00:0a:02:0d:01:40:00:01:01:02:00", 0x46);
-        let request_cmd: SetKeyMap = SetKeyMap {
+        let request_cmd: SetKeyMap = SetKeyMap(mappings::KeyMap {
             profile: 0x01,
             key: mappings::Key {
                 id: 0x40,
                 hypershift: false,
             },
             mapping: mappings::KeyMapping::Mouse(mappings::MouseButton::Right),
-        };
+        });
         assert_eq!(request_cmd.serialize(), right_ctrl_right_click);
 
         let right_ctrl_right_click_resp =
@@ -995,6 +995,6 @@ mod tests {
         let response =
             Command::response(&request_cmd, &right_ctrl_right_click_resp).expect("success");
         let response = response.downcast_ref::<SetKeyMap>().unwrap();
-        assert_eq!(*response, request_cmd);
+        assert_eq!((*response).0, request_cmd.0);
     }
 }

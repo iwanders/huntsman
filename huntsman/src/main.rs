@@ -296,41 +296,73 @@ pub fn main() -> Result<(), Error> {
                 .about(
                     "Modify the key mappings",
                 ).subcommand(
-            SubCommand::with_name("load")
-                .about("Set mapping(s)")
-                .arg(
-                    Arg::with_name("file")
-                        .takes_value(true)
-                        .required(true)
-                        .help("The filename to read the mappings from."),
+                SubCommand::with_name("load")
+                    .about("Load mapping(s) from yaml")
+                    .arg(
+                        Arg::with_name("file")
+                            .takes_value(true)
+                            .required(true)
+                            .help("The filename to read the mappings from."),
+                    )
+                    .arg(
+                        Arg::with_name("profile")
+                            .takes_value(true)
+                            .required(true)
+                            .help("The profile to use."),
+                    ),
                 )
-                .arg(
-                    Arg::with_name("profile")
-                        .takes_value(true)
-                        .required(true)
-                        .help("The profile to use."),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("retrieve")
-                .about("Dumps all keymappings for a profile.")
-                .arg(
-                    Arg::with_name("hypershift")
-                        .short("s")
-                        .help("Retrieve hypershift commands or not."),
+                .subcommand(
+                    SubCommand::with_name("retrieve")
+                        .about("Dumps all keymappings for a profile.")
+                        .arg(
+                            Arg::with_name("hypershift")
+                                .short("s")
+                                .help("Retrieve hypershift commands or not."),
+                        )
+                        .arg(
+                            Arg::with_name("showall")
+                                .short("a")
+                                .help("Show all retrievals, or only modified from default."),
+                        )
+                        .arg(
+                            Arg::with_name("profile_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The profile id to retrieve."),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("showall")
-                        .short("a")
-                        .help("Show all retrievals, or only modified from default."),
+                .subcommand(
+                    SubCommand::with_name("set")
+                        .about("Set a single key mapping")
+                        .arg(
+                            Arg::with_name("hypershift")
+                                .short("s")
+                                .help("Retrieve hypershift commands or not."),
+                        )
+                        .arg(
+                            Arg::with_name("profile_id")
+                                .takes_value(true)
+                                .required(true)
+                                .help("The profile id to retrieve."),
+                        )
+                        .arg(
+                            Arg::with_name("key")
+                                .required(true)
+                                .help("The key to set. (example: `a`, `3`, `left_alt`)"),
+                        )
+                        .arg(
+                            Arg::with_name("mapping")
+                                .default_value("default")
+                                .help("The mapping to set, leave empty for default key value.
+disabled - disables this key
+default - reverts this key to default
+some_other_key_identifier - use this key's default value.
+\"key: { id: a , modifiers:[alt] }\" - use alt 'a' as this key's mapping.
+\"macro: {macro_id: 0x1337, count: 1}\" - Map this key to a macro
+... - and so on for all other mappings.
+"),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("profile_id")
-                        .takes_value(true)
-                        .required(true)
-                        .help("The profile id to retrieve."),
-                ),
-        )
     );
 
     let matches = app.clone().get_matches(); // weird that get_matches() takes 'self', instead of &self
@@ -584,11 +616,26 @@ pub fn main() -> Result<(), Error> {
                         hypershift: hypershift,
                     };
                     let x = h.get_mapping(profile, key)?;
-                    let default_map = huntsman::configuration::get_default_keymap(key);
+                    let default_map = huntsman::configuration::get_default_keymap(&key);
                     if show_all || (default_map != x.mapping) {
                         println!("key: {:?}, mapping: {:?}", key, x);
                     }
                 }
+            }
+            Some("set") => {
+                let submatches = matches.subcommand_matches("set").unwrap();
+                let hypershift = submatches.occurrences_of("hypershift") == 1;
+                let profile = get_profile_id(submatches)?;
+                let key_string = get_value::<String>(submatches, "key")?;
+                let mapping = get_value::<String>(submatches, "mapping")?;
+                let key_id = huntsman::configuration::key_name_to_at101(key_string.as_str())?;
+                let key = commands::mappings::Key {
+                    id: key_id,
+                    hypershift: hypershift,
+                };
+                let mapping = huntsman::configuration::read_mapping(mapping.as_str(), &key)?;
+                h.set_mapping(profile, key, mapping)?;
+                println!("Set key: {:?}, to: {:?}", key_string, mapping);
             }
             _ => println!("Some other subcommand was used"),
         }

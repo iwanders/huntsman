@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub use crate::commands::macros::MacroAction;
 pub use crate::keymap_util::{at101_keys, default_keymaps, get_default_keymap, hypershift_keymaps};
 
+pub use crate::hut_util::key_name_to_at101;
+
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct KeyConfig {
     /// Profile to set for this key.
@@ -32,6 +34,27 @@ pub fn load_mappings(filename: &str) -> Result<Vec<KeyConfig>, Box<dyn std::erro
         std::io::ErrorKind::Other,
         "File type not supported. Use .yaml.",
     )))
+}
+
+pub fn read_mapping(input: &str, key: &Key) -> Result<KeyMapping, Box<dyn std::error::Error>> {
+    if input.to_lowercase() == "default" {
+        return Ok(get_default_keymap(key));
+    }
+    if input.to_lowercase() == "disabled" {
+        return Ok(KeyMapping::Disabled);
+    }
+    if !input.contains(":") {
+        // no colon, check if it looks like a key.
+        let as_key = key_name_to_at101(input)?;
+        let new_key = Key {
+            id: as_key,
+            hypershift: key.hypershift,
+        };
+        return Ok(get_default_keymap(&new_key));
+    }
+    let yaml: serde_yaml::Value = serde_yaml::from_str(input).unwrap();
+    let effects: KeyMapping = serde_yaml::from_value(yaml)?;
+    return Ok(effects);
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
@@ -78,5 +101,50 @@ mod tests {
                 modifiers: Modifiers::shift(),
             }),
         });
+    }
+    #[test]
+    fn test_key_mapping_parse() {
+        let k = Key {
+            id: 0x04,
+            hypershift: false,
+        };
+        let z = read_mapping("key: { id: a , modifiers:[alt] }", &k).unwrap();
+        assert_eq!(
+            z,
+            KeyMapping::Key(KeyboardKey {
+                id: 0x04,
+                modifiers: Modifiers::alt(),
+            })
+        );
+        let z = read_mapping("macro: {macro_id: 0x1337, count: 1}", &k).unwrap();
+        assert_eq!(
+            z,
+            KeyMapping::Macro {
+                macro_id: 0x1337,
+                count: 1,
+            }
+        );
+
+        // specials
+        let z = read_mapping("disabled", &k).unwrap();
+        assert_eq!(z, KeyMapping::Disabled);
+
+        let z = read_mapping("default", &k).unwrap();
+        assert_eq!(
+            z,
+            KeyMapping::Key(KeyboardKey {
+                id: 32,
+                modifiers: Modifiers::none(),
+            })
+        );
+
+        let z = read_mapping("a", &k).unwrap();
+        assert_eq!(
+            z,
+            KeyMapping::Key(KeyboardKey {
+                id: 4,
+                modifiers: Modifiers::none(),
+            })
+        );
     }
 }

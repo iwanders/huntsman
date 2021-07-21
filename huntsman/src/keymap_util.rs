@@ -14,7 +14,7 @@ pub fn at101_keys() -> &'static [u8] {
     &KEYS_PRESENT
 }
 
-pub fn get_default_keymap(key: Key) -> KeyMapping {
+pub fn get_default_keymap(key: &Key) -> KeyMapping {
     let k = if key.hypershift {
         hypershift_keymaps()
     } else {
