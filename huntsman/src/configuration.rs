@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub use crate::commands::macros::MacroAction;
 pub use crate::keymap_util::{at101_keys, default_keymaps, get_default_keymap, hypershift_keymaps};
 
-pub use crate::hut_util::key_name_to_at101;
+pub use crate::hut_util::{at101_to_key_name, key_name_to_at101, keyboard_hid_to_key_name};
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct KeyConfig {

@@ -313,7 +313,7 @@ pub fn main() -> Result<(), Error> {
                 )
                 .subcommand(
                     SubCommand::with_name("retrieve")
-                        .about("Dumps all keymappings for a profile.")
+                        .about("Dumps all keymappings for a profile. key_name(:hypershift) at101 -> mapping")
                         .arg(
                             Arg::with_name("hypershift")
                                 .short("s")
@@ -327,8 +327,9 @@ pub fn main() -> Result<(), Error> {
                         .arg(
                             Arg::with_name("profile_id")
                                 .takes_value(true)
-                                .required(true)
-                                .help("The profile id to retrieve."),
+                                .required(false)
+                                .default_value("all")
+                                .help("The profile id to retrieve. May be 'all' to retrieve all profiles."),
                         ),
                 )
                 .subcommand(
@@ -608,17 +609,53 @@ some_other_key_identifier - use this key's default value.
                 let submatches = matches.subcommand_matches("retrieve").unwrap();
                 let hypershift = submatches.occurrences_of("hypershift") == 1;
                 let show_all = submatches.occurrences_of("showall") == 1;
-                let profile = get_profile_id(submatches)?;
+                let mut profiles: Vec<u8> = vec![];
 
-                for k in huntsman::configuration::at101_keys().iter() {
-                    let key = commands::mappings::Key {
-                        id: *k,
-                        hypershift: hypershift,
-                    };
-                    let x = h.get_mapping(profile, key)?;
-                    let default_map = huntsman::configuration::get_default_keymap(&key);
-                    if show_all || (default_map != x.mapping) {
-                        println!("key: {:?}, mapping: {:?}", key, x);
+                if let Some(v_in) = submatches.value_of("profile_id") {
+                    if v_in == "all" {
+                        profiles.extend(&[1, 2, 3, 4, 5]);
+                    } else {
+                        let profile = get_profile_id(submatches)?;
+                        profiles.push(profile);
+                    }
+                }
+                println!();
+
+                for profile in profiles.iter() {
+                    println!(
+                        "Profile {} ({}) mappings:",
+                        profile,
+                        profile_util::profile_to_colored_name(*profile)
+                    );
+                    for k in huntsman::configuration::at101_keys().iter() {
+                        let key = commands::mappings::Key {
+                            id: *k,
+                            hypershift: hypershift,
+                        };
+                        let x = h.get_mapping(*profile, key)?;
+                        let default_map = huntsman::configuration::get_default_keymap(&key);
+                        if show_all || (default_map != x.mapping) {
+                            let hypershift = if key.hypershift { ":hypershift" } else { "" };
+                            let mapping: String;
+                            match x.mapping {
+                                commands::mappings::KeyMapping::Key(v) => {
+                                    let key_name = if v.id != 0 {
+                                        huntsman::configuration::keyboard_hid_to_key_name(v.id)?
+                                    } else {
+                                        ""
+                                    };
+                                    mapping = format!("{:?} ({})", v, key_name);
+                                }
+                                _ => mapping = format!("{:?}", x.mapping),
+                            }
+                            println!(
+                                "  {: >30}{} {: >3} -> {}",
+                                huntsman::configuration::at101_to_key_name(key.id)?,
+                                hypershift,
+                                key.id,
+                                mapping
+                            );
+                        }
                     }
                 }
             }
