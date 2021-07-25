@@ -2,9 +2,9 @@
 
 This [Rust][rust] workspace allows interacting with the [Razer Huntsman Elite][kbd] keyboard. 
 
-Not all features of the keyboard are supported, neither do I intend to make this project feature
-complete, it's mostly my means of learning a bit of Rust. Currently supported functionality is
-actually fairly feature complete:
+~~Not all features of the keyboard are supported, neither do I intend to make this project feature
+complete~~, it's mostly my means of learning a bit of Rust. Practically all functionality found in
+the official software is supported.
 
 - Retrieving the serial number.
 - The majority of the LED effects.

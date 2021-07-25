@@ -254,7 +254,7 @@ pub fn main() -> Result<(), Error> {
         .subcommand(
             SubCommand::with_name("profile").setting(clap::AppSettings::SubcommandRequiredElseHelp)
                 .about(
-                    "Configuration for profiles, profiles 2, 3, 4 and 5 can be removed / created.",
+                    "Configuration for profiles, profiles 2/red, 3/green, 4/blue and 5/cyan can be removed / created.",
                 )
                 .subcommand(SubCommand::with_name("list").about("List profiles on the device"))
                 .subcommand(SubCommand::with_name("current").about("Show the currently active profile."))
